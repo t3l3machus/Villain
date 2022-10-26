@@ -10,7 +10,7 @@ from time import sleep
 from Core.common import *
 # ~ from Core.core_server import *
 from Core.firaga_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
-from string import ascii_uppercase, ascii_lowercase
+from string import ascii_uppercase, ascii_lowercase, digits
 
 # -------------- Arguments & Usage -------------- #
 parser = argparse.ArgumentParser(
@@ -30,6 +30,7 @@ Usage examples:
 
 parser.add_argument("-s", "--server-ip", action="store", help = "Your hoaxshell server ip address or domain.")
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate.")
+parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate.")
 parser.add_argument("-u", "--update", action="store_true", help = "Pull the latest version from the original repo.")
 parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
 
@@ -90,6 +91,7 @@ def print_banner():
 
 			txt_color = init_color
 		init_color += 30
+			# ~ init_color += 31
 
 		if charset < 2: final.append('\n   ')
 
@@ -125,12 +127,11 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 	
 	if length >= _min and length <= _max:
 	
-		valid = ascii_uppercase + ascii_lowercase + '-_'
+		valid = ascii_uppercase + ascii_lowercase + '-_' + digits
 		
 		for char in word:
 			
 			if char not in valid:
-				print(f'HEADER value includes illegal character "{char}".')
 				return [f'Alias includes illegal character: "{char}".']
 		
 		return word
