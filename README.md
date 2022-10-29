@@ -7,6 +7,9 @@
 
 ## Purpose
 A POST exploitaiton framework that provides resources for maintaining access to systems, connecting & sharing shell sessions with sibling servers (other machines running firaga) and other utilities.
+ - Quickly generating reverse shell payloads for Windows and Linux machines,
+ - Connecting & sharing reverse shell sessions with sibling servers (other machines running firaga),
+ - Has a build in auto-obfuscate function to assist you in bypassing AV solutions (for Windows payloads),
 
 An important part of this tool's functionality is inherited from [HoaxShell](https://github.com/t3l3machus/hoaxshell). One could say that, it is an evolved, steroids induced version of it.
 
