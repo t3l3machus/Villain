@@ -60,6 +60,51 @@ def print_banner():
 	# ~ O =	[[' ', '┌','─','┐'], [' ', '│',' ','│'], [' ', '└','─','┘']]
 	# ~ N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]	
 
+
+    # ~ ,.     (   .        )        .      "
+   # ~ ("       )  )'       ,'        )  . (`     '`
+ # ~ .; )  '   (( (" )      ;(,     ((  (  ;)  "  )"
+ # ~ _"., ,.  _'_.,)_(   ..,( .      )_  _' )_') (. _..( '..jb
+
+
+	# ~ F1 = ['    ', ',.', '   (', '   .  ']
+	# ~ F2 = ['   ("', '     )', '  )\'', '     ,' ]
+	# ~ F3 = [' .;', ' ) ', ' \'', ' ((', ' ("', ' ) ', '   ;(', ',']
+	# ~ F4 = [' _"', '.,', ',.', '_\'', '_.', ',)', '_( ', '..', ',(', ' .']
+
+	# ~ F1 = [['    ,.   '], ['   ("     '], [' .; )  \' '], [' _"., ,.']]
+	# ~ F2 = [['(   .     '], [')  )\'    '], ['(( (" )   '], ['_\'_.,)_(']]
+	# ~ F3 = [[') '], [',\''], [';(,'], ['..,( .']]
+
+
+	# ~ banner = [F1,F2,F3]
+	# ~ final = []
+	# ~ print('\r')
+	# ~ init_color = 54
+
+	# ~ txt_color = init_color
+	# ~ cl = 0
+	
+	
+	# ~ for charset in range(0, 4):
+		# ~ for pos in range(0, len(banner)):
+			# ~ for i in range(0, len(banner[pos][charset])):
+				# ~ clr = f'\033[38;5;{txt_color}m'
+				# ~ char = f'{clr}{banner[pos][charset][i]}'
+				# ~ final.append(char)
+				# ~ cl += 1
+				# ~ txt_color = txt_color + 35 if cl <= 4 else txt_color
+
+			# ~ cl = 0
+
+			# ~ txt_color = init_color
+
+		# ~ init_color += 1
+
+		# ~ if charset < 3: final.append('\n   ')
+
+	# ~ print(f"   {''.join(final)}")
+
 	F = [[' ', '┌','─','┬'], [' ', '├','┤',' '], [' ', '└',' ',' ']]
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
 	R = [[' ', '┬','─','┐'], [' ', '├','┬','┘'], [' ', '┴','└','─']]
@@ -67,17 +112,24 @@ def print_banner():
 	G = [[' ', '┌','─','┐'], [' ', '│',' ','┬'], [' ', '└','─','┘']]
 	A = [[' ', '┌','─','┐'], [' ', '├','─','┤'], [' ', '┴',' ','┴']]
 
-
+	# 55 + 1
+	# 19 + 1
+	# 26, 27 + 5   VERY GOOD
+	# 26, 27 + 6   VERY GOOD
+	# init 55, txt_color + 35, init color += 1 FIRE RED
+	#init 56,  txt_color + 35, init_color += 1 SUPER PURPLE RED
+	
 	# ~ banner = [W,I,N,J,I,T,S,U]
 	# ~ banner = [S,A,U,R,O,N]
 	banner = [F,I,R,A,G,A]
 	final = []
 	print('\r')
-	# ~ init_color = 43
-	init_color = 3
+	init_color = 26
+	# ~ init_color = 3
 	txt_color = init_color
 	cl = 0
-
+	
+	
 	for charset in range(0, 3):
 		for pos in range(0, len(banner)):
 			for i in range(0, len(banner[pos][charset])):
@@ -90,8 +142,8 @@ def print_banner():
 			cl = 0
 
 			txt_color = init_color
-		init_color += 30
-			# ~ init_color += 31
+		# ~ init_color += 30
+		init_color += 5
 
 		if charset < 2: final.append('\n   ')
 
@@ -446,10 +498,10 @@ def main():
 			try:
 
 				print(f'[{INFO}] Pulling changes from the master branch...')
-				u = check_output(f'cd {cwd}&&git pull https://github.com/t3l3machus/winjitsu main', shell=True).decode('utf-8')
+				u = check_output(f'cd {cwd}&&git pull https://github.com/t3l3machus/firaga main', shell=True).decode('utf-8')
 
 				if re.search('Updating', u):
-					print(f'[{INFO}] Update completed! Please, restart winjitsu.')
+					print(f'[{INFO}] Update completed! Please, restart firaga.')
 					updated = True
 
 				elif re.search('Already up to date', u):
@@ -458,10 +510,10 @@ def main():
 
 				else:
 					print(f'[{FAILED}] Something went wrong. Are you running winjitsu from your local git repository?')
-					print(f'[{DEBUG}] Consider running "git pull https://github.com/t3l3machus/winjitsu main" inside the project\'s directory.')
+					print(f'[{DEBUG}] Consider running "git pull https://github.com/t3l3machus/firaga main" inside the project\'s directory.')
 
 			except:
-				print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/t3l3machus/winjitsu main" inside the project\'s directory.')
+				print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/t3l3machus/firaga main" inside the project\'s directory.')
 
 			if updated:
 				sys.exit(0)
@@ -470,9 +522,9 @@ def main():
 		
 		''' Init Firaga's Core '''
 		core = Core_server()
-		core_server = Thread(target = core.initiate, args = ())
-		core_server.daemon = True
-		core_server.start()
+		core_server = Thread(target = core.initiate, args = (), daemon = True).start()
+		# ~ core_server.daemon = True
+		# ~ core_server.start()
 		
 		initiate_hoax_server()
 		payload_engine = Payload_generator()
@@ -591,7 +643,7 @@ def main():
 					
 					if cmd_list_len == 3:
 						
-						Thread(target = core.connect_with_sibling_server, args = (cmd_list[1], cmd_list[2]), daemon = True).start()
+						core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
 						Main_prompt.main_prompt_ready = False
 								
 					else:
@@ -655,6 +707,7 @@ def main():
 							session_owner_id = sessions_manager.return_session_owner_id(session_id)
 							
 							if session_owner_id == core.return_server_uniq_id():
+								padding = ";pwd" if Hoaxshell.active_shell else ''
 								Hoaxshell.command_pool[session_id].append(command + ";pwd")
 							
 							else:
@@ -667,7 +720,44 @@ def main():
 					else:
 						print('Missing arguments.')
 						
-				
+
+
+				elif cmd == 'shell':
+					
+					if cmd_list_len == 2:
+						
+						if len(Sessions_manager.active_sessions.keys()):
+							
+							Main_prompt.main_prompt_ready = False							
+							session_id = cmd_list[1]
+							os_type = sessions_manager.active_sessions[session_id]['OS Type']
+							Hoaxshell.activate_shell_session(session_id, os_type)
+							
+							# ~ command = cmd_list[1]
+							# ~ if command == "pwd": 
+								# ~ command = "split-path $pwd'\\0x00'"
+							
+							# ~ # Check if session id has alias
+							# ~ session_id = sessions_manager.alias_to_session_id(session_id)
+							
+							# ~ # Check who is the owner of the shell session
+							# ~ session_owner_id = sessions_manager.return_session_owner_id(session_id)
+							
+							# ~ if session_owner_id == core.return_server_uniq_id():
+								# ~ padding = ";pwd" if Hoaxshell.active_shell else ''
+								# ~ Hoaxshell.command_pool[session_id].append(command + ";pwd")
+							
+							# ~ else:
+								# ~ command = command + ";pwd" + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+								# ~ core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
+
+						else:
+							print(f'\r[{INFO}] No active session.')		
+
+					else:
+						print('Invalid arguments.')
+
+			
 
 				elif cmd == 'alias':
 					
