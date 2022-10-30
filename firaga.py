@@ -61,17 +61,6 @@ def print_banner():
 	# ~ N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]	
 
 
-    # ~ ,.     (   .        )        .      "
-   # ~ ("       )  )'       ,'        )  . (`     '`
- # ~ .; )  '   (( (" )      ;(,     ((  (  ;)  "  )"
- # ~ _"., ,.  _'_.,)_(   ..,( .      )_  _' )_') (. _..( '..jb
-
-
-	# ~ F1 = ['    ', ',.', '   (', '   .  ']
-	# ~ F2 = ['   ("', '     )', '  )\'', '     ,' ]
-	# ~ F3 = [' .;', ' ) ', ' \'', ' ((', ' ("', ' ) ', '   ;(', ',']
-	# ~ F4 = [' _"', '.,', ',.', '_\'', '_.', ',)', '_( ', '..', ',(', ' .']
-
 	# ~ F1 = [['    ,.   '], ['   ("     '], [' .; )  \' '], [' _"., ,.']]
 	# ~ F2 = [['(   .     '], [')  )\'    '], ['(( (" )   '], ['_\'_.,)_(']]
 	# ~ F3 = [[') '], [',\''], [';(,'], ['..,( .']]
@@ -160,18 +149,90 @@ def print_shadow(msg):
 	print(f'{GRAY}{msg}{END}')
 
 
-def promptHelpMsg():
-	print(
-	'''
-	\r  Command                    Description
-	\r  -------                    -----------
-	\r  help                       Print this message.
-	\r  payload                    Print payload (base64).
-	\r  rawpayload                 Print payload (raw).
-	\r  clear                      Clear screen.
-	\r  exit/quit/q                Close session and exit.
-	''')
+class PrompHelp:
+	
+	detailed = {
+		'connect' : f''' 			
+		\r  Connect with another machine running firaga (sibling server). Once connected, you will be able 
+		\r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
+			
+		\r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
+		''',
+		'generate' : f''' 			
+		\r  Generate reverse shell payload. 
+			
+		\r  For Windows:
+		\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ obfuscate=true ]{END}
 
+		\r  For Linux:
+		\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE>{END}
+		''',
+		'exec' : f''' 			
+		\r  Execute command or file against an active shell session. 
+			
+		\r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
+		
+		\r  *Command(s) should be quoted.
+		''',
+		'shell' : f''' 			
+		\r  Enable an interactive pseudo-shell for a session. Press Ctrl+C to disable.
+			
+		\r  {ORANGE}shell <SESSION ID or ALIAS>{END}
+		''',
+		'alias' : f'''
+		\r  Create an alias to use instead of session ID.
+			
+		\r  {ORANGE}alias <ALIAS> <SESSION ID>{END}
+		''',
+		'kill' : f'''
+		\r  Terminate a self-owned shell session.
+			
+		\r  {ORANGE}kill <SESSION ID or ALIAS>{END}
+		''',
+		'host' : f'''
+		\r  A utility to web transfer files conveniently:
+		\r  Hosts a local directory and prints the contents of it in a tree-like structure.
+		\r  Also, it translates every file path to its corresponding URL so you can quickly 
+		\r  copy and pass it to web clients.
+		\r  {BOLD}Note{END}: Certain non-executable file extensions (e.g., txt, docx, zip) are auto-ignored 
+		\r  so that the stdout is reduced. You can config that behaviour by editing firaga/Core/host.py
+
+		\r  {ORANGE}host <PATH TO LOCAL DIR> <PORT>{END}
+		'''
+	}
+	
+	
+	@staticmethod
+	def print_main_help_msg():
+				
+		print(
+		f'''
+		\r  Command          Description
+		\r  -------          -----------
+		\r  help             Print this message.
+		\r  connect  [+]     Connect with sibling server.
+		\r  generate [+]     Generates reverse shell payload.
+		\r  siblings         Print sibling servers data table.
+		\r  sessions         Print established shell sessions data table.
+		\r  exec     [+]     Execute command/file against session.
+		\r  shell    [+]     Enable interactive hoaxshell for session.
+		\r  alias    [+]     Set an alias for a shell session.
+		\r  kill     [+]     Terminate an established shell session.
+		\r  host     [+]     Web host a local directory.
+		\r  id               Print server's unique ID (self).
+		\r  clear            Clear screen.
+		\r  exit/quit/q      End sessions and exit.
+		
+        \r  Commands with [+] require additional arguments.
+        \r  For details use: {ORANGE}help <command>{END}
+		''')
+			
+
+	@staticmethod
+	def print_detailed(cmd):			
+		print(PrompHelp.detailed[cmd]) if cmd in PrompHelp.detailed.keys() else print(f'No details for command "{cmd}".')
+
+					
 
 def alias_sanitizer(word, _min = 2, _max = 26):
 	
@@ -181,8 +242,7 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 	
 		valid = ascii_uppercase + ascii_lowercase + '-_' + digits
 		
-		for char in word:
-			
+		for char in word:		
 			if char not in valid:
 				return [f'Alias includes illegal character: "{char}".']
 		
@@ -190,226 +250,9 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 				
 	else:
 		return ['Alias length must be between 2 to 26 characters.']
-# ------------------ Settings ------------------ #
-
+		
+		
 quiet = True if args.quiet else False
-
-
-
-
-# ~ def generatePayload(path):
-	# ~ source = open(path, 'r') 			
-	# ~ payload = source.read().strip().replace("\n"," ")
-	# ~ source.close()
-	# ~ payload = re.sub(' +', ' ', payload)
-	# ~ print_green(payload)
-	# ~ copy2cb(payload)
-	# ~ print('Copied to clipboard!')
-	# ~ #encodePayload(payload) if not args.raw_payload else print(f'{PLOAD}{payload}{END}')
-	
-# ~ def generate_find_cmd()
-# ~ r = 
-# ~ find_template = 'gci -Path "*PATH*"  -Recurse 2> $null | where {$_.Name -like "*WORD*"}'
-
-# ------------------ Classes ------------------ #
-# ~ class Core:
-	
-	# ~ def __init__(self):
-		
-		# ~ # Check if dependencies are met
-		# ~ #smbserver_check = True if run('smbserver.py -h', shell=True, stdout=DEVNULL).returncode == 0 else False
-		
-		# ~ self.settings = {
-		
-			# ~ 'SMB Server' : {
-				# ~ 'DRIVE_NAME' : 'winjitsu',
-				# ~ 'LOCAL_SHARE' : os.path.dirname(os.path.abspath(__file__)),
-				# ~ 'USERNAME' : 'winjitsu',
-				# ~ 'PASSWORD' : 'password',
-				# ~ 'LHOST' : False,
-				# ~ #'AVAILABLE' : smbserver_check,
-				# ~ 'RUNNING' : False
-			# ~ }
-		
-		# ~ }
-
-
-
-	# ~ def start_smb_server(self):
-		
-		# ~ if self.settings["SMB Server"]["AVAILABLE"] == True:
-			
-			# ~ try:
-				# ~ #cmd = 'gnome-terminal -- bash -c ' + f'\'smbserver.py -smb2support {self.settings["SMB Server"]["DRIVE_NAME"]} {self.settings["SMB Server"]["LOCAL_SHARE"]}\''
-				# ~ cmd = f'smbserver.py -smb2support {self.settings["SMB Server"]["DRIVE_NAME"]} {self.settings["SMB Server"]["LOCAL_SHARE"]}'
-				# ~ smb_server = threading.Thread(name='smb_server', target=check_output, args=(cmd, shell = True)).daemon = True
-				# ~ smb_server.start()
-				
-				# ~ current_module = import_module(module_path.replace('/', '.') , package=None)
-				
-				
-			# ~ except:
-				# ~ print('Failed to initialize smb server.')
-		
-		# ~ else:
-			# ~ print('Impacket\'s smbserver.py module does not appear to be installed.')
-
-
-
-	# ~ def print_core_settings(self):
-		
-		# ~ settings = self.settings
-		
-		# ~ print('\nSetting  Current Value  Description\n------  -------------  -----------')
-		
-		# ~ for group in settings.keys():
-			
-			# ~ print(f'\n{UNDERLINE}{group}{END}:')
-			
-			# ~ for setting in settings[group].keys():
-				# ~ name = setting
-				# ~ val = settings[group][setting]
-				
-				# ~ if isinstance(val, bool):
-					# ~ val = 'True' if val else 'False'
-					
-				# ~ desc = ''
-				# ~ print(f'{name + " "*(abs(len(name) - 6))}  {val + " "*(abs(len(val) - 13))}  {desc + " "*(abs(len(desc) - 11))}')
-			
-		# ~ print('\n')
-
-
-
-
-class WJ_module:
-	
-	def __init__(self, module_path):
-		
-		template = self.template = import_module('Resources.' + module_path.replace('/', '.'), package=None)
-		self.options = template.options
-		self.payload = template.payload
-		self.meta = template.meta
-		self.supported_commands = template.supported_commands
-		#import templates.enum_registry as template
-
-
-	def get_longest_str(self, l):
-		
-		_max = 0
-		
-		for item in l:
-			if len(item) > _max:
-				_max = len(item)
-
-		return _max
-
-
-
-	def print_module_options(self):
-		
-		options = self.options
-			
-		# Print table headers
-		headers = ['Option', 'Current Value', 'Required', 'Description']	
-		values = []
-		header_line = ""
-		underline = ""
-		num_of_rows = len(options.keys())
-		rows = ['' for r in range(0, num_of_rows)]
-		
-		# Make a list of all values
-		values = [list(options.keys()),[],[],[]]
-		
-		for opt in options.keys():
-			val = options[opt]["value"] if options[opt]["value"] is str else str(options[opt]["value"]).strip("[]")
-			req = 'True' if options[opt]["required"] else 'False'
-			desc = options[opt]["description"]
-			values[1].append(val)
-			values[2].append(req)
-			values[3].append(desc)
-			
-		# Adjust table based on values length 
-		i = 0
-		for h in headers:
-			max_key_len = self.get_longest_str(values[i])
-			dif = (max_key_len - len(h)) + 2
-			padding = (' ' * dif) if dif > 0 else '  '
-			header_line += f"{h}{padding}"
-			underline += f"{len(h)*'-'}{padding}"
-			i += 1
-		
-		i = 0
-		h = 0
-		for r in range(0, num_of_rows):
-			for l in values:
-				max_key_len = self.get_longest_str(l)
-				if max_key_len >= len(headers[h]):
-					dif = (max_key_len - len(l[r])) + 2
-				else: 
-					dif = abs((len(headers[h]) - len(l[r]))) + 2
-				padding = (' ' * dif) if dif > 0 else '  '
-				rows[i] += f"{l[r]}{padding}"
-				h += 1
-			h = 0
-			i += 1
-		
-		# Print headers and rows
-		print('\n' + header_line + '\n' + underline)
-		
-		for r in rows:
-			print(r)
-
-		print('\n')
-
-
-
-	def set_module_option(self, opt, val):
-		
-		try:
-			opt = opt.upper()
-			
-			if opt in self.options.keys():
-				self.options[opt]["value"] = val
-				print(f'{opt} => {val}')
-				
-		except:
-			print('Failed to set value.')
-
-
-
-	def copyPayload(self):
-		
-		try:
-			payload = self.payload.strip().replace("\n"," ")
-			payload = payload.replace("\t"," ")
-			payload = re.sub(' +', ' ', payload)
-			
-			for opt in self.options.keys():
-				
-				value = self.options[opt]['value']
-				
-				if isinstance(value, list):
-					value = str(value).strip("[]")
-					
-				payload = payload.replace(f"*{opt}*", value)
-			
-			print_shadow(payload)
-			copy2cb(payload)
-			print(f'{ORANGE}Copied to clipboard!{END}')
-
-		except:
-			print('Failed to generate payload.')
-
-
-
-	def execute(self):
-		
-		# ~ try:
-		self.template.execute()
-		
-		# ~ except:
-			# ~ print('Module execution failed.')
-
 
 
 # Tab completer          
@@ -574,65 +417,20 @@ def main():
 				cmd = cmd_list[0].lower() if cmd_list else ''
 
 
-
 				if cmd == 'help':
-					#promptHelpMsg()
-					pass
-				
-				
-				
-				elif cmd == 'use' and cmd_list[1]:	
 					
-					try:
-						current_module = WJ_module(cmd_list[1])		
-						active_module = True
-						_type = cmd_list[1].split('/')[0]
-						Main_prompt.prompt = f'{UNDERLINE}WinJitsu{END} {_type}({GREEN}{current_module.meta["title"]}{END}) > '
+					if cmd_list_len == 1:
+						PrompHelp.print_main_help_msg()
+										
+					elif cmd_list_len == 2:
+						PrompHelp.print_detailed(cmd_list[1])
 					
-					except SyntaxError:
-						print('Failed to load module. There seems to be a syntax error in the template.')
+					continue
 					
-					except IndentationError:
-						print('Failed to load module. There seems to be an indentation error in the template.')				
+				# ~ else:
+					# ~ print('Unrecognized or missing arguments.')
 					
-					except:
-						print('Failed to load module.')
-					
-					
-					
-				elif cmd == 'options':
-					current_module.print_module_options() if active_module else print('No active template.')
-
-
-
-				elif cmd == 'set' and cmd_list[1] and cmd_list[2]:
-					current_module.set_module_option(cmd_list[1], cmd_list[2]) if active_module else print('No active template.')
-
-
-
-				elif cmd in ['copy']: #'exec'
-					
-					if active_module:
-						
-						if cmd in current_module.supported_commands:
-							
-							if cmd == 'copy':
-								current_module.copyPayload()
-								
-							elif cmd in ['exec', 'run', 'execute']:
-								current_module.execute() 
-								
-					else:
-						print('No active module.')
-
-
-
-				# ----- Core Commands -----
-				
-				elif cmd == 'settings':
-					core.print_core_settings()
 		
-
 
 				elif cmd == 'id':
 					print(f'{BOLD}Server unique id{END}: {ORANGE}{core.return_server_uniq_id()}{END}')
@@ -696,9 +494,23 @@ def main():
 							Main_prompt.main_prompt_ready = False
 							command = cmd_list[1]
 							session_id = cmd_list[2]
+							src_is_file = False
 							
-							if command == "pwd": 
-								command = "split-path $pwd'\\0x00'"
+							if command[0] == os.path.sep:
+								
+								try:
+									f = open(command)
+									command = f.read()
+									f.close()
+									src_is_file = True
+									
+								except:
+									print('Failed to load file.')
+									Main_prompt.main_prompt_ready = True
+									continue
+							
+							# ~ if command == "pwd": 
+								# ~ command = "split-path $pwd'\\0x00'"
 							
 							# Check if session id has alias
 							session_id = sessions_manager.alias_to_session_id(session_id)
@@ -707,11 +519,14 @@ def main():
 							session_owner_id = sessions_manager.return_session_owner_id(session_id)
 							
 							if session_owner_id == core.return_server_uniq_id():
-								padding = ";pwd" if Hoaxshell.active_shell else ''
-								Hoaxshell.command_pool[session_id].append(command + ";pwd")
+								# ~ padding = ";pwd" if Hoaxshell.active_shell else ''
+								# ~ Hoaxshell.command_pool[session_id].append(command + ";pwd")
+								Hoaxshell.command_pool[session_id].append(command)
 							
 							else:
-								command = command + ";pwd" + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+								# ~ command = command + ";pwd" + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+								# ~ core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
+								command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
 								core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
 
 						else:
@@ -839,17 +654,6 @@ def main():
 						print('Unsupported arguments.')
 				
 
-
-
-				elif cmd == 'back':
-					
-					if active_module:
-						del current_module
-						Main_prompt.prompt = Main_prompt.original_prompt
-						active_module = False
-					
-					else:
-						print('No active module.')
 
 				elif cmd == '':
 					continue
