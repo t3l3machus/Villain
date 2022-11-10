@@ -5,10 +5,9 @@
 # This script is part of the firaga framework.
 
 
-import os, sys, argparse, re, threading, keyboard, rlcompleter
+import os, sys, argparse, re #rlcompleter
 from threading import Thread
-from importlib import import_module
-from subprocess import DEVNULL, STDOUT, check_call, check_output, run
+from subprocess import check_output
 from pyperclip import copy as copy2cb
 from time import sleep, time
 from Core.common import *
@@ -626,42 +625,47 @@ def main():
 									
 					if Sessions_manager.active_sessions.keys():
 						
-						Main_prompt.main_prompt_ready = False
-						command = cmd_list[1]
-						session_id = cmd_list[2]
-						src_is_file = False
-						
-						if command[0] == os.path.sep:
+						try:
+
+							Main_prompt.main_prompt_ready = False
+							command = cmd_list[1]
+							session_id = cmd_list[2]
+							src_is_file = False
 							
-							try:
-								f = open(command)
-								command = f.read()
-								f.close()
-								src_is_file = True
+							if command[0] == os.path.sep:
 								
-							except:
-								print('Failed to load file.')
+								try:
+									f = open(command)
+									command = f.read()
+									f.close()
+									src_is_file = True
+									
+								except:
+									print('Failed to load file.')
+									Main_prompt.main_prompt_ready = True
+									continue
+							
+							if command.lower() == 'exit':
+								print('The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
 								Main_prompt.main_prompt_ready = True
 								continue
-						
-						if command.lower() == 'exit':
-							print('The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
-							Main_prompt.main_prompt_ready = True
-							continue
-						
-						# Check if session id has alias
-						session_id = sessions_manager.alias_to_session_id(session_id)
+							
+							# Check if session id has alias
+							session_id = sessions_manager.alias_to_session_id(session_id)
 
-						# Check who is the owner of the shell session
-						session_owner_id = sessions_manager.return_session_owner_id(session_id)
-						
-						
-						if session_owner_id == core.return_server_uniq_id():
-							Hoaxshell.command_pool[session_id].append(command)
-						
-						else:
-							command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
-							core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
+							# Check who is the owner of the shell session
+							session_owner_id = sessions_manager.return_session_owner_id(session_id)
+							
+							if session_owner_id == core.return_server_uniq_id():
+								Hoaxshell.command_pool[session_id].append(command)
+							
+							else:
+								command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+								core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
+							
+							
+						except KeyboardInterrupt:
+							continue
 
 					else:
 						print(f'\r[{INFO}] No active session.')		
