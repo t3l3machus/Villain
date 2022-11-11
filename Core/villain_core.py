@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 #
-# Author: Panagiotis Chartas (t3l3machus) | https://github.com/t3l3machus
+# Author: Panagiotis Chartas (t3l3machus) 
 #
-# This script is part of the Villain framework.
+# This script is part of the Villain framework: 
+# https://github.com/t3l3machus/Villain
 
 
 import ssl, sys, base64, re, os, socket, struct
