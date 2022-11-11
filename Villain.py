@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 #
 # Author: Panagiotis Chartas (t3l3machus) 
-# Source: https://github.com/t3l3machus/firaga
-# This script is part of the firaga framework.
+#
+# This script is part of the Villain framework: 
+# https://github.com/t3l3machus/Villain
 
 
-import os, sys, argparse, re #rlcompleter
+import os, sys, argparse, re
 from threading import Thread
 from subprocess import check_output
 from pyperclip import copy as copy2cb
@@ -37,7 +38,7 @@ if Hoaxshell_settings.ssl_support:
 	
 Core_server_settings.bind_port = args.port if args.port else Core_server_settings.bind_port
 
-from Core.firaga_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
+from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
 
 
 # -------------- Functions & Classes -------------- #
@@ -46,14 +47,6 @@ def print_banner():
 	
 	print('\r')
 	padding = '  '
-
-	F = [[' ', '┌','─','┬'], [' ', '├','┤',' '], [' ', '└',' ',' ']]
-	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
-	R = [[' ', '┬','─','┐'], [' ', '├','┬','┘'], [' ', '┴','└','─']]
-	A = [[' ', '┌','─','┐'], [' ', '├','─','┤'], [' ', '┴',' ','┴']]	
-	G = [[' ', '┌','─','┐'], [' ', '│',' ','┬'], [' ', '└','─','┘']]
-	A = [[' ', '┌','─','┐'], [' ', '├','─','┤'], [' ', '┴',' ','┴']]
-
 	
 	V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└','┐','┌', '┘'], [' ', ' ','└','┘', ' ']]
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
@@ -63,7 +56,6 @@ def print_banner():
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
 	N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]	
 
-	# ~ banner = [F,I,R,A,G,A]
 	banner = [V,I,L,L2,A,I,N]
 	final = []	
 	init_color = 97 #89 #97
@@ -99,7 +91,7 @@ class PrompHelp:
 	
 		'connect' : {
 			'details' : f''' 			
-			\r  Connect with another machine running firaga (sibling server). Once connected, you will be able 
+			\r  Connect with another machine running Villain (sibling server). Once connected, you will be able 
 			\r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
 				
 			\r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
@@ -107,25 +99,26 @@ class PrompHelp:
 			'least_args' : 2,
 			'max_args' : 2
 		},
-		
-		
+				
+				
 		'generate' : {
 			'details' : f''' 			
-			\r  Generate backdoor payload. If you start firaga over SSL the generated payload(s) 
+			\r  Generate backdoor payload. If you start Villain with SSL the generated payload(s) 
 			\r  will be adjusted accordingly. 
 				
 			\r  {BOLD}For Windows{END}:
-			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> domain=DOMAIN] [ obfuscate encode constraint_mode ]{END}
+			\r  {ORANGE}generate os=windows lhost=<IP or IFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]{END}
 
 			\r  Use exec_outfile to write & execute commands from a specified file on the victim (instead of using IEX):
-			\r  {ORANGE}generate os=windows lhost=eth0 exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1{END}"
+			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1{END}"
 
 			\r  {BOLD}For Linux{END}:
-			\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE>{END}
+			\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE> [ domain=<DOMAIN> ]{END}
 			''',
 			'least_args' : 2,
 			'max_args' : 7
 		},			
+
 
 		'exec' : {
 			'details' : f''' 			
@@ -175,7 +168,7 @@ class PrompHelp:
 		
 		'kill' : {
 			'details' : f'''
-			\r  Terminate a self-owned shell session.
+			\r  Terminate a self-owned backdoor session.
 				
 			\r  {ORANGE}kill <SESSION ID or ALIAS>{END}
 			''',
@@ -194,7 +187,7 @@ class PrompHelp:
 
 		'siblings' : {
 			'details' : f'''
-			\r  Siblings are basically other instances of firaga that you've connected with.
+			\r  Siblings are basically other instances of Villain that you've connected with.
 			''',
 			'least_args' : 0,
 			'max_args' : 0
@@ -248,11 +241,11 @@ class PrompHelp:
 		\r  siblings         Print sibling servers data table.
 		\r  sessions         Print established backdoor sessions data table.
 		\r  exec     [+]     Execute command/file against session.
-		\r  shell    [+]     Enable interactive hoaxshell for session.
+		\r  shell    [+]     Enable interactive hoaxshell for backdoor session.
 		\r  alias    [+]     Set an alias for a shell session.
 		\r  reset    [+]     Reset alias back to session ID.
-		\r  kill     [+]     Terminate an established shell session.
-		\r  id               Print server's unique ID (self).
+		\r  kill     [+]     Terminate an established backdoor session.
+		\r  id               Print server's unique ID (Self).
 		\r  clear            Clear screen.
 		\r  exit             Kill all sessions and quit.
 		
@@ -314,7 +307,7 @@ class Completer(object):
 	def __init__(self):
 		
 		self.tab_counter = 0		
-		self.main_prompt_commands = PrompHelp.commands.keys()	
+		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
 		self.generate_arguments = ['os', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
 		'trusted_domain', 'exec_outfile', 'execpoutsa']
 	
@@ -492,10 +485,10 @@ def main():
 		try:
 
 			print(f'[{INFO}] Pulling changes from the master branch...')
-			u = check_output(f'cd {cwd}&&git pull https://github.com/t3l3machus/firaga main', shell=True).decode('utf-8')
+			u = check_output(f'cd {cwd}&&git pull https://github.com/t3l3machus/Villain main', shell=True).decode('utf-8')
 
 			if re.search('Updating', u):
-				print(f'[{INFO}] Update completed! Please, restart firaga.')
+				print(f'[{INFO}] Update completed! Please, restart Villain.')
 				updated = True
 
 			elif re.search('Already up to date', u):
@@ -503,11 +496,11 @@ def main():
 				pass
 
 			else:
-				print(f'[{FAILED}] Something went wrong. Are you running firaga from your local git repository?')
-				print(f'[{DEBUG}] Consider running "git pull https://github.com/t3l3machus/firaga main" inside the project\'s directory.')
+				print(f'[{FAILED}] Something went wrong. Are you running Villain from your local git repository?')
+				print(f'[{DEBUG}] Consider running "git pull https://github.com/t3l3machus/Villain main" inside the project\'s directory.')
 
 		except:
-			print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/t3l3machus/firaga main" inside the project\'s directory.')
+			print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/t3l3machus/Villain main" inside the project\'s directory.')
 
 		if updated:
 			sys.exit(0)
