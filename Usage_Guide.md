@@ -18,8 +18,8 @@ The backdoors are designed to start as new background processes. Currently suppo
 #### Available arguments for the "generate" prompt command:
 | Argument          | Required | Supported OS | Requires Input Val | Description |
 |:-----------------:|:-------:|:-------------:|:------------------:|------------------------|
-| os                | True    | All           | Yes                | The OS type of the backdoor. |
-| lhost             | True    | N/A           | Yes                | Your local IP or Interface. |
+| os                | True    | All           | Yes                | The OS type to generate backdoor for. |
+| lhost             | True    | N/A           | Yes                | Your local IP or Interface to connect back. |
 | domain            | Depends | N/A           | Yes                | If you have provided trusted cert and priv_key files to start Villain with SSL, you can provide domain instead of lhost. |
 | obfuscate         | False   | Windows       | No                 | Auto-obfuscate the generated payload. This aims to assist you, not always do the job for you. |
 | encode            | False   | Windows       | No                 | Base64 encode the generated payload. |
