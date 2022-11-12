@@ -8,7 +8,7 @@
 Use the "generate" prompt command to generate backdoor payloads for Windows or Linux machines. 
 
 ```
-generate os=windows lhost=<IP or IFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]
+generate os=<OS Type> lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]
 ```
 
 The backdoors are designed to start as new background processes. Currently supported types of backdoors:  
