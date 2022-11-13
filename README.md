@@ -32,7 +32,7 @@ For more information about using Villain check out the [Usage Guide](https://git
 
 ## Important Notes
 1. Villain has a built-in auto-obfuscate payload function to assist users in bypassing AV solutions (for Windows payloads). As a result, payloads are undetected (for the time being).
-2. At the moment, Villain instances connected with each other (sibling servers) must be able to directly reach each other as well. I intend to add a network route mapping utility so that sibling servers can use one another as a proxy to achieve cross network communication between them.
+2. Villain instances connected with each other (sibling servers) must be able to directly reach each other as well. I intend to add a network route mapping utility so that sibling servers can use one another as a proxy to achieve cross network communication between them.
  
 
 ## Approach
