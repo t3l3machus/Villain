@@ -46,11 +46,7 @@ A few notes about the http(s) beacon-like reverse shell approach:
  - The generated payloads can run even by users with limited privileges.
 
 ## Contributions
-<p style="align: justify">
 Pull requests are generally welcome. Please, keep in mind: I am constantly working on new offsec tools as well as maintaining several existing ones. I rarely accept pull requests because I either have a plan for the course of a project or I evaluate that it would be hard to test and/or maintain the foreign code. It doesn't have to do with how good or bad is an idea, it's just too much work and also, I am kind of developing all these tools to learn myself.
 
 There are parts of this project that were removed before publishing because I considered them to be buggy or hard to maintain (at this early stage).
 If you have an idea for an addition that comes with a significant chunk of code, I suggest you first contact me to discuss if there's something similar already in the making, before making a PR. 
-</p>
-
-
