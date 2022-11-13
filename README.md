@@ -35,6 +35,9 @@ For more information about using Villain check out the [Usage Guide](https://git
  
 
 ## Approach
+A few notes about the http(s) beacon-like reverse shell approach:
+![image](https://user-images.githubusercontent.com/75489922/201542083-68280123-6ea0-4653-b129-3124ad9bb041.png)
+
 ### Limitations
  - A backdoor shell is going to hang if you execute a command that initiates an interactive session. For more information [read this](https://github.com/t3l3machus/hoaxshell#Limitations).
 ### Advantages
