@@ -20,14 +20,13 @@ class Core_server_settings:
 	
 	bind_address = '0.0.0.0'
 	bind_port = 65001	
-	# ~ CLIENT_BUFFER_SIZE = 20000
 	
 	# How long to sleep between echo requests to check if siblings are alive
 	ping_siblings_sleep_time = 4
 	
 	# Seconds to wait for cmd output when executing commands against shell sessions of sibling servers
 	timeout_for_command_output = 30
-
+	
 
 
 class Hoaxshell_settings:
