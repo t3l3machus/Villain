@@ -6,11 +6,21 @@
 # https://github.com/t3l3machus/Villain
 
 
-import sys, readline, string, base64, os
+import sys, string, base64, os, re
+from threading import Thread
+from platform import system as get_system_type
 from Crypto.Cipher import AES
-from uuid import UUID
+from uuid import UUID, uuid4
 from ipaddress import ip_address
 from copy import deepcopy
+from time import sleep, time
+from pyperclip import copy as copy2cb
+
+if get_system_type() == 'Linux':
+	import gnureadline as global_readline
+else:
+	import readline as global_readline
+
 
 ''' Colors '''
 MAIN = '\001\033[38;5;85m\002'
@@ -18,7 +28,6 @@ GREEN = '\001\033[38;5;82m\002'
 GRAY = PLOAD = '\001\033[38;5;246m\002'
 NAME = '\001\033[38;5;228m\002'
 RED = '\001\033[1;31m\002'
-# ~ PLOAD = '\001\033[38;5;119m\002'
 FAIL = '\001\033[1;91m\002'
 ORANGE = '\033[0;38;5;214m\002'
 LRED = '\033[0;38;5;202m\002'
@@ -38,7 +47,7 @@ DEBUG = f'{ORANGE}Debug{END}'
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 
-''' Command Prompt Settings'''
+''' Command Prompt Settings '''
 
 class Main_prompt:
 	
@@ -51,7 +60,7 @@ class Main_prompt:
 	def rst_prompt(prompt = prompt, prefix = '\r'):
 		
 		Main_prompt.main_prompt_ready = True
-		sys.stdout.write(prefix + Main_prompt.prompt + readline.get_line_buffer())
+		sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
 
 
 	@staticmethod
