@@ -5,7 +5,7 @@
 ## Table of contents
 1. [Generate Backdoor Payloads](Generate-Backdoor-Payloads)
 2. [Connect With Sibling Server](Connect-With-Sibling-Server)
-
+3. [The exec Command](The-exec-Command)
 
 ## Generate Backdoor Payloads
 Use the "generate" prompt command to generate backdoor payloads for Windows or Linux machines. 
@@ -46,8 +46,15 @@ connect <IP> <CORE SERVER PORT>
 ```
 By default, the Core server port is `65001` (you can change that with `-p` when starting Villain).
 
-## The exec command
-Use the `exec `prompt command to execute a **quoted command** or **script from your file system** against a session. 
+## The shell Command
+Use the `shell` prompt command to start an interactive HoaxShell against a session. 
+```
+shell <SESSION ID or ALIAS>
+```
+Press Ctrl + C or type `exit` to return to the main Villain prompt.
+
+## The exec Command
+Use the `exec` prompt command to execute a **quoted command** or **script from your file system** against a session. 
 ```
 exec </path/to/local/file> <SESSION ID or ALIAS>
 exec 'net user;Get-Date' <SESSION ID or ALIAS>
