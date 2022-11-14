@@ -5,7 +5,8 @@
 ## Table of contents
 1. [Generate Backdoor Payloads](Generate-Backdoor-Payloads)
 2. [Connect With Sibling Server](Connect-With-Sibling-Server)
-3. [The exec Command](The-exec-Command)
+3. [The shell Command](The-shell-Command)
+4. [The exec Command](The-exec-Command)
 
 ## Generate Backdoor Payloads
 Use the "generate" prompt command to generate backdoor payloads for Windows or Linux machines. 
