@@ -224,17 +224,22 @@ class Payload_generator:
 				'exec_outfile' : exec_outfile if exec_outfile else False
 			}
 			
-			payload = self.obfuscator.mask_payload(payload) if boolean_args['obfuscate'] else payload
-			payload = self.encodeUTF16(payload) if boolean_args['encode'] else payload
-			del boolean_args
-			
-			print(f'{PLOAD}{payload}{END}')
-			copy2cb(payload)
-			print(f'{ORANGE}Copied to clipboard!{END}')
-			
 		except:
 			print('Error parsing arguments. Check your input and try again.')
 			return
+			
+		payload = self.obfuscator.mask_payload(payload) if boolean_args['obfuscate'] else payload
+		payload = self.encodeUTF16(payload) if boolean_args['encode'] else payload
+		del boolean_args
+		
+		print(f'{PLOAD}{payload}{END}')
+		
+		try:	
+			copy2cb(payload)
+			print(f'{ORANGE}Copied to clipboard!{END}')
+		
+		except:
+			print(f'{RED}Copy to clipboard failed. You need to do it manually.{END}')
 
 
 
