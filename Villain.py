@@ -55,7 +55,7 @@ def print_banner():
 
 	banner = [V,I,L,L2,A,I,N]
 	final = []	
-	init_color = 97 #357 #95 #89 #97
+	init_color = 97
 	txt_color = init_color
 	cl = 0
 		
@@ -294,23 +294,6 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 	else:
 		return ['Alias length must be between 2 to 26 characters.']
 		
-
-
-# ~ def restore_prompt():
-
-	# ~ Threading_params.thread_limiter.acquire()
-	
-	# ~ timeout_start = time()
-
-	# ~ while time() < timeout_start + 15:	
-	
-		# ~ sleep(5)
-		
-	# ~ else:
-		# ~ Main_prompt.set_main_prompt_ready()
-		# ~ Threading_params.thread_limiter.release()
-		# ~ return
-
 	
 	
 # Tab auto-completer          
@@ -321,7 +304,7 @@ class Completer(object):
 		self.tab_counter = 0		
 		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
 		self.generate_arguments = ['os', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
-		'trusted_domain', 'exec_outfile']
+		'trusted_domain', 'exec_outfile', 'domain']
 	
 	
 	
