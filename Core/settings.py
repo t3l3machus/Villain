@@ -29,7 +29,7 @@ class Core_server_settings:
 	
 
 
-class Hoaxshell_settings:
+class Villain_settings:
 	
 	bind_address = '0.0.0.0'
 	bind_port = 8080

