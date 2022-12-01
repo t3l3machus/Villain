@@ -32,7 +32,9 @@ You should run as root:
 Villain.py [-h] [-p PORT] [-x HOAX_PORT] [-c CERTFILE] [-k KEYFILE] [-u] [-q]
 ```
 For more information about using Villain check out the [Usage Guide](https://github.com/t3l3machus/Villain/blob/main/Usage_Guide.md).
-
+```
+generate os=windows lhost=IP obfuscate
+```
 ## Important Notes
 1. Villain has a built-in auto-obfuscate payload function to assist users in bypassing AV solutions (for Windows payloads). As a result, payloads are undetected (for the time being).
 2. Each generated payload is going to work only once. An already used payload cannot be reused to establish a session.
