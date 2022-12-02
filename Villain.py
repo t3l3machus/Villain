@@ -9,7 +9,7 @@
 import argparse
 from subprocess import check_output
 from Core.common import *
-from Core.settings import Hoaxshell_settings, Core_server_settings
+from Core.settings import Villain_settings, Core_server_settings
 from string import ascii_uppercase, ascii_lowercase, digits
 
 
@@ -17,25 +17,25 @@ from string import ascii_uppercase, ascii_lowercase, digits
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-p", "--port", action="store", help = "Core server port (default: 65001).", type = int)
-parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
-parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
-parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
+parser.add_argument("-x", "--hoax-port", action="store", help = "Villain server port (default: 8080 via http, 443 via https).", type = int)
+parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for Villain https server).")
+parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for Villain https server).")
 parser.add_argument("-u", "--update", action="store_true", help = "Pull the latest version from the original repo.")
 parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
 
 args = parser.parse_args()
 
-Hoaxshell_settings.certfile = args.certfile
-Hoaxshell_settings.keyfile = args.keyfile
-Hoaxshell_settings.ssl_support = True if (args.certfile and args.keyfile) else False
-Hoaxshell_settings.bind_port = args.hoax_port if args.hoax_port else Hoaxshell_settings.bind_port
+Villain_settings.certfile = args.certfile
+Villain_settings.keyfile = args.keyfile
+Villain_settings.ssl_support = True if (args.certfile and args.keyfile) else False
+Villain_settings.bind_port = args.hoax_port if args.hoax_port else Villain_settings.bind_port
 
-if Hoaxshell_settings.ssl_support:
-	Hoaxshell_settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_settings.bind_port_ssl
+if Villain_settings.ssl_support:
+	Villain_settings.bind_port_ssl = args.hoax_port if args.hoax_port else Villain_settings.bind_port_ssl
 	
 Core_server_settings.bind_port = args.port if args.port else Core_server_settings.bind_port
 
-from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
+from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_manager, Villain, Core_server
 
 
 # -------------- Functions & Classes -------------- #
@@ -236,7 +236,7 @@ class PrompHelp:
 		\r  siblings         Print sibling servers data table.
 		\r  sessions         Print established backdoor sessions data table.
 		\r  exec     [+]     Execute command/file against session.
-		\r  shell    [+]     Enable interactive hoaxshell for backdoor session.
+		\r  shell    [+]     Enable interactive Villain for backdoor session.
 		\r  alias    [+]     Set an alias for a shell session.
 		\r  reset    [+]     Reset alias back to session ID.
 		\r  kill     [+]     Terminate an established backdoor session.
@@ -525,7 +525,7 @@ def main():
 	initiate_hoax_server()
 	payload_engine = Payload_generator()
 	sessions_manager = Sessions_manager()
-	Hoaxshell.server_unique_id = core.return_server_uniq_id()
+	Villain.server_unique_id = core.return_server_uniq_id()
 		
 	''' Start tab autoComplete '''
 	comp = Completer()
@@ -656,7 +656,7 @@ def main():
 							session_owner_id = sessions_manager.return_session_owner_id(session_id)
 							
 							if session_owner_id == core.return_server_uniq_id():
-								Hoaxshell.command_pool[session_id].append(command)
+								Villain.command_pool[session_id].append(command)
 							
 							else:
 								command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
@@ -684,7 +684,7 @@ def main():
 							continue
 																		
 						os_type = sessions_manager.active_sessions[session_id]['OS Type']
-						Hoaxshell.activate_shell_session(session_id, os_type)
+						Villain.activate_shell_session(session_id, os_type)
 						
 					else:
 						print(f'\r[{INFO}] No active session.')		
@@ -798,7 +798,7 @@ def main():
 			if verified:				
 				print('\r')
 				Core_server.announce_server_shutdown()			
-				Hoaxshell.terminate()
+				Villain.terminate()
 				core.stop_listener()
 				sys.exit(0)
 
