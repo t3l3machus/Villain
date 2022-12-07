@@ -17,9 +17,9 @@ from time import sleep, time
 from pyperclip import copy as copy2cb
 
 if get_system_type() == 'Linux':
-	import gnureadline as global_readline
+    import gnureadline as global_readline
 else:
-	import readline as global_readline
+    import readline as global_readline
 
 
 ''' Colors '''
@@ -50,117 +50,117 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 ''' Command Prompt Settings '''
 
 class Main_prompt:
-	
-	original_prompt = prompt = f"{UNDERLINE}Villain{END} > "
-	main_prompt_ready = True
-	SPACE = '#>SPACE$<#'
 
-	
-	@staticmethod
-	def rst_prompt(prompt = prompt, prefix = '\r'):
-		
-		Main_prompt.main_prompt_ready = True
-		sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
+    original_prompt = prompt = f"{UNDERLINE}Villain{END} > "
+    main_prompt_ready = True
+    SPACE = '#>SPACE$<#'
 
 
-	@staticmethod
-	def set_main_prompt_ready():
-		Main_prompt.main_prompt_ready = True
+    @staticmethod
+    def rst_prompt(prompt = prompt, prefix = '\r'):
+
+        Main_prompt.main_prompt_ready = True
+        sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
+
+
+    @staticmethod
+    def set_main_prompt_ready():
+        Main_prompt.main_prompt_ready = True
 
 
 
 ''' General Functions '''
 
 def exit_with_msg(msg):
-	print(f"[{DEBUG}] {msg}")
-	sys.exit(0)
+    print(f"[{DEBUG}] {msg}")
+    sys.exit(0)
 
 
 
-def print_fail_and_return_to_prompt(msg):			
-	print(f'\r[{FAILED}] {msg}')
-	Main_prompt.rst_prompt()
+def print_fail_and_return_to_prompt(msg):
+    print(f'\r[{FAILED}] {msg}')
+    Main_prompt.rst_prompt()
 
 
 
 def print_shadow(msg):
-	print(f'{GRAY}{msg}{END}')
-	
+    print(f'{GRAY}{msg}{END}')
+
 
 
 def chill():
-	pass
+    pass
 
 
 
 def is_valid_uuid(value):
 
-	 try:
-		  UUID(str(value))
-		  return True
+    try:
+        UUID(str(value))
+        return True
 
-	 except:
-		  return False
+    except:
+        return False
 
 
 
 def is_valid_ip(ip_addr):
-	
-	try:
-		ip_object = ip_address(ip_addr)
-		return True
-		
-	except ValueError:
-		return False
+
+    try:
+        ip_object = ip_address(ip_addr)
+        return True
+
+    except ValueError:
+        return False
 
 
 
 def print_table(rows, columns):
 
-	columns_list = [columns]
-	
-	for item in rows: 
-		columns_list.append([str(item[col] if item[col] is not None else '') for col in columns])
-		
-	col_size = [max(map(len, col)) for col in zip(*columns_list)]
-	format_str = '  '.join(["{{:<{}}}".format(i) for i in col_size])
-	columns_list.insert(1, ['-' * i for i in col_size])
-		
-	for item in columns_list:
-		item[-1] = f'{GREEN}{item[-1]}{END}' if item[-1] == 'Active' else item[-1]
-		item[-1] = f'{ORANGE}{item[-1]}{END}' if (item[-1] in ['Unreachable', 'Undefined']) else item[-1]
-		print(format_str.format(*item))
-			
+    columns_list = [columns]
+
+    for item in rows:
+        columns_list.append([str(item[col] if item[col] is not None else '') for col in columns])
+
+    col_size = [max(map(len, col)) for col in zip(*columns_list)]
+    format_str = '  '.join(["{{:<{}}}".format(i) for i in col_size])
+    columns_list.insert(1, ['-' * i for i in col_size])
+
+    for item in columns_list:
+        item[-1] = f'{GREEN}{item[-1]}{END}' if item[-1] == 'Active' else item[-1]
+        item[-1] = f'{ORANGE}{item[-1]}{END}' if (item[-1] in ['Unreachable', 'Undefined']) else item[-1]
+        print(format_str.format(*item))
+
 
 
 def clone_dict_keys(_dict):
-	
-	clone = deepcopy(_dict)
-	clone_keys = clone.keys()
-	return clone_keys
+
+    clone = deepcopy(_dict)
+    clone_keys = clone.keys()
+    return clone_keys
 
 
 
 ''' Encryption '''
 def encrypt_msg(aes_key, msg, iv):
-	enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
-	
-	if type(msg) == bytes:
-		cipher_text = enc_s.encrypt(msg)
-	else:
-		cipher_text = enc_s.encrypt(msg.encode('utf-8'))
-		
-	encoded_cipher_text = base64.b64encode(cipher_text)
-	return encoded_cipher_text
+    enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
+
+    if type(msg) == bytes:
+        cipher_text = enc_s.encrypt(msg)
+    else:
+        cipher_text = enc_s.encrypt(msg.encode('utf-8'))
+
+    encoded_cipher_text = base64.b64encode(cipher_text)
+    return encoded_cipher_text
 
 
 
 def decrypt_msg(aes_key, cipher, iv):
-	
-	try:
-		decryption_suite = AES.new(aes_key, AES.MODE_CFB, iv)
-		plain_text = decryption_suite.decrypt(base64.b64decode(cipher + b'=='))
-		return plain_text if type(plain_text) == str else plain_text.decode('utf-8', 'ignore')
-	
-	except TypeError:
-		pass
+
+    try:
+        decryption_suite = AES.new(aes_key, AES.MODE_CFB, iv)
+        plain_text = decryption_suite.decrypt(base64.b64decode(cipher + b'=='))
+        return plain_text if type(plain_text) == str else plain_text.decode('utf-8', 'ignore')
+
+    except TypeError:
+        pass
