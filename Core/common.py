@@ -93,7 +93,7 @@ def is_valid_uuid(value):
 
 def is_valid_ip(ip_addr):
     try:
-        ip_object = ip_address(ip_addr)
+        ip_address(ip_addr)
         return True
 
     except ValueError:
