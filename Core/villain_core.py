@@ -290,7 +290,7 @@ class Obfuscator:
 
 
 	def randomize_case(self, string):
-		return ''.join(choice((str.upper, str.lower))(c) for c in string)
+		return ''.join(choice((str.upper, str.lower))() for c in string)
 
 
 	
