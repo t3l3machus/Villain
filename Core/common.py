@@ -6,15 +6,15 @@
 # https://github.com/t3l3machus/Villain
 
 
-import sys, string, base64, os, re
-from threading import Thread
-from platform import system as get_system_type
-from Crypto.Cipher import AES
-from uuid import UUID, uuid4
-from ipaddress import ip_address
+import base64
+import os
+import sys
 from copy import deepcopy
-from time import sleep, time
-from pyperclip import copy as copy2cb
+from ipaddress import ip_address
+from platform import system as get_system_type
+from uuid import UUID
+
+from Crypto.Cipher import AES
 
 if get_system_type() == 'Linux':
     import gnureadline as global_readline

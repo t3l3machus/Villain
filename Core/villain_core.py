@@ -10,7 +10,7 @@ import ssl, socket, struct
 import netifaces as ni
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from warnings import filterwarnings
-from datetime import date, datetime
+from datetime import datetime
 from ast import literal_eval
 from random import randint, choice, randrange
 from .common import *
