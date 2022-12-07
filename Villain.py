@@ -74,7 +74,8 @@ def print_banner():
             txt_color = init_color
         init_color += 1
 
-        if charset < 2: final.append('\n   ')
+        if charset < 2:
+            final.append('\n   ')
 
     print(f"   {''.join(final)}")
     print(f'{END}{padding}           by t3l3machus\n')
@@ -363,14 +364,11 @@ class Completer(object):
         if lb_list_len == 0:
             return
 
-
         # Get prompt command from word fragment
         elif lb_list_len == 1:
 
             match = self.get_match_from_list(lb_list[0].lower(), self.main_prompt_commands)
             self.update_prompt(len(lb_list[0]), match) if match else chill()
-
-
 
         # Autocomplete session IDs
         elif (lb_list[0].lower() in ['exec', 'alias', 'kill', 'shell']) and (lb_list_len > 1) and (lb_list[-1][0] != "/"):
@@ -383,8 +381,6 @@ class Completer(object):
                 match = self.get_match_from_list(lb_list[-1], Sessions_manager.active_sessions.keys())
                 self.update_prompt(len(lb_list[-1]), match) if match else chill()
 
-
-
         # Autocomplete generate prompt command arguments
         elif (lb_list[0].lower() == 'generate') and (lb_list_len > 1):
 
@@ -392,16 +388,12 @@ class Completer(object):
             match = self.get_match_from_list(lb_list[-1], self.generate_arguments)
             self.update_prompt(len(lb_list[-1]), match, lower=True) if match else chill()
 
-
-
         # Autocomplete help
         elif (lb_list[0].lower() == 'help') and (lb_list_len > 1):
 
             word_frag = lb_list[-1].lower()
             match = self.get_match_from_list(lb_list[-1], self.main_prompt_commands)
             self.update_prompt(len(lb_list[-1]), match, lower=True) if match else chill()
-
-
 
         # Autocomplete paths
         elif (lb_list[0].lower() in ['exec', 'host']) and (lb_list_len > 1) and (lb_list[-1][0] == "/"):
@@ -553,22 +545,14 @@ def main():
                     elif cmd_list_len == 2:
                         PrompHelp.print_detailed(cmd_list[1])
 
-
-
                 elif cmd == 'id':
                     print(f'{BOLD}Server unique id{END}: {ORANGE}{core.return_server_uniq_id()}{END}')
-
-
 
                 elif cmd == 'connect':
                     core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
 
-
-
                 elif cmd == 'generate':
                     payload_engine.generate_payload(cmd_list[1:])
-
-
 
                 elif cmd == 'kill':
                     session_id = sessions_manager.alias_to_session_id(cmd_list[1])
@@ -578,8 +562,6 @@ def main():
                         continue
 
                     sessions_manager.kill_session(session_id)
-
-
 
                 elif cmd == 'exec':
 
@@ -628,14 +610,11 @@ def main():
                                 command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
                                 core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
 
-
                         except KeyboardInterrupt:
                             continue
 
                     else:
                         print(f'\r[{INFO}] No active session.')
-
-
 
                 elif cmd == 'shell':
 
@@ -654,9 +633,6 @@ def main():
 
                     else:
                         print(f'\r[{INFO}] No active session.')
-
-
-
 
                 elif cmd == 'alias':
 
@@ -704,8 +680,6 @@ def main():
                     else:
                         print(f'\rNo active sessions.')
 
-
-
                 elif cmd == 'reset':
 
                     sid = Sessions_manager.alias_to_session_id(cmd_list[1])
@@ -717,21 +691,14 @@ def main():
                         Sessions_manager.active_sessions[sid]['aliased'] = False
                         Sessions_manager.active_sessions[sid]['alias'] = None
 
-
                     else:
                         print('Unrecognized alias.')
-
-
 
                 elif cmd == 'clear':
                     os.system('clear')
 
-
-
                 elif cmd == 'exit':
                     raise KeyboardInterrupt
-
-
 
                 elif cmd == 'sessions':
 
@@ -742,15 +709,11 @@ def main():
                     else:
                         print('Unsupported arguments.')
 
-
-
                 elif cmd == 'siblings':
                     core.list_siblings()
 
-
                 else:
                     continue
-
 
         except KeyboardInterrupt:
 
