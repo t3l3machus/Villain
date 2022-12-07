@@ -7,10 +7,13 @@
 
 
 import argparse
+import re
 from subprocess import check_output
 from Core.common import *
 from Core.settings import HoaxshellSettings, CoreServerSettings
 from string import ascii_uppercase, ascii_lowercase, digits
+from threading import Thread
+from time import time, sleep
 
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
@@ -483,7 +486,7 @@ def main():
         if core.core_initialized:
             break
 
-        elif not core.core_initialized:
+        elif not core.core_initialized and time() > (timeout_start + 5):
             sys.exit(1)
 
     else:
