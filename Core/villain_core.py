@@ -297,7 +297,7 @@ class Obfuscator:
 	def string_to_regex(self, string):
 		
 		# First check if string is actually a regex
-		if re.match( "^\[.*\}$", string):
+		if re.match( "^\[.*}$", string):
 			return string
 			
 		else:
