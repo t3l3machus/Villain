@@ -1,6 +1,6 @@
 # Usage Guide
 :warning: Villain was explicitly developed and tested on **kali linux**.  
-:warning: This guide is a work in progress currently describing key features. Check out Villain's introduction on youtube for more info.
+:warning: This guide is a work in progress currently describing key features. Check out Villain's introduction on YouTube for more info.
 
 ## Table of contents
 1. [Generate Backdoor Payloads](Generate-Backdoor-Payloads)
