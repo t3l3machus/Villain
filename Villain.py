@@ -263,7 +263,7 @@ class PrompHelp:
 def alias_sanitizer(word, _min=2, _max=26):
     length = len(word)
 
-    if length >= _min and length <= _max:
+    if _min <= length <= _max:
 
         valid = ascii_uppercase + ascii_lowercase + '-_' + digits
 
