@@ -45,7 +45,7 @@ class Hoaxshell_settings:
 	# Beacon frequency of the generated backdoor shells
 	default_frequency = 0.8
 	
-	# Generate self signed cert:
+	# Generate self-signed cert:
 	# openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
 	certfile = False # Add path to cert.pem here for SSL or pass it as argument
 	keyfile = False  # Add path to priv_key.pem here for SSL or pass it as argument
