@@ -1367,8 +1367,7 @@ class Core_server:
     @staticmethod
     def encapsulate_dict(data, encapsulate_as):
 
-        encapsulated = {}
-        encapsulated[encapsulate_as] = data
+        encapsulated = {encapsulate_as: data}
         return encapsulated
 
     @staticmethod
