@@ -417,7 +417,7 @@ class Obfuscator:
 	def mask_payload(self, payload):
 		
 		# Obfuscate variable name definitions
-		variables = re.findall("\$[A-Za-z0-9_]*={1}", payload)
+		variables = re.findall("\$[A-Za-z0-9_]*=", payload)
 		
 		if variables:
 						
