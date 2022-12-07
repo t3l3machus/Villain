@@ -37,7 +37,7 @@ if HoaxshellSettings.ssl_support:
 
 CoreServerSettings.bind_port = args.port if args.port else CoreServerSettings.bind_port
 
-from Core.villain_core import PayloadGenerator, initiate_hoax_server, SessionsManager, Hoaxshell, Core_server
+from Core.villain_core import PayloadGenerator, initiate_hoax_server, SessionsManager, Hoaxshell, CoreServer
 
 
 # -------------- Functions & Classes -------------- #
@@ -465,7 +465,7 @@ def main():
             sys.exit(0)
 
     ''' Init Core '''
-    core = Core_server()
+    core = CoreServer()
     core_server = Thread(target=core.initiate, args=())
     core_server.daemon = True
     core_server.start()
@@ -725,7 +725,7 @@ def main():
 
             if verified:
                 print('\r')
-                Core_server.announce_server_shutdown()
+                CoreServer.announce_server_shutdown()
                 Hoaxshell.terminate()
                 core.stop_listener()
                 sys.exit(0)
