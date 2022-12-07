@@ -20,15 +20,15 @@ The backdoors are designed to start as new background processes. Currently suppo
  - for Linux: bash
 
 #### Available arguments for the "generate" prompt command:
-| Argument          | Required | Supported OS | Requires Input Val | Description |
-|:-----------------:|:-------:|:-------------:|:------------------:|------------------------|
-| os                | True    | All           | Yes                | The OS type to generate backdoor for [windows/linux]. |
-| lhost             | True    | N/A           | Yes                | Your local IP or Interface to connect back. |
-| domain            | Depends | N/A           | Yes                | If you have provided trusted cert and priv_key files to start Villain with SSL, you can provide domain instead of lhost. |
-| obfuscate         | False   | Windows       | No                 | Auto-obfuscate the generated payload. This aims to assist you, not always do the job for you. |
-| encode            | False   | Windows       | No                 | Base64 encode the generated payload. |
-| exec_outfile      | False   | Windows       | Yes                | Provide a file path on the victim to write & execute commands from (instead of using IEX) |
-| constraint_mode   | False   | Windows       | No                 | Make the generated payload work on PowerShell Constraint Language Mode. By using this option you sacrifice a bit of the decoding clarity of your shell. |
+|    Argument     | Required | Supported OS | Requires Input Val | Description                                                                                                                                             |
+|:---------------:|:--------:|:------------:|:------------------:|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+|       os        |   True   |     All      |        Yes         | The OS type to generate backdoor for [windows/linux].                                                                                                   |
+|      lhost      |   True   |     N/A      |        Yes         | Your local IP or Interface to connect back.                                                                                                             |
+|     domain      | Depends  |     N/A      |        Yes         | If you have provided trusted cert and priv_key files to start Villain with SSL, you can provide domain instead of lhost.                                |
+|    obfuscate    |  False   |   Windows    |         No         | Auto-obfuscate the generated payload. This aims to assist you, not always do the job for you.                                                           |
+|     encode      |  False   |   Windows    |         No         | Base64 encode the generated payload.                                                                                                                    |
+|  exec_outfile   |  False   |   Windows    |        Yes         | Provide a file path on the victim to write & execute commands from (instead of using IEX)                                                               |
+| constraint_mode |  False   |   Windows    |         No         | Make the generated payload work on PowerShell Constraint Language Mode. By using this option you sacrifice a bit of the decoding clarity of your shell. |
 
 #### Examples:
 ```
