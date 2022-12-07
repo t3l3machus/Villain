@@ -546,7 +546,7 @@ def main():
 				if user_input == '':
 					continue
 				
-				# Handle single/double quoted arguments
+				# Handle single/double-quoted arguments
 				quoted_args_single = re.findall("'{1}[\s\S]*'{1}", user_input)
 				quoted_args_double = re.findall('"{1}[\s\S]*"{1}', user_input)
 				quoted_args = quoted_args_single + quoted_args_double
