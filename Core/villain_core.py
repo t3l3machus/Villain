@@ -96,7 +96,7 @@ class Payload_generator:
                 return
 
             ''' Parse LHOST '''
-            if ('lhost' in arguments):
+            if 'lhost' in arguments:
 
                 try:
                     # Check if valid IP address
@@ -159,7 +159,7 @@ class Payload_generator:
                     else:
                         print(f'Ignoring argument "{item}" (not supported for {os_type} payloads)')
 
-            if (os_type == 'linux'):
+            if os_type == 'linux':
                 boolean_args['constraint_mode'] = True
                 boolean_args['trusted_domain'] = False
 

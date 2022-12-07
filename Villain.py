@@ -357,7 +357,7 @@ class Completer(object):
         lb_list_len = len(lb_list) if lb_list != [''] else 0
 
         # Return no input or input already matches a command
-        if (lb_list_len == 0):
+        if lb_list_len == 0:
             return
 
 
