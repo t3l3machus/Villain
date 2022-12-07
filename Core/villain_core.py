@@ -1463,11 +1463,11 @@ class Core_server:
 		except ConnectionResetError:
 			return 'connection_reset'
 
-		except OSError:
-			return 'no_route_to_host'
-
 		except socket.timeout:
 			return 'timed_out'
+
+		except OSError:
+			return 'no_route_to_host'
 
 		except:
 			return 'unknown_error'
