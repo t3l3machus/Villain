@@ -9,7 +9,7 @@
 import argparse
 from subprocess import check_output
 from Core.common import *
-from Core.settings import Hoaxshell_settings, Core_server_settings
+from Core.settings import HoaxshellSettings, CoreServerSettings
 from string import ascii_uppercase, ascii_lowercase, digits
 
 # -------------- Arguments -------------- #
@@ -24,15 +24,15 @@ parser.add_argument("-q", "--quiet", action="store_true", help="Do not print the
 
 args = parser.parse_args()
 
-Hoaxshell_settings.certfile = args.certfile
-Hoaxshell_settings.keyfile = args.keyfile
-Hoaxshell_settings.ssl_support = True if (args.certfile and args.keyfile) else False
-Hoaxshell_settings.bind_port = args.hoax_port if args.hoax_port else Hoaxshell_settings.bind_port
+HoaxshellSettings.certfile = args.certfile
+HoaxshellSettings.keyfile = args.keyfile
+HoaxshellSettings.ssl_support = True if (args.certfile and args.keyfile) else False
+HoaxshellSettings.bind_port = args.hoax_port if args.hoax_port else HoaxshellSettings.bind_port
 
-if Hoaxshell_settings.ssl_support:
-    Hoaxshell_settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_settings.bind_port_ssl
+if HoaxshellSettings.ssl_support:
+    HoaxshellSettings.bind_port_ssl = args.hoax_port if args.hoax_port else HoaxshellSettings.bind_port_ssl
 
-Core_server_settings.bind_port = args.port if args.port else Core_server_settings.bind_port
+CoreServerSettings.bind_port = args.port if args.port else CoreServerSettings.bind_port
 
 from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
 
@@ -334,7 +334,7 @@ class Completer(object):
 
                     else:
                         print_shadow('\n' + '  '.join(matches))
-                        Main_prompt.rst_prompt()
+                        MainPrompt.rst_prompt()
                         return False
 
                 elif len(unique) == 1:
@@ -430,7 +430,7 @@ class Completer(object):
             elif len(match) > 1 and self.tab_counter > 1:
                 print_shadow('\n' + '  '.join(match))
                 self.tab_counter = 0
-                Main_prompt.rst_prompt()
+                MainPrompt.rst_prompt()
 
         # Reset tab counter after 0.5s of inactivity
         Thread(name="reset_counter", target=self.reset_counter).start()
@@ -505,9 +505,9 @@ def main():
 
         try:
 
-            if Main_prompt.main_prompt_ready:
+            if MainPrompt.main_prompt_ready:
 
-                user_input = input(Main_prompt.prompt).strip()
+                user_input = input(MainPrompt.prompt).strip()
 
                 if user_input == '':
                     continue
@@ -520,7 +520,7 @@ def main():
                 if len(quoted_args):
 
                     for arg in quoted_args:
-                        space_escaped = arg.replace(' ', Main_prompt.SPACE)
+                        space_escaped = arg.replace(' ', MainPrompt.SPACE)
 
                         if (space_escaped[0] == "'" and space_escaped[-1] == "'") or (space_escaped[0] == '"' and space_escaped[-1] == '"'):
                             space_escaped = space_escaped[1:-1]
@@ -529,7 +529,7 @@ def main():
 
                 # Create cmd-line args list
                 user_input = user_input.split(' ')
-                cmd_list = [w.replace(Main_prompt.SPACE, ' ') for w in user_input if w]
+                cmd_list = [w.replace(MainPrompt.SPACE, ' ') for w in user_input if w]
                 cmd_list_len = len(cmd_list)
                 cmd = cmd_list[0].lower() if cmd_list else ''
 
@@ -584,7 +584,7 @@ def main():
 
                         try:
 
-                            Main_prompt.main_prompt_ready = False
+                            MainPrompt.main_prompt_ready = False
                             command = cmd_list[1]
                             session_id = cmd_list[2]
                             src_is_file = False
@@ -599,12 +599,12 @@ def main():
 
                                 except:
                                     print('Failed to load file.')
-                                    Main_prompt.main_prompt_ready = True
+                                    MainPrompt.main_prompt_ready = True
                                     continue
 
                             if command.lower() == 'exit':
                                 print('The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
-                                Main_prompt.main_prompt_ready = True
+                                MainPrompt.main_prompt_ready = True
                                 continue
 
                             # Check if session id has alias
@@ -612,7 +612,7 @@ def main():
 
                             if not session_id:
                                 print('Failed to interpret session_id.')
-                                Main_prompt.main_prompt_ready = True
+                                MainPrompt.main_prompt_ready = True
                                 continue
 
                             # Check who is the owner of the shell session
@@ -638,12 +638,12 @@ def main():
 
                     if Sessions_manager.active_sessions.keys():
 
-                        Main_prompt.main_prompt_ready = False
+                        MainPrompt.main_prompt_ready = False
                         session_id = Sessions_manager.alias_to_session_id(cmd_list[1])
 
                         if not session_id:
                             print('Failed to interpret session_id.')
-                            Main_prompt.main_prompt_ready = True
+                            MainPrompt.main_prompt_ready = True
                             continue
 
                         os_type = sessions_manager.active_sessions[session_id]['OS Type']

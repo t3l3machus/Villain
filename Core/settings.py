@@ -9,12 +9,12 @@
 from threading import BoundedSemaphore
 
 
-class Threading_params:
+class ThreadingParams:
     MAX_THREADS = 100
     thread_limiter = BoundedSemaphore(MAX_THREADS)
 
 
-class Core_server_settings:
+class CoreServerSettings:
     bind_address = '0.0.0.0'
     bind_port = 65001
 
@@ -25,7 +25,7 @@ class Core_server_settings:
     timeout_for_command_output = 30
 
 
-class Hoaxshell_settings:
+class HoaxshellSettings:
     bind_address = '0.0.0.0'
     bind_port = 8080
     bind_port_ssl = 443
@@ -46,5 +46,5 @@ class Hoaxshell_settings:
     keyfile = False  # Add path to priv_key.pem here for SSL or pass it as argument
 
 
-class Sessions_manager_settings:
+class SessionsManagerSettings:
     shell_state_change_after = 2.0

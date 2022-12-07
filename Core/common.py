@@ -46,19 +46,19 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 ''' Command Prompt Settings '''
 
 
-class Main_prompt:
+class MainPrompt:
     original_prompt = prompt = f"{UNDERLINE}Villain{END} > "
     main_prompt_ready = True
     SPACE = '#>SPACE$<#'
 
     @staticmethod
     def rst_prompt(prompt=prompt, prefix='\r'):
-        Main_prompt.main_prompt_ready = True
-        sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
+        MainPrompt.main_prompt_ready = True
+        sys.stdout.write(prefix + MainPrompt.prompt + global_readline.get_line_buffer())
 
     @staticmethod
     def set_main_prompt_ready():
-        Main_prompt.main_prompt_ready = True
+        MainPrompt.main_prompt_ready = True
 
 
 ''' General Functions '''
@@ -71,7 +71,7 @@ def exit_with_msg(msg):
 
 def print_fail_and_return_to_prompt(msg):
     print(f'\r[{FAILED}] {msg}')
-    Main_prompt.rst_prompt()
+    MainPrompt.rst_prompt()
 
 
 def print_shadow(msg):
