@@ -85,129 +85,129 @@ class PrompHelp:
 
         'connect': {
             'details': f''' 			
-			\r  Connect with another machine running Villain (sibling server). Once connected, you will be able 
-			\r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
-				
-			\r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
-			''',
+            \r  Connect with another machine running Villain (sibling server). Once connected, you will be able 
+            \r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
+
+            \r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
+            ''',
             'least_args': 2,
             'max_args': 2
         },
 
         'generate': {
             'details': f''' 			
-			\r  Generate backdoor payload. If you start Villain with SSL the generated payload(s) 
-			\r  will be adjusted accordingly. 
-				
-			\r  {BOLD}For Windows{END}:
-			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]{END}
+            \r  Generate backdoor payload. If you start Villain with SSL the generated payload(s) 
+            \r  will be adjusted accordingly. 
+            
+            \r  {BOLD}For Windows{END}:
+            \r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> [ exec_outfile=<REMOTE PATH> domain=<DOMAIN>] [ obfuscate encode constraint_mode ]{END}
 
-			\r  Use exec_outfile to write & execute commands from a specified file on the victim (instead of using IEX):
-			\r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> exec_outfile="C:\\Users\\\\\\$env:USERNAME\.local\hack.ps1"{END}
+            \r  Use exec_outfile to write & execute commands from a specified file on the victim (instead of using IEX):
+            \r  {ORANGE}generate os=windows lhost=<IP or INTERFACE> exec_outfile="C:\\Users\\\\\\$env:USERNAME\\.local\\hack.ps1"{END}
 
-			\r  {BOLD}For Linux{END}:
-			\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE> [ domain=<DOMAIN> ]{END}
-			''',
+            \r  {BOLD}For Linux{END}:
+            \r  {ORANGE}generate os=linux lhost=<IP or INTERFACE> [ domain=<DOMAIN> ]{END}
+            ''',
             'least_args': 2,
             'max_args': 7
         },
 
         'exec': {
             'details': f''' 			
-			\r  Execute command or file against an active shell session. 
-				
-			\r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
-			
-			\r  *Command(s) should be quoted.
-			''',
+            \r  Execute command or file against an active shell session. 
+            
+            \r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
+
+            \r  *Command(s) should be quoted.
+            ''',
             'least_args': 2,
             'max_args': 2
         },
 
         'shell': {
             'details': f''' 			
-			\r  Enable an interactive pseudo-shell for a session. Press Ctrl+C to disable.
-				
-			\r  {ORANGE}shell <SESSION ID or ALIAS>{END}
-			''',
+            \r  Enable an interactive pseudo-shell for a session. Press Ctrl+C to disable.
+            
+            \r  {ORANGE}shell <SESSION ID or ALIAS>{END}
+            ''',
             'least_args': 1,
             'max_args': 1
         },
 
         'alias': {
             'details': f'''
-			\r  Create an alias to use instead of session ID.
-				
-			\r  {ORANGE}alias <ALIAS> <SESSION ID>{END}
-			''',
+            \r  Create an alias to use instead of session ID.
+            
+            \r  {ORANGE}alias <ALIAS> <SESSION ID>{END}
+            ''',
             'least_args': 2,
             'max_args': 2
         },
 
         'reset': {
             'details': f'''
-			\r  Reset a given alias to the original session ID.
-				
-			\r  {ORANGE}reset <ALIAS>{END}
-			''',
+            \r  Reset a given alias to the original session ID.
+            
+            \r  {ORANGE}reset <ALIAS>{END}
+            ''',
             'least_args': 1,
             'max_args': 1
         },
 
         'kill': {
             'details': f'''
-			\r  Terminate a self-owned backdoor session.
-				
-			\r  {ORANGE}kill <SESSION ID or ALIAS>{END}
-			''',
+            \r  Terminate a self-owned backdoor session.
+
+            \r  {ORANGE}kill <SESSION ID or ALIAS>{END}
+            ''',
             'least_args': 1,
             'max_args': 1
         },
 
         'help': {
             'details': f'''
-			\r  Really?
-			''',
+            \r  Really?
+            ''',
             'least_args': 0,
             'max_args': 1
         },
 
         'siblings': {
             'details': f'''
-			\r  Siblings are basically other instances of Villain that you've connected with.
-			''',
+            \r  Siblings are basically other instances of Villain that you've connected with.
+            ''',
             'least_args': 0,
             'max_args': 0
         },
 
         'sessions': {
             'details': f'''
-			\r  Sessions of backdoored machines that you have succesfully poisoned.
-			''',
+            \r  Sessions of backdoored machines that you have succesfully poisoned.
+            ''',
             'least_args': 0,
             'max_args': 0
         },
 
         'id': {
             'details': f'''
-			\r  Print server's unique ID.
-			''',
+            \r  Print server's unique ID.
+            ''',
             'least_args': 0,
             'max_args': 0
         },
 
         'exit': {
             'details': f'''
-			\r  Kill all sessions and quit.
-			''',
+            \r  Kill all sessions and quit.
+            ''',
             'least_args': 0,
             'max_args': 0
         },
 
         'clear': {
             'details': f'''
-			\r  Come on man.
-			''',
+            \r  Come on man.
+            ''',
             'least_args': 0,
             'max_args': 0
         },
@@ -219,25 +219,25 @@ class PrompHelp:
 
         print(
             f'''
-		\r  Command          Description
-		\r  -------          -----------
-		\r  help     [+]     Print this message.
-		\r  connect  [+]     Connect with sibling server.
-		\r  generate [+]     Generates backdoor payload.
-		\r  siblings         Print sibling servers data table.
-		\r  sessions         Print established backdoor sessions data table.
-		\r  exec     [+]     Execute command/file against session.
-		\r  shell    [+]     Enable interactive hoaxshell for backdoor session.
-		\r  alias    [+]     Set an alias for a shell session.
-		\r  reset    [+]     Reset alias back to session ID.
-		\r  kill     [+]     Terminate an established backdoor session.
-		\r  id               Print server's unique ID (Self).
-		\r  clear            Clear screen.
-		\r  exit             Kill all sessions and quit.
-		
+        \r  Command          Description
+        \r  -------          -----------
+        \r  help     [+]     Print this message.
+        \r  connect  [+]     Connect with sibling server.
+        \r  generate [+]     Generates backdoor payload.
+        \r  siblings         Print sibling servers data table.
+        \r  sessions         Print established backdoor sessions data table.
+        \r  exec     [+]     Execute command/file against session.
+        \r  shell    [+]     Enable interactive hoaxshell for backdoor session.
+        \r  alias    [+]     Set an alias for a shell session.
+        \r  reset    [+]     Reset alias back to session ID.
+        \r  kill     [+]     Terminate an established backdoor session.
+        \r  id               Print server's unique ID (Self).
+        \r  clear            Clear screen.
+        \r  exit             Kill all sessions and quit.
+        
         \r  Commands with [+] may require additional arguments.
         \r  For details use: {ORANGE}help <COMMAND>{END}
-		''')
+        ''')
 
     @staticmethod
     def print_detailed(cmd):
