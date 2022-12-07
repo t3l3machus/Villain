@@ -861,8 +861,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 			try:				
 				Thread(target = self.monitor_shell_state, args = (session_id,), daemon = True).start()			
-			except:
-				pass
+			except Exception as e:
+				print(f'\r[{FAILED}] Failed to start shell monitoring thread: {e}')
 				
 			new_session_data = deepcopy(Sessions_manager.active_sessions[session_id])
 			new_session_data['session_id'] = session_id
@@ -1008,7 +1008,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 						#Core_server.announce_session_termination({'session_id' : session_id})
 						
 				except:
-					continue
+					print(f'[{FAILED}] Error while terminating session {session_id}')
 			
 			sleep(Hoaxshell_settings.default_frequency + 2.0)
 			print(f'\r[{INFO}] Sessions terminated.')
@@ -1302,7 +1302,7 @@ class Core_server:
 										lost_sessions += 1
 										
 								except:
-									continue
+									print(f'\r[{FAILED}] Failed to remove session {ORANGE}{session_id}{END} from active sessions.')
 																
 						print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')
 						print(f'\r[{WARN}] {lost_sessions} x backdoor sessions lost.') if lost_sessions else chill()
@@ -1769,7 +1769,7 @@ class Core_server:
 							Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 												
 					except:					
-						continue
+						print(f'\r[{FAILED}] Failed to ping sibling server {ORANGE}{sibling_id}{END}.')
 			
 			sleep(Core_server_settings.ping_siblings_sleep_time)
 			
