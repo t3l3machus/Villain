@@ -37,7 +37,7 @@ if HoaxshellSettings.ssl_support:
 
 CoreServerSettings.bind_port = args.port if args.port else CoreServerSettings.bind_port
 
-from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
+from Core.villain_core import PayloadGenerator, initiate_hoax_server, SessionsManager, Hoaxshell, Core_server
 
 
 # -------------- Functions & Classes -------------- #
@@ -373,12 +373,12 @@ class Completer(object):
         # Autocomplete session IDs
         elif (lb_list[0].lower() in ['exec', 'alias', 'kill', 'shell']) and (lb_list_len > 1) and (lb_list[-1][0] != "/"):
 
-            if lb_list[-1] in Sessions_manager.active_sessions.keys():
+            if lb_list[-1] in SessionsManager.active_sessions.keys():
                 pass
 
             else:
                 word_frag = lb_list[-1]
-                match = self.get_match_from_list(lb_list[-1], Sessions_manager.active_sessions.keys())
+                match = self.get_match_from_list(lb_list[-1], SessionsManager.active_sessions.keys())
                 self.update_prompt(len(lb_list[-1]), match) if match else chill()
 
         # Autocomplete generate prompt command arguments
@@ -485,8 +485,8 @@ def main():
         sys.exit(1)
 
     initiate_hoax_server()
-    payload_engine = Payload_generator()
-    sessions_manager = Sessions_manager()
+    payload_engine = PayloadGenerator()
+    sessions_manager = SessionsManager()
     Hoaxshell.server_unique_id = core.return_server_uniq_id()
 
     ''' Start tab autoComplete '''
@@ -565,7 +565,7 @@ def main():
 
                 elif cmd == 'exec':
 
-                    if Sessions_manager.active_sessions.keys():
+                    if SessionsManager.active_sessions.keys():
 
                         try:
 
@@ -618,10 +618,10 @@ def main():
 
                 elif cmd == 'shell':
 
-                    if Sessions_manager.active_sessions.keys():
+                    if SessionsManager.active_sessions.keys():
 
                         MainPrompt.main_prompt_ready = False
-                        session_id = Sessions_manager.alias_to_session_id(cmd_list[1])
+                        session_id = SessionsManager.alias_to_session_id(cmd_list[1])
 
                         if not session_id:
                             print('Failed to interpret session_id.')
@@ -636,7 +636,7 @@ def main():
 
                 elif cmd == 'alias':
 
-                    sessions = Sessions_manager.active_sessions.keys()
+                    sessions = SessionsManager.active_sessions.keys()
 
                     if len(sessions):
                         if cmd_list[2] in sessions:
@@ -651,7 +651,7 @@ def main():
                                 unique = True
 
                                 for session_id in sessions:
-                                    if Sessions_manager.active_sessions[session_id]['alias'] == alias.strip():
+                                    if SessionsManager.active_sessions[session_id]['alias'] == alias.strip():
                                         unique = False
                                         break
 
@@ -668,8 +668,8 @@ def main():
                                     is_session_id = True
 
                                 if unique and not is_session_id and not is_reserved:
-                                    Sessions_manager.active_sessions[cmd_list[2]]['alias'] = alias.strip()
-                                    Sessions_manager.active_sessions[cmd_list[2]]['aliased'] = True
+                                    SessionsManager.active_sessions[cmd_list[2]]['alias'] = alias.strip()
+                                    SessionsManager.active_sessions[cmd_list[2]]['aliased'] = True
 
                                 else:
                                     print('Illegal alias value.')
@@ -682,14 +682,14 @@ def main():
 
                 elif cmd == 'reset':
 
-                    sid = Sessions_manager.alias_to_session_id(cmd_list[1])
+                    sid = SessionsManager.alias_to_session_id(cmd_list[1])
 
                     if sid == cmd_list[1]:
                         print('Unrecognized alias.')
 
-                    elif sid in Sessions_manager.active_sessions.keys():
-                        Sessions_manager.active_sessions[sid]['aliased'] = False
-                        Sessions_manager.active_sessions[sid]['alias'] = None
+                    elif sid in SessionsManager.active_sessions.keys():
+                        SessionsManager.active_sessions[sid]['aliased'] = False
+                        SessionsManager.active_sessions[sid]['alias'] = None
 
                     else:
                         print('Unrecognized alias.')
@@ -719,7 +719,7 @@ def main():
 
             verified = True
 
-            if Sessions_manager.active_sessions.keys() or core.sibling_servers.keys():
+            if SessionsManager.active_sessions.keys() or core.sibling_servers.keys():
                 choice = input('\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [yes/no]: ').lower()
                 verified = True if choice in ['yes', 'y'] else False
 

