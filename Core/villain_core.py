@@ -6,14 +6,20 @@
 # https://github.com/t3l3machus/Villain
 
 
-import socket
 import ssl
+import re
+import socket
 import struct
-from ast import literal_eval
-from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from random import randint, choice, randrange
 from warnings import filterwarnings
+from datetime import datetime
+
+from threading import Thread
+from time import sleep, time
+from pyperclip import copy as copy2cb
+from uuid import uuid4
+from ast import literal_eval
+from random import randint, choice, randrange
 
 import netifaces as ni
 
