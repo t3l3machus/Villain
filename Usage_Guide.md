@@ -3,10 +3,10 @@
 :warning: This guide is a work in progress currently describing key features. Check out Villain's introduction on youtube for more info.
 
 ## Table of contents
-1. [Generate Backdoor Payloads](Generate-Backdoor-Payloads)
-2. [Connect With Sibling Server](Connect-With-Sibling-Server)
-3. [The shell Command](The-shell-Command)
-4. [The exec Command](The-exec-Command)
+1. [Generate Backdoor Payloads](https://github.com/t3l3machus/Villain/edit/main/Usage_Guide.md#Generate-Backdoor-Payloads)
+2. [Connect With Sibling Server](https://github.com/t3l3machus/Villain/edit/main/Usage_Guide.md#Connect-With-Sibling-Server)
+3. [The shell Command](https://github.com/t3l3machus/Villain/edit/main/Usage_Guide.md#The-shell-Command)
+4. [The exec Command](https://github.com/t3l3machus/Villain/edit/main/Usage_Guide.md#The-exec-Command)
 
 ## Generate Backdoor Payloads
 Use the "generate" prompt command to generate backdoor payloads for Windows or Linux machines. 
