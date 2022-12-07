@@ -483,7 +483,7 @@ def main():
         if core.core_initialized:
             break
 
-        elif core.core_initialized == False:
+        elif not core.core_initialized:
             sys.exit(1)
 
     else:
