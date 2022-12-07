@@ -79,7 +79,7 @@ def exit_with_msg(msg):
 
 def print_fail_and_return_to_prompt(msg):			
 	print(f'\r[{FAILED}] {msg}')
-	Main_prompt.rst_prompt(force_rst = True)
+	Main_prompt.rst_prompt()
 
 
 
