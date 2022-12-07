@@ -21,7 +21,6 @@ if get_system_type() == 'Linux':
 else:
     import readline as global_readline
 
-
 ''' Colors '''
 MAIN = '\001\033[38;5;85m\002'
 GREEN = '\001\033[38;5;82m\002'
@@ -35,7 +34,6 @@ BOLD = '\001\033[1m\002'
 UNDERLINE = '\001\033[4m\002'
 END = '\001\033[0m\002'
 
-
 ''' MSG Prefixes '''
 INFO = f'{MAIN}Info{END}'
 WARN = f'{LRED}Warning{END}'
@@ -43,38 +41,32 @@ IMPORTANT = f'{ORANGE}Important{END}'
 FAILED = f'{RED}Fail{END}'
 DEBUG = f'{ORANGE}Debug{END}'
 
-
 cwd = os.path.dirname(os.path.abspath(__file__))
-
 
 ''' Command Prompt Settings '''
 
-class Main_prompt:
 
+class Main_prompt:
     original_prompt = prompt = f"{UNDERLINE}Villain{END} > "
     main_prompt_ready = True
     SPACE = '#>SPACE$<#'
 
-
     @staticmethod
-    def rst_prompt(prompt = prompt, prefix = '\r'):
-
+    def rst_prompt(prompt=prompt, prefix='\r'):
         Main_prompt.main_prompt_ready = True
         sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
-
 
     @staticmethod
     def set_main_prompt_ready():
         Main_prompt.main_prompt_ready = True
 
 
-
 ''' General Functions '''
+
 
 def exit_with_msg(msg):
     print(f"[{DEBUG}] {msg}")
     sys.exit(0)
-
 
 
 def print_fail_and_return_to_prompt(msg):
@@ -82,19 +74,15 @@ def print_fail_and_return_to_prompt(msg):
     Main_prompt.rst_prompt()
 
 
-
 def print_shadow(msg):
     print(f'{GRAY}{msg}{END}')
-
 
 
 def chill():
     pass
 
 
-
 def is_valid_uuid(value):
-
     try:
         UUID(str(value))
         return True
@@ -103,9 +91,7 @@ def is_valid_uuid(value):
         return False
 
 
-
 def is_valid_ip(ip_addr):
-
     try:
         ip_object = ip_address(ip_addr)
         return True
@@ -114,9 +100,7 @@ def is_valid_ip(ip_addr):
         return False
 
 
-
 def print_table(rows, columns):
-
     columns_list = [columns]
 
     for item in rows:
@@ -132,16 +116,15 @@ def print_table(rows, columns):
         print(format_str.format(*item))
 
 
-
 def clone_dict_keys(_dict):
-
     clone = deepcopy(_dict)
     clone_keys = clone.keys()
     return clone_keys
 
 
-
 ''' Encryption '''
+
+
 def encrypt_msg(aes_key, msg, iv):
     enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
 
@@ -154,9 +137,7 @@ def encrypt_msg(aes_key, msg, iv):
     return encoded_cipher_text
 
 
-
 def decrypt_msg(aes_key, cipher, iv):
-
     try:
         decryption_suite = AES.new(aes_key, AES.MODE_CFB, iv)
         plain_text = decryption_suite.decrypt(base64.b64decode(cipher + b'=='))

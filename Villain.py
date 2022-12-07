@@ -12,16 +12,15 @@ from Core.common import *
 from Core.settings import Hoaxshell_settings, Core_server_settings
 from string import ascii_uppercase, ascii_lowercase, digits
 
-
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-p", "--port", action="store", help = "Core server port (default: 65001).", type = int)
-parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
-parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
-parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
-parser.add_argument("-u", "--update", action="store_true", help = "Pull the latest version from the original repo.")
-parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
+parser.add_argument("-p", "--port", action="store", help="Core server port (default: 65001).", type=int)
+parser.add_argument("-x", "--hoax-port", action="store", help="HoaxShell server port (default: 8080 via http, 443 via https).", type=int)
+parser.add_argument("-c", "--certfile", action="store", help="Path to your ssl certificate (for HoaxShell https server).")
+parser.add_argument("-k", "--keyfile", action="store", help="Path to the private key for your certificate (for HoaxShell https server).")
+parser.add_argument("-u", "--update", action="store_true", help="Pull the latest version from the original repo.")
+parser.add_argument("-q", "--quiet", action="store_true", help="Do not print the banner on startup.")
 
 args = parser.parse_args()
 
@@ -41,19 +40,18 @@ from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_
 # -------------- Functions & Classes -------------- #
 
 def print_banner():
-
     print('\r')
     padding = '  '
 
-    V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└','┐','┌', '┘'], [' ', ' ','└','┘', ' ']]
-    I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
-    L = [[' ', '┬',' ',' '], [' ', '│',' ', ' '], [' ', '┴','─','┘']]
-    L2 = [['┬',' ',' '], ['│',' ', ' '], ['┴','─','┘']]
-    A = [['┌','─','┐'], ['├','─','┤'], ['┴',' ','┴']]
-    I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
-    N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]
+    V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└', '┐', '┌', '┘'], [' ', ' ', '└', '┘', ' ']]
+    I = [[' ', '┬'], [' ', '│', ], [' ', '┴']]
+    L = [[' ', '┬', ' ', ' '], [' ', '│', ' ', ' '], [' ', '┴', '─', '┘']]
+    L2 = [['┬', ' ', ' '], ['│', ' ', ' '], ['┴', '─', '┘']]
+    A = [['┌', '─', '┐'], ['├', '─', '┤'], ['┴', ' ', '┴']]
+    I = [[' ', '┬'], [' ', '│', ], [' ', '┴']]
+    N = [[' ', '┌', '┐', '┌'], [' ', '│', '│', '│'], [' ', '┘', '└', '┘']]
 
-    banner = [V,I,L,L2,A,I,N]
+    banner = [V, I, L, L2, A, I, N]
     final = []
     init_color = 97
     txt_color = init_color
@@ -79,25 +77,22 @@ def print_banner():
     print(f'{END}{padding}           by t3l3machus\n')
 
 
-
 class PrompHelp:
-
     commands = {
 
-        'connect' : {
-            'details' : f''' 			
+        'connect': {
+            'details': f''' 			
 			\r  Connect with another machine running Villain (sibling server). Once connected, you will be able 
 			\r  to see and interact with all connected sibling servers' shell sessions and vice-versa.
 				
 			\r  {ORANGE}connect <IP> <CORE_SERVER_PORT>{END}
 			''',
-            'least_args' : 2,
-            'max_args' : 2
+            'least_args': 2,
+            'max_args': 2
         },
 
-
-        'generate' : {
-            'details' : f''' 			
+        'generate': {
+            'details': f''' 			
 			\r  Generate backdoor payload. If you start Villain with SSL the generated payload(s) 
 			\r  will be adjusted accordingly. 
 				
@@ -110,118 +105,111 @@ class PrompHelp:
 			\r  {BOLD}For Linux{END}:
 			\r  {ORANGE}generate os=linux lhost=<IP or INTERFACE> [ domain=<DOMAIN> ]{END}
 			''',
-            'least_args' : 2,
-            'max_args' : 7
+            'least_args': 2,
+            'max_args': 7
         },
 
-
-        'exec' : {
-            'details' : f''' 			
+        'exec': {
+            'details': f''' 			
 			\r  Execute command or file against an active shell session. 
 				
 			\r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
 			
 			\r  *Command(s) should be quoted.
 			''',
-            'least_args' : 2,
-            'max_args' : 2
+            'least_args': 2,
+            'max_args': 2
         },
 
-
-        'shell' : {
-            'details' : f''' 			
+        'shell': {
+            'details': f''' 			
 			\r  Enable an interactive pseudo-shell for a session. Press Ctrl+C to disable.
 				
 			\r  {ORANGE}shell <SESSION ID or ALIAS>{END}
 			''',
-            'least_args' : 1,
-            'max_args' : 1
+            'least_args': 1,
+            'max_args': 1
         },
 
-
-        'alias' : {
-            'details' : f'''
+        'alias': {
+            'details': f'''
 			\r  Create an alias to use instead of session ID.
 				
 			\r  {ORANGE}alias <ALIAS> <SESSION ID>{END}
 			''',
-            'least_args' : 2,
-            'max_args' : 2
+            'least_args': 2,
+            'max_args': 2
         },
 
-
-        'reset' : {
-            'details' : f'''
+        'reset': {
+            'details': f'''
 			\r  Reset a given alias to the original session ID.
 				
 			\r  {ORANGE}reset <ALIAS>{END}
 			''',
-            'least_args' : 1,
-            'max_args' : 1
+            'least_args': 1,
+            'max_args': 1
         },
 
-
-        'kill' : {
-            'details' : f'''
+        'kill': {
+            'details': f'''
 			\r  Terminate a self-owned backdoor session.
 				
 			\r  {ORANGE}kill <SESSION ID or ALIAS>{END}
 			''',
-            'least_args' : 1,
-            'max_args' : 1
+            'least_args': 1,
+            'max_args': 1
         },
 
-
-        'help' : {
-            'details' : f'''
+        'help': {
+            'details': f'''
 			\r  Really?
 			''',
-            'least_args' : 0,
-            'max_args' : 1
+            'least_args': 0,
+            'max_args': 1
         },
 
-        'siblings' : {
-            'details' : f'''
+        'siblings': {
+            'details': f'''
 			\r  Siblings are basically other instances of Villain that you've connected with.
 			''',
-            'least_args' : 0,
-            'max_args' : 0
+            'least_args': 0,
+            'max_args': 0
         },
 
-        'sessions' : {
-            'details' : f'''
+        'sessions': {
+            'details': f'''
 			\r  Sessions of backdoored machines that you have succesfully poisoned.
 			''',
-            'least_args' : 0,
-            'max_args' : 0
+            'least_args': 0,
+            'max_args': 0
         },
 
-        'id' : {
-            'details' : f'''
+        'id': {
+            'details': f'''
 			\r  Print server's unique ID.
 			''',
-            'least_args' : 0,
-            'max_args' : 0
+            'least_args': 0,
+            'max_args': 0
         },
 
-        'exit' : {
-            'details' : f'''
+        'exit': {
+            'details': f'''
 			\r  Kill all sessions and quit.
 			''',
-            'least_args' : 0,
-            'max_args' : 0
+            'least_args': 0,
+            'max_args': 0
         },
 
-        'clear' : {
-            'details' : f'''
+        'clear': {
+            'details': f'''
 			\r  Come on man.
 			''',
-            'least_args' : 0,
-            'max_args' : 0
+            'least_args': 0,
+            'max_args': 0
         },
 
     }
-
 
     @staticmethod
     def print_main_help_msg():
@@ -248,13 +236,9 @@ class PrompHelp:
         \r  For details use: {ORANGE}help <COMMAND>{END}
 		''')
 
-
-
     @staticmethod
     def print_detailed(cmd):
         print(PrompHelp.commands[cmd]['details']) if cmd in PrompHelp.commands.keys() else print(f'No details for command "{cmd}".')
-
-
 
     @staticmethod
     def validate(cmd, num_of_args):
@@ -276,9 +260,7 @@ class PrompHelp:
         return valid
 
 
-
-def alias_sanitizer(word, _min = 2, _max = 26):
-
+def alias_sanitizer(word, _min=2, _max=26):
     length = len(word)
 
     if length >= _min and length <= _max:
@@ -295,8 +277,7 @@ def alias_sanitizer(word, _min = 2, _max = 26):
         return ['Alias length must be between 2 to 26 characters.']
 
 
-
-# Tab auto-completer          
+# Tab auto-completer
 class Completer(object):
 
     def __init__(self):
@@ -306,13 +287,9 @@ class Completer(object):
         self.generate_arguments = ['os', 'lhost', 'obfuscate', 'encode', 'constraint_mode',
                                    'trusted_domain', 'exec_outfile', 'domain']
 
-
-
     def reset_counter(self):
         sleep(0.4)
         self.tab_counter = 0
-
-
 
     def get_possible_cmds(self, cmd_frag):
 
@@ -323,8 +300,6 @@ class Completer(object):
                 matches.append(cmd)
 
         return matches
-
-
 
     def get_match_from_list(self, cmd_frag, wordlist):
 
@@ -371,12 +346,8 @@ class Completer(object):
         else:
             return False
 
-
-
-    def update_prompt(self, typed, new_content, lower = False):
+    def update_prompt(self, typed, new_content, lower=False):
         global_readline.insert_text(new_content[typed:])
-
-
 
     def complete(self, text, state):
 
@@ -416,7 +387,7 @@ class Completer(object):
 
             word_frag = lb_list[-1].lower()
             match = self.get_match_from_list(lb_list[-1], self.generate_arguments)
-            self.update_prompt(len(lb_list[-1]), match, lower = True) if match else chill()
+            self.update_prompt(len(lb_list[-1]), match, lower=True) if match else chill()
 
 
 
@@ -425,7 +396,7 @@ class Completer(object):
 
             word_frag = lb_list[-1].lower()
             match = self.get_match_from_list(lb_list[-1], self.main_prompt_commands)
-            self.update_prompt(len(lb_list[-1]), match, lower = True) if match else chill()
+            self.update_prompt(len(lb_list[-1]), match, lower=True) if match else chill()
 
 
 
@@ -439,9 +410,9 @@ class Completer(object):
             path_level = search_term.split('/')
 
             if re.search('/', search_term) and len(path_level) > 1:
-                search_term	= path_level[-1]
+                search_term = path_level[-1]
 
-                for i in range(0, len(path_level)-1):
+                for i in range(0, len(path_level) - 1):
                     root += f'/{path_level[i]}'
 
             dirs = next(os.walk(root))[1]
@@ -466,9 +437,7 @@ class Completer(object):
         return
 
 
-
 def main():
-
     chill() if args.quiet else print_banner()
     cwd = os.path.dirname(os.path.abspath(__file__))
 
@@ -500,11 +469,9 @@ def main():
         if updated:
             sys.exit(0)
 
-
-
     ''' Init Core '''
     core = Core_server()
-    core_server = Thread(target = core.initiate, args = ())
+    core_server = Thread(target=core.initiate, args=())
     core_server.daemon = True
     core_server.start()
 
@@ -533,7 +500,6 @@ def main():
     global_readline.parse_and_bind("tab: complete")
     global_readline.set_completer(comp.complete)
 
-
     ''' +---------[ Command prompt ]---------+'''
     while True:
 
@@ -561,8 +527,6 @@ def main():
 
                         user_input = user_input.replace(arg, space_escaped)
 
-
-
                 # Create cmd-line args list
                 user_input = user_input.split(' ')
                 cmd_list = [w.replace(Main_prompt.SPACE, ' ') for w in user_input if w]
@@ -578,7 +542,6 @@ def main():
 
                 if not valid:
                     continue
-
 
                 if cmd == 'help':
                     if cmd_list_len == 1:
@@ -719,7 +682,6 @@ def main():
                                 if alias in ['Undefined', 'Active']:
                                     is_reserved = True
 
-
                                 # Check if alias is the id of another session
                                 is_session_id = False
 
@@ -801,7 +763,6 @@ def main():
                 Hoaxshell.terminate()
                 core.stop_listener()
                 sys.exit(0)
-
 
 
 if __name__ == '__main__':

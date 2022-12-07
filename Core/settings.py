@@ -10,14 +10,11 @@ from threading import BoundedSemaphore
 
 
 class Threading_params:
-
     MAX_THREADS = 100
     thread_limiter = BoundedSemaphore(MAX_THREADS)
 
 
-
 class Core_server_settings:
-
     bind_address = '0.0.0.0'
     bind_port = 65001
 
@@ -28,9 +25,7 @@ class Core_server_settings:
     timeout_for_command_output = 30
 
 
-
 class Hoaxshell_settings:
-
     bind_address = '0.0.0.0'
     bind_port = 8080
     bind_port_ssl = 443
@@ -47,12 +42,9 @@ class Hoaxshell_settings:
 
     # Generate self-signed cert:
     # openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
-    certfile = False # Add path to cert.pem here for SSL or pass it as argument
+    certfile = False  # Add path to cert.pem here for SSL or pass it as argument
     keyfile = False  # Add path to priv_key.pem here for SSL or pass it as argument
 
 
-
-
 class Sessions_manager_settings:
-
     shell_state_change_after = 2.0
