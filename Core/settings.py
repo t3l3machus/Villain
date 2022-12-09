@@ -52,7 +52,21 @@ class Hoaxshell_settings:
 	
 	
 
-
 class Sessions_manager_settings:
 	
 	shell_state_change_after = 2.0 
+
+
+
+class Netcat_settings:
+	
+	bind_address = '0.0.0.0'
+	bind_port = 4443
+	sock_timeout = 4
+	recv_timeout = 12
+	recv_timeout_buffer_size = 8192
+	await_execution_timeout = 12
+	alive_echo_exec_timeout = 2.5
+	
+	# Max failed echo response requests before a connection is characterized as lost
+	fail_count = 3
