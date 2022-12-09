@@ -2104,15 +2104,11 @@ class Netcat_multi_listener:
 						username = tmp[1].split('PS ')[0]
 						
 					except:
-						print('##:' +username)
-						#username = tmp[1] 
-				else:
-					
-					try:
+						
 						username = tmp[1] 
-					
-					except: 
-						print('#:' +tmp)
+				else:					
+					username = tmp[1] 
+
 		 
 			
 			Sessions_manager.active_sessions[session_id] = {
