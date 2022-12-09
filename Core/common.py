@@ -15,6 +15,7 @@ from ipaddress import ip_address
 from copy import deepcopy
 from time import sleep, time
 from pyperclip import copy as copy2cb
+from string import ascii_uppercase, ascii_lowercase, digits
 
 if get_system_type() == 'Linux':
 	import gnureadline as global_readline
@@ -54,17 +55,20 @@ class Main_prompt:
 	original_prompt = prompt = f"{UNDERLINE}Villain{END} > "
 	main_prompt_ready = True
 	SPACE = '#>SPACE$<#'
+	exec_active = False
 
 	
 	@staticmethod
 	def rst_prompt(prompt = prompt, prefix = '\r'):
 		
 		Main_prompt.main_prompt_ready = True
+		Main_prompt.exec_active = False
 		sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
 
 
 	@staticmethod
 	def set_main_prompt_ready():
+		Main_prompt.exec_active = False
 		Main_prompt.main_prompt_ready = True
 
 
@@ -129,6 +133,7 @@ def print_table(rows, columns):
 	for item in columns_list:
 		item[-1] = f'{GREEN}{item[-1]}{END}' if item[-1] == 'Active' else item[-1]
 		item[-1] = f'{ORANGE}{item[-1]}{END}' if (item[-1] in ['Unreachable', 'Undefined']) else item[-1]
+		item[-1] = f'{LRED}{item[-1]}{END}' if (item[-1] in ['Lost']) else item[-1]
 		print(format_str.format(*item))
 			
 
@@ -138,6 +143,27 @@ def clone_dict_keys(_dict):
 	clone = deepcopy(_dict)
 	clone_keys = clone.keys()
 	return clone_keys
+
+
+
+def strip_ansi_codes(s):
+    s = re.sub('\\[([0-9]+)(;[0-9]+)*m', '', s) 
+    return re.sub('\033\\[([0-9]+)(;[0-9]+)*m', '', s) 
+
+
+
+def ansi_codes_detected(s):
+    return True if (re.search('\033\\[([0-9]+)(;[0-9]+)*m', s) or re.search('\\[([0-9]+)(;[0-9]+)*m', s)) else False
+
+
+
+def check_list_for_duplicates(l):
+	
+	for elem in l:
+		if l.count(elem) > 1:
+			return True
+			
+	return False
 
 
 
