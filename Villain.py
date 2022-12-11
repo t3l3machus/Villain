@@ -10,7 +10,7 @@ import argparse
 from subprocess import check_output
 from Core.common import *
 from Core.settings import Hoaxshell_settings, Core_server_settings, Netcat_settings
-
+from Core.gtbin import gtfo_bin
 
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
@@ -98,7 +98,6 @@ def print_banner():
 class PrompHelp:
 	
 	commands = {
-	
 		'connect' : {
 			'details' : f''' 			
 			\r  Connect with another machine running Villain (sibling server). Once connected, you will be able 
@@ -110,7 +109,16 @@ class PrompHelp:
 			'max_args' : 2
 		},
 				
-				
+	    'gtbin' : {
+            'details' : f'''
+            \r GTFOBins is a curated list of Unix binaries that can be used to bypass local security restrictions in misconfigured systems.
+            \r This command contains exploit methods for some binaries like {ORANGE}shell, file_upload, suid, sudo, file_read, file_write{END}.
+            ''',
+            'least_args' : 2,
+            'max_args' : 7
+        },	
+
+
 		'generate' : {
 			'details' : f''' 			
 			\r  Generate backdoor payload. If you start Villain with SSL the generated payload(s) 
@@ -455,7 +463,13 @@ class Completer(object):
 			match = self.get_match_from_list(lb_list[-1], self.generate_arguments)
 			self.update_prompt(len(lb_list[-1]), match, lower = True) if match else chill()
 
-
+        # Autocomplete generate prompt command arguments
+		elif (lb_list[0].lower() == 'gtbin') and (lb_list_len > 1):
+									
+			word_frag = lb_list[-1].lower()
+			match = self.get_match_from_list(lb_list[-1], self.generate_arguments)
+			self.update_prompt(len(lb_list[-1]), match, lower = True) if match else chill()
+        
 
 		# Autocomplete help
 		elif (lb_list[0].lower() == 'help') and (lb_list_len > 1):
@@ -654,6 +668,8 @@ def main():
 					print(f'{BOLD}Server unique id{END}: {ORANGE}{core.return_server_uniq_id()}{END}')
 
 
+				elif cmd == 'gtbin':
+					gtfo_bin(cmd_list[1], cmd_list[2])
 
 				elif cmd == 'connect':
 					core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
@@ -673,8 +689,6 @@ def main():
 						continue	
 														
 					sessions_manager.kill_session(session_id)
-
-						
 
 				elif cmd == 'exec':
 									
@@ -894,7 +908,7 @@ def main():
 
 				elif cmd == 'siblings':										
 					core.list_siblings()
-											
+
 
 				else:
 					continue

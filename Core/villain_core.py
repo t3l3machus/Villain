@@ -254,7 +254,6 @@ class Payload_generator:
 		except:
 			print(f'{RED}Copy to clipboard failed. You need to do it manually.{END}')
 
-
 class Obfuscator:
 	
 	def __init__(self):
@@ -1213,8 +1212,6 @@ class Core_server:
 	def return_server_uniq_id():
 		return Core_server.SERVER_UNIQUE_ID
 
-
-
 	def sock_handler(self, conn, address):
 		
 		try:
@@ -1787,7 +1784,6 @@ class Core_server:
 			Main_prompt.set_main_prompt_ready()			
 		else:
 			Main_prompt.rst_prompt() if not Hoaxshell.active_shell else Hoaxshell.rst_shell_prompt()
-
 
 
 	def connect_with_sibling_server(self, server_ip, server_port):
