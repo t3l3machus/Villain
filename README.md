@@ -37,7 +37,7 @@ Villain.py [-h] [-p PORT] [-x HOAX_PORT] [-c CERTFILE] [-k KEYFILE] [-u] [-q]
 For more information about using Villain check out the [Usage Guide](https://github.com/t3l3machus/Villain/blob/main/Usage_Guide.md).
 
 ## Important Notes
-1. Villain has a built-in auto-obfuscate payload function to assist users in bypassing AV solutions (for Windows payloads). As a result, payloads are undetected (for the time being).
+1. Villain has a built-in auto-obfuscate payload function aiming to assist users in bypassing AV solutions (for Windows payloads). 
 2. Each generated payload is going to work only once. An already used payload cannot be reused to establish a session.
 3. The communication between sibling servers is AES encrypted using the recipient sibling server's ID as the encryption KEY and the 16 first bytes of the local server's ID as IV. During the initial connection handshake of two sibling servers, each server's ID is exchanged clear text, meaning that the handshake could be captured and used to decrypt traffic between sibling servers. I know it's "weak" that way. It's not supposed to be super secure as this tool was designed to be used during penetration testing / red team assessments, for which this encryption schema should be enough.
 4. Villain instances connected with each other (sibling servers) must be able to directly reach each other as well. I intend to add a network route mapping utility so that sibling servers can use one another as a proxy to achieve cross network communication between them.
