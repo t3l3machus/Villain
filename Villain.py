@@ -285,7 +285,8 @@ class PrompHelp:
 		\r  reset     [+]     Reset alias back to the session's unique ID.
 		\r  kill      [+]     Terminate an established backdoor session.
 		\r  repair    [+]     Manually correct a session's hostname/username info.
-		\r  id                Print server's unique ID (Self).
+	    \r  gtbin             GTFOBins is a curated list of Unix binaries that can be used to bypass local security restrictions in misconfigured systems.	
+        \r  id                Print server's unique ID (Self).
 		\r  clear             Clear screen.
 		\r  exit              Kill all sessions and quit.
 		
