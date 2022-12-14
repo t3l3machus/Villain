@@ -137,7 +137,9 @@ class Payload_generator:
 				else:					
 					exec_outfile = False
 					print(f'Ignoring argument "exec_outfile" (not supported for {args_dict["os"]} payloads)')
-			
+				
+				del args_dict['exec_outfile']
+				
 			else:
 				exec_outfile = False
 
