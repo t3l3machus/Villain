@@ -899,6 +899,9 @@ def main():
 				else:
 					continue
 		
+			else:
+				sleep(0.1)
+		
 		
 		except KeyboardInterrupt:
 			
