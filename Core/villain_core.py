@@ -854,8 +854,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			else:
 				raise KeyboardInterrupt
 			
-		
-		except KeyboardInterrupt:
+
+		except (EOFError, KeyboardInterrupt):
 			print('\r')
 			Hoaxshell.deactivate_shell()
 		

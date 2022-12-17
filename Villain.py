@@ -900,7 +900,7 @@ def main():
 					continue
 		
 		
-		except KeyboardInterrupt:
+		except (EOFError, KeyboardInterrupt):
 			
 			Main_prompt.main_prompt_ready = True
 			
