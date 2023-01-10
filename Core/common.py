@@ -51,7 +51,6 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 ''' Command Prompt Settings '''
 
 class Main_prompt:
-	
 	original_prompt = prompt = f"{UNDERLINE}Villain{END} > "
 	main_prompt_ready = True
 	SPACE = '#>SPACE$<#'
@@ -60,7 +59,6 @@ class Main_prompt:
 	
 	@staticmethod
 	def rst_prompt(prompt = prompt, prefix = '\r'):
-		
 		Main_prompt.main_prompt_ready = True
 		Main_prompt.exec_active = False
 		sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
@@ -83,7 +81,8 @@ def exit_with_msg(msg):
 
 def print_fail_and_return_to_prompt(msg):			
 	print(f'\r[{FAILED}] {msg}')
-	Main_prompt.rst_prompt(force_rst = True)
+#	Main_prompt.rst_prompt(force_rst = True)
+	Main_prompt.rst_prompt()
 
 
 
@@ -98,13 +97,12 @@ def chill():
 
 
 def is_valid_uuid(value):
+	try:
+		UUID(str(value))
+		return True
 
-	 try:
-		  UUID(str(value))
-		  return True
-
-	 except:
-		  return False
+	except:
+		return False
 
 
 
