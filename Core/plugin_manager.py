@@ -18,8 +18,6 @@ class Plugins:
 
     def getplugins(self):
         pluginsfolder = os.path.join(os.getcwd(), "Plugins")
-        print(os.getcwd())
-        print(pluginsfolder)
         for filename in glob.glob("*.py", root_dir=pluginsfolder):
             print(f"[{INFO}] Found Plugin {filename}")
             basename = filename.replace(".py", "")
@@ -39,7 +37,6 @@ class Plugins:
                     "Action" : cmd["Action"],
                     "Args" : bool(False if cmd["max_args"] == 0 else True)
                 }
-                print(self.commands[name]["Source"])
                 self.getMainHelpMsg(name, self.commands[name], PlObj.Name)
                 self.getPluginsHelpList(name, self.commands[name])
         
