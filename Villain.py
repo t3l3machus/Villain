@@ -629,7 +629,7 @@ def main():
 						user_input = user_input.replace(arg, space_escaped)
 						
 				
-				
+				commands_list = clone_dict_keys(PrompHelp.commands)
 				# Create cmd-line args list
 				user_input = user_input.split(' ')
 				cmd_list = [w.replace(Main_prompt.SPACE, ' ') for w in user_input if w]
@@ -902,8 +902,10 @@ def main():
 					core.list_siblings()
 											
 
+				elif cmd in commands_list:
+					Plugins.Execute(cmd, cmd_list[1:])
 				else:
-					 Plugins.Execute(cmd, cmd_list[1:])
+					continue
 
 
 		except KeyboardInterrupt:

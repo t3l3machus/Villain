@@ -8,4 +8,4 @@ class Plugin:
             "max_args" : Maximum of Args accepted by this Command -> int,
             "Action" : "Name of a Function Somewhere outside of this class inside of this file (without these : '()' " -> str
         }
-    }help
+    }
