@@ -10,6 +10,7 @@ import argparse
 from subprocess import check_output
 from Core.common import *
 from Core.settings import Hoaxshell_settings, Core_server_settings, Netcat_settings
+import Core.plugin_manager as PL
 
 
 # -------------- Arguments -------------- #
@@ -46,7 +47,7 @@ else:
 	defined_ports.append(Hoaxshell_settings.bind_port)
 
 if check_list_for_duplicates(defined_ports):
-	exit(f'[{DEBUG}] The port number of each server/listener must be different.')
+    exit(f'[{DEBUG}] The port number of each server/listener must be different.')
 
 
 
@@ -56,10 +57,8 @@ from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_
 # -------------- Functions & Classes -------------- #
 
 def print_banner():
-	
 	print('\r')
 	padding = '  '
-	
 	V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└','┐','┌', '┘'], [' ', ' ','└','┘', ' ']]
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
 	L = [[' ', '┬',' ',' '], [' ', '│',' ', ' '], [' ', '┴','─','┘']]	
@@ -67,13 +66,11 @@ def print_banner():
 	A = [['┌','─','┐'], ['├','─','┤'], ['┴',' ','┴']]
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
 	N = [[' ', '┌','┐','┌'], [' ', '│','│','│'], [' ', '┘','└','┘']]	
-
-	banner = [V,I,L,L2,A,I,N]
+	banner = [V,I,L,L,A,I,N]
 	final = []	
 	init_color = 97
 	txt_color = init_color
 	cl = 0
-		
 	for charset in range(0, 3):
 		for pos in range(0, len(banner)):
 			for i in range(0, len(banner[pos][charset])):
@@ -82,22 +79,18 @@ def print_banner():
 				final.append(char)
 				cl += 1
 				txt_color = txt_color + 36 if cl <= 3 else txt_color
-
 			cl = 0
-
 			txt_color = init_color
 		init_color += 1
-
 		if charset < 2: final.append('\n   ')
-
 	print(f"   {''.join(final)}")
 	print(f'{END}{padding}           by t3l3machus\n')
 
-
+Plugins = PL.Plugins()
 
 class PrompHelp:
 	
-	commands = {
+	cmds = {
 	
 		'connect' : {
 			'details' : f''' 			
@@ -256,13 +249,14 @@ class PrompHelp:
 		},
 	
 	}
-	
-	
 	@staticmethod
-	def print_main_help_msg():
-				
-		print(
-		f'''
+	def Combine_Commands(cmds = cmds, plcmds = Plugins.pluginshelplist):
+		for key in plcmds:
+			cmds[key] = plcmds[key]
+		return cmds
+	commands = Combine_Commands()
+	main_help_msg = f"""
+		\r  Built-In Commands:
 		\r  Command          Description
 		\r  -------          -----------
 		\r  help      [+]     Print this message.
@@ -280,10 +274,23 @@ class PrompHelp:
 		\r  id                Print server's unique ID (Self).
 		\r  clear             Clear screen.
 		\r  exit              Kill all sessions and quit.
-		
-        \r  Commands with [+] may require additional arguments.
+		\r
+	"""
+	end_main_msg = f"""
+	    \r  Commands with [+] may require additional arguments.
         \r  For details use: {ORANGE}help <COMMAND>{END}
-		''')
+		\r
+	"""
+	@staticmethod
+	def combine_main_help_msg(mainmsg = main_help_msg, mainpluginhelpmsg = Plugins.main_help_msg, endmainmsg = end_main_msg):
+		mainmsg += "\n\r" + mainpluginhelpmsg + "\n\r" + endmainmsg
+		return mainmsg
+	
+
+	@staticmethod
+	def print_main_help_msg():
+				
+		print(PrompHelp.combine_main_help_msg())
 			
 
 
@@ -309,7 +316,6 @@ class PrompHelp:
 		elif num_of_args > PrompHelp.commands[cmd]['max_args']:
 			print('Too many arguments.')
 			valid = False			
-	
 		return valid
 
 	
@@ -897,9 +903,9 @@ def main():
 											
 
 				else:
-					continue
-		
-		
+					 Plugins.Execute(cmd, cmd_list[1:])
+
+
 		except KeyboardInterrupt:
 			
 			Main_prompt.main_prompt_ready = True

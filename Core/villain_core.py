@@ -43,7 +43,7 @@ class Payload_generator:
 
 
 
-	def args_to_dict(self, args_list):
+	def args_to_dict(self, args_list) -> dict | None:
 		
 		try:
 			args_dict = {}
@@ -1592,12 +1592,12 @@ class Core_server:
 		except ConnectionResetError:
 			return 'connection_reset'
 			
-		except OSError:
-			return 'no_route_to_host'
-			
 		except socket.timeout:
 			return 'timed_out'
-		
+			
+		except OSError:
+			return 'no_route_to_host'
+
 		except:
 			return 'unknown_error'
 

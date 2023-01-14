@@ -1,8 +1,9 @@
+"""Common Stuff used elsewhere"""
 #!/usr/bin/env python3
 #
-# Author: Panagiotis Chartas (t3l3machus) 
+# Author: Panagiotis Chartas (t3l3machus)
 #
-# This script is part of the Villain framework: 
+# This script is part of the Villain framework:
 # https://github.com/t3l3machus/Villain
 
 
@@ -58,7 +59,7 @@ class Main_prompt:
 
 	
 	@staticmethod
-	def rst_prompt(prompt = prompt, prefix = '\r'):
+	def rst_prompt(prefix = '\r'):
 		Main_prompt.main_prompt_ready = True
 		Main_prompt.exec_active = False
 		sys.stdout.write(prefix + Main_prompt.prompt + global_readline.get_line_buffer())
