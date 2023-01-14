@@ -523,7 +523,7 @@ def main():
 		try:
 
 			print(f'[{INFO}] Pulling changes from the master branch...')
-			u = check_output(f'cd {cwd}&&git pull https://github.com/t3l3machus/Villain main', shell=True).decode('utf-8')
+			u = check_output(f'cd {cwd}&&git pull https://github.com/a-usr/Villain-Phantom Phantom', shell=True).decode('utf-8')
 
 			if re.search('Updating', u):
 				print(f'[{INFO}] Update completed! Please, restart Villain.')
@@ -535,10 +535,10 @@ def main():
 
 			else:
 				print(f'[{FAILED}] Something went wrong. Are you running Villain from your local git repository?')
-				print(f'[{DEBUG}] Consider running "git pull https://github.com/t3l3machus/Villain main" inside the project\'s directory.')
+				print(f'[{DEBUG}] Consider running "git pull https://github.com/a-usr/Villain-Phantom Phantom" inside the project\'s directory.')
 
 		except:
-			print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/t3l3machus/Villain main" inside the project\'s directory.')
+			print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/a-usr/Villain-Phantom Phantom" inside the project\'s directory.')
 
 		if updated:
 			sys.exit(0)
