@@ -539,6 +539,7 @@ class Obfuscator:
 class Sessions_manager:
 	
 	active_sessions = {}
+	active_sessions : dict[str, dict]
 	legit_session_ids = {}
 	sessions_graveyard = []
 
@@ -557,7 +558,7 @@ class Sessions_manager:
 				
 			except:
 				return ['Failed to repair value.']
-		
+
 		else:
 			return valid	
 		

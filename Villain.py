@@ -382,22 +382,42 @@ class Completer(object):
 		
 		elif len(matches) > 1:
 			
-			char_count = 0
+			char_count = 1
 			
 			while True:
-				char_count += 1
 				new_search_term_len = (len(cmd_frag) + char_count)
 				new_word_frag = matches[0][0:new_search_term_len]
 				unique = []
-				
+				print()
+				print(char_count)
+				print(matches)
+				print(new_search_term_len)
+				print(new_word_frag)
 				for m in matches:
 					
 					if re.match(f"^{new_word_frag}", m):
-						unique.append(m)		
-				
-				if len(unique) < len(matches):
+						unique.append(m)
+						print("m:" + m)
+				char_count +=1
+				print(char_count)
+				print(unique)
+				if len(unique) == len(matches):
+					for i in range(len(matches)):
+						if new_word_frag == matches[i]:
+							if self.tab_counter <= 1:
+								print("ret")
+								return new_word_frag
+						
+							else:						
+								print_shadow('\n' + '  '.join(matches))
+								Main_prompt.rst_prompt()
+								return False 
+						else:
+							continue
+				elif len(unique) < len(matches):
 					
 					if self.tab_counter <= 1:
+						print("ret")
 						return new_word_frag[0:-1]
 						
 					else:						
@@ -409,6 +429,7 @@ class Completer(object):
 					return False
 				
 				else:
+					print(char_count)
 					continue
 					
 		else:
@@ -430,12 +451,9 @@ class Completer(object):
 		
 		# Return no input or input already matches a command
 		if (lb_list_len == 0):
-			return
-			
-
+			return None
 		# Get prompt command from word fragment
 		elif lb_list_len == 1:
-					
 			match = self.get_match_from_list(lb_list[0].lower(), self.main_prompt_commands)
 			self.update_prompt(len(lb_list[0]), match) if match else chill()
 		
@@ -449,8 +467,8 @@ class Completer(object):
 			
 			else:				
 				word_frag = lb_list[-1]
-				match = self.get_match_from_list(lb_list[-1], Sessions_manager.active_sessions.keys())
-				self.update_prompt(len(lb_list[-1]), match) if match else chill()
+				match = self.get_match_from_list(word_frag, Sessions_manager.active_sessions.keys())
+				self.update_prompt(len(word_frag), match) if match else chill()
 
 
 
@@ -503,7 +521,19 @@ class Completer(object):
 				print_shadow('\n' + '  '.join(match))
 				self.tab_counter = 0
 				Main_prompt.rst_prompt()
-						
+		elif lb_list[0].lower() in Plugins.specialargs:
+			search_term = lb_list[-1]
+			match = Plugins.findargs(lb_list)
+			if len(match) == 1:
+				typed = len(search_term)
+				global_readline.insert_text(match[0][typed:])
+				self.tab_counter = 0
+				
+			# Print all matches
+			elif len(match) > 1 and self.tab_counter > 1:
+				print_shadow('\n' + '  '.join(match))
+				self.tab_counter = 0
+				Main_prompt.rst_prompt()
 		# Reset tab counter after 0.5s of inactivity
 		Thread(name="reset_counter", target=self.reset_counter).start()
 		return
@@ -596,7 +626,7 @@ def main():
 		
 	''' Start tab autoComplete '''
 	comp = Completer()
-	global_readline.set_completer_delims(' \t\n;')
+	global_readline.set_completer_delims('')
 	global_readline.parse_and_bind("tab: complete")
 	global_readline.set_completer(comp.complete)			
 		

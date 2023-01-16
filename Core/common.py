@@ -17,7 +17,6 @@ from copy import deepcopy
 from time import sleep, time
 from pyperclip import copy as copy2cb
 from string import ascii_uppercase, ascii_lowercase, digits
-
 if get_system_type() == 'Linux':
 	import gnureadline as global_readline
 else:
@@ -137,7 +136,7 @@ def print_table(rows, columns):
 			
 
 
-def clone_dict_keys(_dict):
+def clone_dict_keys(_dict) -> list[str]:
 	
 	clone = deepcopy(_dict)
 	clone_keys = clone.keys()
