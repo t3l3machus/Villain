@@ -90,7 +90,7 @@ class Payload_generator:
 			if 'os' in arguments:
 				if args_dict['os'].lower() in ['windows', 'linux', 'macos']:
 					os_type = args_dict['os'].lower()
-					del args_dict['os']
+					#del args_dict['os']
 				
 				else:
 					print('Unsupported OS type.')
@@ -239,7 +239,8 @@ class Payload_generator:
 			return
 		
 		for item in args_dict.keys():
-			print(f'Ignoring unrecognized argument "{item}".')
+			if item not in ['os']:
+				print(f'Ignoring unrecognized argument "{item}".')
 			
 		payload = self.obfuscator.mask_payload(payload) if boolean_args['obfuscate'] else payload
 		payload = self.encodeUTF16(payload) if boolean_args['encode'] else payload
