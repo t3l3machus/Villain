@@ -341,7 +341,7 @@ class Completer(object):
 		self.tab_counter = 0		
 		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
 		self.generate_arguments = ['os', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
-		'trusted_domain', 'exec_outfile', 'domain']
+		'trusted_domain', 'exec_outfile', 'domain', 'hostproxy']
 	
 	
 	
