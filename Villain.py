@@ -338,7 +338,7 @@ def alias_sanitizer(word, _min = 2, _max = 26):
 		return ['Alias length must be between 2 to 26 characters.']
 		
 	
-	
+	#%%
 # Tab auto-completer          
 class Completer(object):
 	

@@ -8,26 +8,32 @@ import re
 from .common import FAIL, RED, ORANGE, END, INFO, FAILED, global_readline
 class CMDStruct:
     "Structure for command objects"
-    def __init__(self, name:str, Source:str, Plugin:str, Details:str, Desc:str, min_args:int, max_args:int, action:str, sp_args:list[str]|None):
-        self.Name = name
-        self.Source = Source
-        self.Plugin = Plugin
-        self.Details = Details
-        self.Desc = Desc
-        self.least_args = min_args
-        self.max_args = max_args
-        self.Action = action
-        if self.max_args == 0:
-            self.Args = False
-        else:
-            self.Args = True
-        self.args = []
-        if sp_args == None:
-            self.spargs = False
-        else:
-            self.spargs = True
-            for arg in sp_args:
-                self.args.append(arg.lower())
+    def __init__(self, name:str, Source:str, Plugin:str, cmd:dict[str, str | list[str] | int | None | types.FunctionType]):
+        try:
+            self.Name = name
+            self.Source = Source
+            self.Plugin = Plugin
+            self.Details = cmd["Details"]
+            self.Desc = cmd["Desc"]
+            self.least_args = cmd["least_args"]
+            self.max_args = cmd["max_args"]
+            if callable(cmd["Action"]):
+                self.Action = cmd["Action"]
+            else:
+                raise Action_not_Callable(name, Source)
+            if self.max_args == 0:
+                self.Args = False
+            else:
+                self.Args = True
+            self.args = []
+            if cmd["Special_args"] is None:
+                self.spargs = False
+            else:
+                self.spargs = True
+                for arg in cmd["Special_args"]:
+                    self.args.append(arg.lower())
+        except (TypeError ,KeyError):
+            print(f"{FAILED} Invalid Command Structure in Plugin {Source}")
 
 class Plugins:
     def __init__(self):
@@ -72,14 +78,12 @@ class Plugins:
                 if name in self.commands.keys():
                     raise cmd_duplicate(name, filename, self.commands[name].Source)
                 cmd = PlObj.commands[name]
-                self.commands[name] = CMDStruct(name, basename, PlObj.Name, cmd["Details"], cmd["Desc"], cmd["least_args"], cmd["max_args"], cmd["Action"], cmd["Special_args"])
+                self.commands[name] = CMDStruct(name, basename, PlObj.Name, cmd)
         
         PlObj = None
     def Execute(self, cmd, arg_list):
         "Execute a command"
-        func = self.commands[cmd].Action
-        fname = self.commands[cmd].Source
-        exec(f"self.plugins[\"{fname}\"].{func}({arg_list})")
+        self.commands[cmd].Action(arg_list)
     def getMainHelpMsg(self, cmds : dict[str, CMDStruct]):
         "Constructing the main help Message for every command"
         for key in cmds:
@@ -116,9 +120,14 @@ class cmd_duplicate(BaseException):
     def __init__(self, name, source1, source2):
         message = f"[{FAILED}]{RED} The plugin {ORANGE}{source1}{FAIL} tried to declare the command {ORANGE}{name}{FAIL}, but it was already declared by the plugin {ORANGE}{source2}{FAIL}. {END}"
         print(message)
-        sys.exit(1)
+        sys.exit(-1)
 class cmd_lenght_error(BaseException):
     def __init__(self, cmd : str, size : int, Source : str):
         message = f"[{FAILED}]{RED} The Command {ORANGE}{cmd}{FAIL} from the plugin {ORANGE}{Source}{FAIL} has a size of {ORANGE}{size}{FAIL} characters, but the maximum size is 10 characters. {END}"
         print(message)
-        sys.exit(1)
+        sys.exit(-1)
+class Action_not_Callable(BaseException):
+    def __init__(self, name:str, Source:str) -> None:
+        message = f"[{FAILED}]{RED} The Command {ORANGE}{name}{FAIL} from the Plugin {ORANGE}{Source}{FAIL} failed to import because the command stored in the 'Action'-Field wasn't a callable"
+        print(message)
+        sys.exit(-1)
