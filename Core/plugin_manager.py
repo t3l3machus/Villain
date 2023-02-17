@@ -26,7 +26,7 @@ class CMDStruct:
             else:
                 self.Args = True
             self.args = []
-            if cmd["Special_args"] is None:
+            if not "Special_args" in cmd.keys() or cmd["Special_args"] is None:
                 self.spargs = False
             else:
                 self.spargs = True
@@ -36,7 +36,7 @@ class CMDStruct:
             print(f"{FAILED} Invalid Command Structure in Plugin {Source}")
 
 class Plugins:
-    def __init__(self):
+    def __init__(self, pipe):
         print(f"[{INFO}] Loading Plugins...")
         self.main_help_msg = ""
         self.main_help_msg : str
@@ -48,6 +48,7 @@ class Plugins:
         self.specialargs = []
         self.specialargs : list[str]
         self.Plugin_being_processed = ""
+        self.pipe = pipe
         self.getplugins()
         self.getMainHelpMsg(self.commands)
         self.getPluginsHelpList(self.commands)
@@ -73,7 +74,7 @@ class Plugins:
             print(f"[{INFO}] Found Plugin {filename}")
             basename = filename.replace(".py", "")
             self.plugins[basename] = __import__("Plugins." + basename, None, None, (" "))
-            PlObj = self.plugins[basename].Plugin()
+            PlObj = self.plugins[basename].Plugin(self.pipe)
             for name in PlObj.commands:
                 if name in self.commands.keys():
                     raise cmd_duplicate(name, filename, self.commands[name].Source)
@@ -83,7 +84,10 @@ class Plugins:
         PlObj = None
     def Execute(self, cmd, arg_list):
         "Execute a command"
-        self.commands[cmd].Action(arg_list)
+        if self.commands[cmd].max_args > 0:
+            self.commands[cmd].Action(arg_list)
+        else:
+            self.commands[cmd].Action()
     def getMainHelpMsg(self, cmds : dict[str, CMDStruct]):
         "Constructing the main help Message for every command"
         for key in cmds:

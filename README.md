@@ -57,3 +57,8 @@ Pull requests are generally welcome. Please, keep in mind: I am constantly worki
 
 There are parts of this project that were removed before publishing because I considered them to be buggy or hard to maintain (at this early stage).
 If you have an idea for an addition that comes with a significant chunk of code, I suggest you first contact me to discuss if there's something similar already in the making, before making a PR. 
+
+
+## Phantom
+Phantom is a extension for Villain that allows users to easily create,
+ manage and use plugins.

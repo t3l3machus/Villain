@@ -11,6 +11,7 @@ from subprocess import check_output
 from Core.common import *
 from Core.settings import Hoaxshell_settings, Core_server_settings, Netcat_settings
 import Core.plugin_manager as PL
+from PLTools import pipe
 
 
 # -------------- Arguments -------------- #
@@ -57,7 +58,7 @@ from Core.villain_core import Payload_generator, initiate_hoax_server, Sessions_
 # -------------- Functions & Classes -------------- #
 
 def print_banner():
-	print('\r')
+	fprint('\r')
 	padding = '  '
 	V = [[' ', '┬', ' ', ' ', '┬'], [' ', '└','┐','┌', '┘'], [' ', ' ','└','┘', ' ']]
 	I =	[[' ', '┬'], [' ', '│',], [' ', '┴']]
@@ -83,10 +84,11 @@ def print_banner():
 			txt_color = init_color
 		init_color += 1
 		if charset < 2: final.append('\n   ')
-	print(f"   {''.join(final)}")
-	print(f'{END}{padding}           by t3l3machus\n')
-
-Plugins = PL.Plugins()
+	fprint(f"   {''.join(final)}")
+	fprint(f'{END}{padding}           by t3l3machus\n')
+	
+p = pipe()
+Plugins = PL.Plugins(p)
 
 class PrompHelp:
 	
@@ -290,13 +292,13 @@ class PrompHelp:
 	@staticmethod
 	def print_main_help_msg():
 				
-		print(PrompHelp.combine_main_help_msg())
+		fprint(PrompHelp.combine_main_help_msg())
 			
 
 
 	@staticmethod
 	def print_detailed(cmd):			
-		print(PrompHelp.commands[cmd]['details']) if cmd in PrompHelp.commands.keys() else print(f'No details for command "{cmd}".')
+		fprint(PrompHelp.commands[cmd]['details']) if cmd in PrompHelp.commands.keys() else print(f'No details for command "{cmd}".')
 
 
 
@@ -304,9 +306,11 @@ class PrompHelp:
 	def validate(cmd, num_of_args):
 		
 		valid = True
-		
-		if cmd not in PrompHelp.commands.keys():
-			print('Unknown command.')
+		if cmd == "prbuff":
+			pass
+
+		elif cmd not in PrompHelp.commands.keys():
+			print(f'Unknown command: {cmd}')
 			valid = False
 			
 		elif num_of_args < PrompHelp.commands[cmd]['least_args']:
@@ -388,24 +392,15 @@ class Completer(object):
 				new_search_term_len = (len(cmd_frag) + char_count)
 				new_word_frag = matches[0][0:new_search_term_len]
 				unique = []
-				print()
-				print(char_count)
-				print(matches)
-				print(new_search_term_len)
-				print(new_word_frag)
 				for m in matches:
 					
 					if re.match(f"^{new_word_frag}", m):
 						unique.append(m)
-						print("m:" + m)
 				char_count +=1
-				print(char_count)
-				print(unique)
 				if len(unique) == len(matches):
 					for i in range(len(matches)):
 						if new_word_frag == matches[i]:
 							if self.tab_counter <= 1:
-								print("ret")
 								return new_word_frag
 						
 							else:						
@@ -417,7 +412,6 @@ class Completer(object):
 				elif len(unique) < len(matches):
 					
 					if self.tab_counter <= 1:
-						print("ret")
 						return new_word_frag[0:-1]
 						
 					else:						
@@ -537,9 +531,280 @@ class Completer(object):
 		# Reset tab counter after 0.5s of inactivity
 		Thread(name="reset_counter", target=self.reset_counter).start()
 		return
+"""Start Pipe"""
+fprint = p.forceprint
+flush = p.flush
+print = p.print
+
+def execute(cmd, cmd_list, cmd_list_len, commands_list, sessions_manager, payload_engine, core):
+	for i in ["f"]:
+		
+		# Validate number of args
+		valid = PrompHelp.validate(cmd, (cmd_list_len - 1))				
+							
+		if not valid:
+			continue
+
+		if cmd == 'help':					
+			if cmd_list_len == 1:
+				PrompHelp.print_main_help_msg()
+								
+			elif cmd_list_len == 2:
+				PrompHelp.print_detailed(cmd_list[1])
+														
 
 
-	
+		elif cmd == 'id':
+			print(f'{BOLD}Server unique id{END}: {ORANGE}{core.return_server_uniq_id()}{END}')
+
+
+
+		elif cmd == 'connect':
+			core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
+
+
+
+		elif cmd == 'generate':								
+			payload_engine.generate_payload(cmd_list[1:])
+
+
+
+		elif cmd == 'kill':
+			session_id = sessions_manager.alias_to_session_id(cmd_list[1])
+			
+			if not session_id:
+				print('Failed to interpret session_id.')
+				continue	
+												
+			sessions_manager.kill_session(session_id)
+
+
+
+		elif cmd == 'exec':
+							
+			if sessions_manager.active_sessions.keys():
+				
+				try:
+
+					Main_prompt.main_prompt_ready = False
+					Main_prompt.exec_active = True
+					command = cmd_list[1]
+					session_id = cmd_list[2]
+					src_is_file = False
+					
+					if command[0] == os.path.sep:
+						
+						try:
+							f = open(command)
+							command = f.read()
+							f.close()
+							src_is_file = True
+							
+						except:
+							print('Failed to load file.')
+							Main_prompt.main_prompt_ready = True
+							continue
+					
+					if command.lower() == 'exit':
+						print('The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
+						Main_prompt.main_prompt_ready = True
+						continue
+					
+					# Check if session id has alias
+					session_id = sessions_manager.alias_to_session_id(session_id)
+					
+					if not session_id:
+						print('Failed to interpret session_id.')
+						Main_prompt.main_prompt_ready = True
+						continue								
+
+					# Check who is the owner of the shell session
+					session_owner_id = sessions_manager.return_session_owner_id(session_id)
+					
+					if session_owner_id == core.return_server_uniq_id():
+						Hoaxshell.command_pool[session_id].append(command)
+					
+					else:
+						
+						if sessions_manager.active_sessions[session_id]['Shell'] == 'cmd.exe':
+							command += "&echo '{" + core.SERVER_UNIQUE_ID + "}'"
+														
+						elif sessions_manager.active_sessions[session_id]['Shell'] == 'unix':
+							command += "&&echo '{" + core.SERVER_UNIQUE_ID + "}'"
+						
+						else:
+							command += ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
+						
+						core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
+					
+					# Reset prompt if session status is Undefined or Lost 
+					if sessions_manager.active_sessions[session_id]['Status'] in ['Undefined', 'Lost']:
+						Main_prompt.main_prompt_ready = True
+					
+				except KeyboardInterrupt:
+					continue
+
+			else:
+				print(f'\r[{INFO}] No active session.')		
+
+
+
+		elif cmd == 'shell':
+				
+			if sessions_manager.active_sessions.keys():
+				
+				Main_prompt.main_prompt_ready = False	
+				session_id = sessions_manager.alias_to_session_id(cmd_list[1])
+				
+				if not session_id:
+					print('Failed to interpret session_id.')
+					Main_prompt.main_prompt_ready = True
+					continue
+																
+				os_type = sessions_manager.active_sessions[session_id]['OS Type']
+				Hoaxshell.activate_shell_session(session_id, os_type)
+				
+			else:
+				print(f'\r[{INFO}] No active session.')		
+
+
+
+
+		elif cmd == 'alias':
+								
+			sessions = sessions_manager.active_sessions.keys()
+			
+			if len(sessions):
+				if cmd_list[2] in sessions:
+					
+					alias = alias_sanitizer(cmd_list[1]).strip()
+					
+					if isinstance(alias, list):
+						print(alias[0])
+						
+					else:
+						# Check if alias is unique
+						unique = True
+						
+						for session_id in sessions:
+							if sessions_manager.active_sessions[session_id]['alias'] == alias.strip():
+								unique = False
+								break
+							
+						# Check if alias is a reserved keyword
+						is_reserved = False
+						
+						if alias in ['Undefined', 'Active']:
+							is_reserved = True
+						
+						
+						# Check if alias is the id of another session	
+						is_session_id = False
+						
+						if alias in sessions:
+							is_session_id = True
+							
+						if unique and not is_session_id and not is_reserved:
+							sessions_manager.active_sessions[cmd_list[2]]['alias'] = alias.strip()
+							sessions_manager.active_sessions[cmd_list[2]]['aliased'] = True
+						
+						else:
+							print('Illegal alias value.')
+							
+				else:
+					print('Invalid session ID.')
+
+			else:
+				print(f'\rNo active sessions.')		
+
+
+
+		elif cmd == 'repair':
+			sessions = sessions_manager.active_sessions.keys()
+			
+			if len(sessions):
+				
+				if cmd_list[1] in sessions:
+					
+					key = cmd_list[2].lower().strip()
+					
+					if key in ['hostname', 'username']:
+						
+						result = sessions_manager.repair(cmd_list[1], key, cmd_list[3])
+						
+						if isinstance(result, list):
+							print(result[0])
+							
+						elif result == 0:
+							print('Success.')
+						
+					else:
+						print(f'Repair function not applicable on "{key}". Try HOSTNAME or USERNAME.')
+							
+				else:
+					print('Invalid session ID.')
+
+			else:
+				print(f'\rNo active sessions.')							
+
+
+
+		elif cmd == 'reset':
+								
+			sid = sessions_manager.alias_to_session_id(cmd_list[1])
+			
+			if sid == cmd_list[1]:
+				print('Unrecognized alias.')
+			
+			elif sid in sessions_manager.active_sessions.keys():
+				sessions_manager.active_sessions[sid]['aliased'] = False
+				sessions_manager.active_sessions[sid]['alias'] = None
+				
+			
+			else:
+				print('Unrecognized alias.')
+
+
+
+		elif cmd == 'clear':
+			os.system('clear')
+
+
+
+		elif cmd == 'exit':
+			raise KeyboardInterrupt
+
+
+
+		elif cmd == 'sessions':
+
+			if cmd_list_len == 1:							
+				sessions_manager.list_sessions()
+						
+			else:
+				print('Unsupported arguments.')
+
+
+
+		elif cmd == 'backdoors':
+
+			if cmd_list_len == 1:											
+				sessions_manager.list_backdoors()
+						
+			else:
+				print('Unsupported arguments.')
+		
+
+
+		elif cmd == 'siblings':										
+			core.list_siblings()
+		elif cmd == "prbuff":
+			fprint(p.pqueue)							
+
+		elif cmd in commands_list:
+			Plugins.Execute(cmd, cmd_list[1:])
+		else:
+			continue	
 def main():
 
 	chill() if args.quiet else print_banner()
@@ -552,23 +817,23 @@ def main():
 
 		try:
 
-			print(f'[{INFO}] Pulling changes from the master branch...')
+			fprint(f'[{INFO}] Pulling changes from the master branch...')
 			u = check_output(f'cd {cwd}&&git pull https://github.com/a-usr/Villain-Phantom Phantom', shell=True).decode('utf-8')
 
 			if re.search('Updating', u):
-				print(f'[{INFO}] Update completed! Please, restart Villain.')
+				fprint(f'[{INFO}] Update completed! Please, restart Villain.')
 				updated = True
 
 			elif re.search('Already up to date', u):
-				print(f'[{INFO}] Already running the latest version!')
+				fprint(f'[{INFO}] Already running the latest version!')
 				pass
 
 			else:
-				print(f'[{FAILED}] Something went wrong. Are you running Villain from your local git repository?')
-				print(f'[{DEBUG}] Consider running "git pull https://github.com/a-usr/Villain-Phantom Phantom" inside the project\'s directory.')
+				fprint(f'[{FAILED}] Something went wrong. Are you running Villain from your local git repository?')
+				fprint(f'[{DEBUG}] Consider running "git pull https://github.com/a-usr/Villain-Phantom Phantom" inside the project\'s directory.')
 
 		except:
-			print(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/a-usr/Villain-Phantom Phantom" inside the project\'s directory.')
+			fprint(f'[{FAILED}] Update failed. Consider running "git pull https://github.com/a-usr/Villain-Phantom Phantom" inside the project\'s directory.')
 
 		if updated:
 			sys.exit(0)
@@ -629,8 +894,7 @@ def main():
 	global_readline.set_completer_delims('')
 	global_readline.parse_and_bind("tab: complete")
 	global_readline.set_completer(comp.complete)			
-		
-	
+
 	''' +---------[ Command prompt ]---------+'''
 	while True:
 		
@@ -669,273 +933,7 @@ def main():
 				if cmd in core.requests.keys():
 					core.requests[cmd] = True
 					continue
-				
-				# Validate number of args
-				valid = PrompHelp.validate(cmd, (cmd_list_len - 1))				
-									
-				if not valid:
-					continue
-
-
-				if cmd == 'help':					
-					if cmd_list_len == 1:
-						PrompHelp.print_main_help_msg()
-										
-					elif cmd_list_len == 2:
-						PrompHelp.print_detailed(cmd_list[1])
-														
-		
-
-				elif cmd == 'id':
-					print(f'{BOLD}Server unique id{END}: {ORANGE}{core.return_server_uniq_id()}{END}')
-
-
-
-				elif cmd == 'connect':
-					core.connect_with_sibling_server(cmd_list[1], cmd_list[2])
-					
-								
-
-				elif cmd == 'generate':								
-					payload_engine.generate_payload(cmd_list[1:])
-								
-
-
-				elif cmd == 'kill':
-					session_id = sessions_manager.alias_to_session_id(cmd_list[1])
-					
-					if not session_id:
-						print('Failed to interpret session_id.')
-						continue	
-														
-					sessions_manager.kill_session(session_id)
-
-						
-
-				elif cmd == 'exec':
-									
-					if Sessions_manager.active_sessions.keys():
-						
-						try:
-
-							Main_prompt.main_prompt_ready = False
-							Main_prompt.exec_active = True
-							command = cmd_list[1]
-							session_id = cmd_list[2]
-							src_is_file = False
-							
-							if command[0] == os.path.sep:
-								
-								try:
-									f = open(command)
-									command = f.read()
-									f.close()
-									src_is_file = True
-									
-								except:
-									print('Failed to load file.')
-									Main_prompt.main_prompt_ready = True
-									continue
-							
-							if command.lower() == 'exit':
-								print('The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
-								Main_prompt.main_prompt_ready = True
-								continue
-							
-							# Check if session id has alias
-							session_id = sessions_manager.alias_to_session_id(session_id)
-							
-							if not session_id:
-								print('Failed to interpret session_id.')
-								Main_prompt.main_prompt_ready = True
-								continue								
-
-							# Check who is the owner of the shell session
-							session_owner_id = sessions_manager.return_session_owner_id(session_id)
-							
-							if session_owner_id == core.return_server_uniq_id():
-								Hoaxshell.command_pool[session_id].append(command)
-							
-							else:
-								
-								if Sessions_manager.active_sessions[session_id]['Shell'] == 'cmd.exe':
-									command += "&echo '{" + core.SERVER_UNIQUE_ID + "}'"
-																
-								elif Sessions_manager.active_sessions[session_id]['Shell'] == 'unix':
-									command += "&&echo '{" + core.SERVER_UNIQUE_ID + "}'"
-								
-								else:
-									command += ";echo '{" + core.SERVER_UNIQUE_ID + "}'"
-								
-								core.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, command)
-							
-							# Reset prompt if session status is Undefined or Lost 
-							if Sessions_manager.active_sessions[session_id]['Status'] in ['Undefined', 'Lost']:
-								Main_prompt.main_prompt_ready = True
-							
-						except KeyboardInterrupt:
-							continue
-
-					else:
-						print(f'\r[{INFO}] No active session.')		
-
-						
-
-				elif cmd == 'shell':
-						
-					if Sessions_manager.active_sessions.keys():
-						
-						Main_prompt.main_prompt_ready = False	
-						session_id = Sessions_manager.alias_to_session_id(cmd_list[1])
-						
-						if not session_id:
-							print('Failed to interpret session_id.')
-							Main_prompt.main_prompt_ready = True
-							continue
-																		
-						os_type = sessions_manager.active_sessions[session_id]['OS Type']
-						Hoaxshell.activate_shell_session(session_id, os_type)
-						
-					else:
-						print(f'\r[{INFO}] No active session.')		
-
-
-			
-
-				elif cmd == 'alias':
-										
-					sessions = Sessions_manager.active_sessions.keys()
-					
-					if len(sessions):
-						if cmd_list[2] in sessions:
-							
-							alias = alias_sanitizer(cmd_list[1]).strip()
-							
-							if isinstance(alias, list):
-								print(alias[0])
-								
-							else:
-								# Check if alias is unique
-								unique = True
-								
-								for session_id in sessions:
-									if Sessions_manager.active_sessions[session_id]['alias'] == alias.strip():
-										unique = False
-										break
-								
-								# Check if alias is a reserved keyword
-								is_reserved = False
-								
-								if alias in ['Undefined', 'Active']:
-									is_reserved = True
-								
-								
-								# Check if alias is the id of another session	
-								is_session_id = False
-								
-								if alias in sessions:
-									is_session_id = True
-									
-								if unique and not is_session_id and not is_reserved:
-									Sessions_manager.active_sessions[cmd_list[2]]['alias'] = alias.strip()
-									Sessions_manager.active_sessions[cmd_list[2]]['aliased'] = True
-								
-								else:
-									print('Illegal alias value.')
-									
-						else:
-							print('Invalid session ID.')
-
-					else:
-						print(f'\rNo active sessions.')		
-
-
-
-				elif cmd == 'repair':
-					sessions = Sessions_manager.active_sessions.keys()
-					
-					if len(sessions):
-						
-						if cmd_list[1] in sessions:
-							
-							key = cmd_list[2].lower().strip()
-							
-							if key in ['hostname', 'username']:
-								
-								result = sessions_manager.repair(cmd_list[1], key, cmd_list[3])
-								
-								if isinstance(result, list):
-									print(result[0])
-									
-								elif result == 0:
-									print('Success.')
-								
-							else:
-								print(f'Repair function not applicable on "{key}". Try HOSTNAME or USERNAME.')
-									
-						else:
-							print('Invalid session ID.')
-
-					else:
-						print(f'\rNo active sessions.')							
-
-
-
-				elif cmd == 'reset':
-										
-					sid = Sessions_manager.alias_to_session_id(cmd_list[1])
-					
-					if sid == cmd_list[1]:
-						print('Unrecognized alias.')
-					
-					elif sid in Sessions_manager.active_sessions.keys():
-						Sessions_manager.active_sessions[sid]['aliased'] = False
-						Sessions_manager.active_sessions[sid]['alias'] = None
-						
-					
-					else:
-						print('Unrecognized alias.')
-
-
-
-				elif cmd == 'clear':
-					os.system('clear')
-
-
-
-				elif cmd == 'exit':
-					raise KeyboardInterrupt
-
-
-
-				elif cmd == 'sessions':
-
-					if cmd_list_len == 1:							
-						sessions_manager.list_sessions()
-								
-					else:
-						print('Unsupported arguments.')
-
-
-
-				elif cmd == 'backdoors':
-
-					if cmd_list_len == 1:											
-						sessions_manager.list_backdoors()
-								
-					else:
-						print('Unsupported arguments.')
-				
-
-
-				elif cmd == 'siblings':										
-					core.list_siblings()
-											
-
-				elif cmd in commands_list:
-					Plugins.Execute(cmd, cmd_list[1:])
-				else:
-					continue
+				p.unpipe_and_exec(cmd_list, commands_list, execute, sessions_manager, payload_engine, core)
 
 
 		except KeyboardInterrupt:
