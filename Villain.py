@@ -217,7 +217,7 @@ class PrompHelp:
 
 		'sessions' : {
 			'details' : f'''
-			\r  Sessions of backdoored machines that you have succesfully poisoned.
+			\r  Sessions of backdoored machines that you have successfully poisoned.
 			''',
 			'least_args' : 0,
 			'max_args' : 0
@@ -225,7 +225,7 @@ class PrompHelp:
 
 		'backdoors' : {
 			'details' : f'''
-			\r  Shell and listener types of backdoored machines that you have succesfully poisoned.
+			\r  Shell and listener types of backdoored machines that you have successfully poisoned.
 			''',
 			'least_args' : 0,
 			'max_args' : 0
