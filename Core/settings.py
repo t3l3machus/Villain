@@ -7,7 +7,7 @@
 
 
 from threading import BoundedSemaphore
-
+from uuid import uuid4
 
 class Threading_params:
 	
@@ -16,10 +16,10 @@ class Threading_params:
 
 
 
-class Core_server_settings:
+class Core_Server_Settings:
 	
 	bind_address = '0.0.0.0'
-	bind_port = 65001	
+	bind_port = 6501	
 	
 	# How long to sleep between echo requests to check if siblings are alive
 	ping_siblings_sleep_time = 4
@@ -29,12 +29,13 @@ class Core_server_settings:
 	
 
 
-class Hoaxshell_settings:
+class Hoaxshell_Settings:
 	
 	bind_address = '0.0.0.0'
 	bind_port = 8080
 	bind_port_ssl = 443
 	ssl_support = None
+	monitor_shell_state_freq = 3
 
 	# Server response header definition
 	server_version = 'Apache/2.4.1'
@@ -42,15 +43,19 @@ class Hoaxshell_settings:
 	# Header name of the header that carries the backdoor's session ID
 	_header = 'Authorization'
 	
-	# Beacon frequency of the generated backdoor shells
-	default_frequency = 0.8
-	
 	# Generate self signed cert:
 	# openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
-	certfile = False # Add path to cert.pem here for SSL or pass it as argument
-	keyfile = False  # Add path to priv_key.pem here for SSL or pass it as argument
+	certfile = False # Add path to cert.pem here for SSL or parse it with -c
+	keyfile = False  # Add path to priv_key.pem here for SSL or parse it with -k
 	
+
+
+class File_Smuggler_Settings:
 	
+	bind_address = '0.0.0.0'
+	bind_port = 8888	
+
+
 
 class Sessions_manager_settings:
 	
@@ -58,15 +63,23 @@ class Sessions_manager_settings:
 
 
 
-class Netcat_settings:
+class TCP_Sock_Handler_Settings:
 	
 	bind_address = '0.0.0.0'
 	bind_port = 4443
+	sentinel_value = uuid4().hex
 	sock_timeout = 4
-	recv_timeout = 12
-	recv_timeout_buffer_size = 8192
-	await_execution_timeout = 12
+	recv_timeout = 14
+	recv_timeout_buffer_size = 4096
+	await_execution_timeout = 90
 	alive_echo_exec_timeout = 2.5
 	
 	# Max failed echo response requests before a connection is characterized as lost
 	fail_count = 3
+
+
+
+class Payload_Generator_Settings:
+	
+	# Set to false in order to parse domains as LHOST when generating commands
+	validate_lhost_as_ip = True	
