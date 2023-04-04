@@ -20,6 +20,7 @@ The framework's main features include:
 <!--Many additional information can be found in the user guide.-->
 
 :zap: **This release is fresh and is still being tested.**  
+:warning: Create your own obfuscated reverse shell templates and replace the default ones in your instance of Villain to better handle AV evasion. Here's how 📽️ -> [youtube.com/watch?v=grSBdZdUya0](https://www.youtube.com/watch?v=grSBdZdUya0)
 
 ### Video Presentations
 [2022-11-30] John Hammond showcased the tool in this incredible video -> [youtube.com/watch?v=pTUggbSCqA0](https://www.youtube.com/watch?v=pTUggbSCqA0)  
