@@ -6,7 +6,7 @@
 # https://github.com/t3l3machus/Villain
 
 
-import ssl, socket, struct
+import ssl, socket, struct, clipboard
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from warnings import filterwarnings
 from datetime import date, datetime
@@ -231,7 +231,8 @@ class Payload_Generator:
 
 		# Copy payload to clipboard
 		try:
-			copy2cb(payload.data)
+			clipboard.copy(payload.data)
+			clipboard.paste()
 			print(f'{ORANGE}Copied to clipboard!{END}')
 
 		except:
