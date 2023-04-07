@@ -3,10 +3,10 @@
 :warning: This guide is a work in progress currently describing key features. Check out Villain's introduction on youtube for more info.
 
 ## Table of contents
-1. [Generate Backdoor Payloads](Generate-Reverse-Shell-Commands)
-2. [Connect With Sibling Server](Connect-With-Sibling-Server)
-3. [The shell Command](The-shell-Command)
-4. [The exec Command](The-exec-Command)
+1. [Generate Backdoor Payloads](#Generate-Reverse-Shell-Commands)
+2. [Connect With Sibling Server](#Connect-With-Sibling-Server)
+3. [The shell Command](#The-shell-Command)
+4. [The exec Command](#The-exec-Command)
 
 ## Generate Reverse Shell Commands
 Use the `generate` prompt command to generate payloads for Windows / Linux machines. 
