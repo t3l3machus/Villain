@@ -7,9 +7,10 @@
 
 
 import argparse
+import importlib.util
 from subprocess import check_output
 from Core.common import *
-from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings
+from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings, Callback_Settings
 
 
 # -------------- Arguments -------------- #
@@ -23,6 +24,7 @@ parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl
 parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
 parser.add_argument("-u", "--update", action="store_true", help = "Pull the latest version from the original repo.")
 parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
+parser.add_argument("-cb", "--callback", action="store", help="Path to a custom python callback script that will be executed once a new session is created. This file should have a function called 'callback' that takes a single argument (session object) and return boolean (success/failure).")
 
 args = parser.parse_args()
 
@@ -31,6 +33,17 @@ Hoaxshell_Settings.certfile = args.certfile
 Hoaxshell_Settings.keyfile = args.keyfile
 Hoaxshell_Settings.ssl_support = True if (args.certfile and args.keyfile) else False
 Hoaxshell_Settings.bind_port = args.hoax_port if args.hoax_port else Hoaxshell_Settings.bind_port
+
+# Parse the callback
+if args.callback:
+	Callback_Settings.callback_file = args.callback
+	# load the file and check if it has a function called 'callback'
+	filename = Callback_Settings.callback_file.split('/')[-1]
+	spec = importlib.util.spec_from_file_location(filename, Callback_Settings.callback_file)
+	module = importlib.util.module_from_spec(spec)
+	spec.loader.exec_module(module)
+
+	Callback_Settings.callback_function = getattr(module, 'callback')
 
 if Hoaxshell_Settings.ssl_support:
 	Hoaxshell_Settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_Settings.bind_port_ssl
