@@ -6,7 +6,7 @@
 <img src="https://img.shields.io/badge/Maintained%3F-Yes-96c40f">
 
 ## Purpose
-Villain is a C2 framework that can handle multiple TCP socket & HoaxShell-based reverse shells, enhance their functionality with additional features (commands, utilities etc) and share them among connected sibling servers (Villain instances running on different machines).  
+Villain is a high level C2 framework that can handle multiple TCP socket & HoaxShell-based reverse shells, enhance their functionality with additional features (commands, utilities etc) and share them among connected sibling servers (Villain instances running on different machines).  
 
 The framework's main features include:
  - Payload generation based on default, customizable and/or user defined payload templates (Windows & Linux),
