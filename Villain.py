@@ -7,6 +7,7 @@
 
 
 import argparse
+import os
 from subprocess import check_output
 from Core.common import *
 from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings
@@ -1285,7 +1286,12 @@ def main():
 							villain_cmd['issuer'] = 'self'
 
 							# Start listener
-							os.system(f'gnome-terminal -- bash -c "stty raw -echo; (stty size; cat) | nc -lvnp {lport}"')
+							# Will spawn in TMUX instead of gnome-terminal if available.
+							if os.getenv("TMUX") is not None:
+								os.system(f'tmux split-window -h "bash -c \'stty raw -echo; (stty size; cat) | nc -lvnp {lport}\'"')
+							else:
+								os.system(f'gnome-terminal -- bash -c "stty raw -echo; (stty size; cat) | nc -lvnp {lport}"')
+							
 							sleep(0.2)
 							Hoaxshell.command_pool[session_id].append(villain_cmd)
 
