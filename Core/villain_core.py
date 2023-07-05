@@ -1091,8 +1091,14 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			self.end_headers()
 			self.wfile.write(bytes('OK', "utf-8"))
 			Sessions_Manager.active_sessions[session_id]['execution_verified'] = True
-			Sessions_Manager.active_sessions[session_id]['Computername'] = url_split[1]
-			Sessions_Manager.active_sessions[session_id]['Username'] = url_split[2]
+			
+			try:
+				Sessions_Manager.active_sessions[session_id]['Computername'] = url_split[1]
+				Sessions_Manager.active_sessions[session_id]['Username'] = url_split[2]
+			except IndexError:
+				Sessions_Manager.active_sessions[session_id]['Computername'] = 'Undefined'
+				Sessions_Manager.active_sessions[session_id]['Username'] = 'Undefined'
+				
 			print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
 
 			try:
