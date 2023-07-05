@@ -1241,7 +1241,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		if Sessions_Manager.active_sessions[session_id]['Listener'] == 'hoaxshell':
 			exit_command = 'stop-process $PID' if os_type  == 'Windows' else 'echo byee'
 
-			if (os_type == 'Windows' and not outfile) or os_type == 'Linux':
+			if Sessions_Manager.active_sessions[session_id]['Shell'] == 'cmd.exe':
+				Hoaxshell.command_pool[session_id].append({'data' : 'exit', 'issuer' : 'self', 'quiet' : True})
+				
+			elif (os_type == 'Windows' and not outfile) or os_type == 'Linux':
 				Hoaxshell.command_pool[session_id].append({'data' : exit_command, 'issuer' : 'self', 'quiet' : True})
 
 			elif os_type == 'Windows' and outfile:
