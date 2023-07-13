@@ -131,7 +131,7 @@ class PrompHelp:
 	
 		'connect' : {
 			'details' : f''' 			
-			\rConnect with another instance of Villain (sibling server). Once connected, you will be able to see and interact with foreign shell sessions owned by sibling servers and vice-versa. Multiple sibling servers can be connected at once. The limit of connections depends on the number of active threads a Villain instance can have at once. Read the Usage Guide or check my YouTube channel for details.
+			\rConnect with another instance of Villain (sibling server). Once connected, you will be able to see and interact with foreign shell sessions owned by sibling servers and vice-versa. Multiple sibling servers can be connected at once. The limit of connections depends on the number of active threads a Villain instance can have (adjustable). In case you forgot the team server port number, use "sockets" to list Villain related services info. Read the Usage Guide or check my YouTube channel for details.
 
 			\r {ORANGE}connect <IP> <TEAM_SERVER_PORT>{END}
 			''',
