@@ -784,7 +784,8 @@ def main():
 	global_readline.set_completer_delims(' \t\n;')
 	global_readline.parse_and_bind("tab: complete")
 	global_readline.set_completer(comp.complete)			
-		
+
+	print(f'[{INFO}] Welcome! Type "help" to list available commands.')		
 	
 	''' +---------[ Command prompt ]---------+ '''
 	while True:
