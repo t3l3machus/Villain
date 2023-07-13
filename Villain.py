@@ -1329,6 +1329,11 @@ def main():
 			
 			bound = False
 			Main_prompt.ready = True
+
+			if global_readline.get_line_buffer(): 
+				sys.stdout.flush()
+				print()
+				continue
 			
 			if Main_prompt.exec_active:
 				Main_prompt.exec_active = False
