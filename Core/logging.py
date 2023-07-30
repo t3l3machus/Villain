@@ -67,8 +67,11 @@ class HoaxShell_Implants_Logger:
 
 def clear_metadata():
 
-    if os.path.exists(HoaxShell_Implants_Logger.generated_implants_file):
-        os.remove(HoaxShell_Implants_Logger.generated_implants_file)
+    try:
+        if os.path.exists(HoaxShell_Implants_Logger.generated_implants_file):
+            os.remove(HoaxShell_Implants_Logger.generated_implants_file)
+    except:
+        return False
     
     return True
 
