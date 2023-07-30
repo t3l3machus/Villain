@@ -10,7 +10,7 @@ import argparse
 from subprocess import check_output
 from Core.common import *
 from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings
-
+from Core.logging import clear_metadata
 
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
@@ -131,10 +131,9 @@ class PrompHelp:
 	
 		'connect' : {
 			'details' : f''' 			
-			\rConnect with another instance of Villain (sibling server). Once connected, you will be able to see and interact with foreign shell sessions owned by sibling servers and vice-versa. Multiple sibling servers can be connected at once. The limit of connections depends on the number of active threads a Villain instance can have (adjustable). In case you forgot the team server port number, use "sockets" to list Villain related services info. Read the Usage Guide or check my YouTube channel for details.
+Connect with another instance of Villain (sibling server). Once connected, you will be able to see and interact with foreign shell sessions owned by sibling servers and vice-versa. Multiple sibling servers can be connected at once. The limit of connections depends on the number of active threads a Villain instance can have (adjustable). In case you forgot the team server port number (default: 6501), use "sockets" to list Villain related services info. Read the Usage Guide or check my YouTube channel (@HaxorTechTones) for details.
 
-			\r {ORANGE}connect <IP> <TEAM_SERVER_PORT>{END}
-			''',
+connect <IP> <TEAM_SERVER_PORT>''',
 			'least_args' : 2,
 			'max_args' : 2
 		},
@@ -142,20 +141,19 @@ class PrompHelp:
 				
 		'generate' : {
 			'details' : f''' 		
-			\rGenerate a reverse shell command. This function has been redesigned to use payload templates, which you can find in Villain/Core/payload_templates and edit or create your own.
-			\r
-			\r Main logic:
-			\r {ORANGE}generate payload=<OS_TYPE/HANDLER/PAYLOAD_TEMPLATE> lhost=<IP or INTERFACE> [ obfuscate encode ]{END}
-			\r
-			\r Usage examples:
-			\r {ORANGE}generate payload=windows/netcat/powershell_reverse_tcp lhost=eth0 encode{END}
-			\r {ORANGE}generate payload=linux/hoaxshell/sh_curl lhost=eth0{END}
-			\r
-			\r  - The ENCODE and OBFUSCATE attributes are enabled for certain templates and can be used during payload generation. 
-			\r  - For info on a particular template, use "generate" with PAYLOAD being the only provided argument.
-			\r  - To catch HoaxShell https-based reverse shells you need to start Villain with SSL.
-			\r  - Ultimately, one should edit the templates and add obfuscated versions of the commands for AV evasion.
-			''',
+Generate a reverse shell command. This function has been redesigned to use payload templates, which you can find in Villain/Core/payload_templates and edit or create your own.
+
+Main logic:
+generate payload=<OS_TYPE/HANDLER/PAYLOAD_TEMPLATE> lhost=<IP or INTERFACE> [ obfuscate encode ]
+
+Usage examples:
+generate payload=windows/netcat/powershell_reverse_tcp lhost=eth0 encode
+generate payload=linux/hoaxshell/sh_curl lhost=eth0
+
+- The ENCODE and OBFUSCATE attributes are enabled for certain templates and can be used during payload generation. 
+- For info on a particular template, use "generate" with PAYLOAD being the only provided argument.
+- To catch HoaxShell https-based reverse shells you need to start Villain with SSL.
+- Ultimately, one should edit the templates and add obfuscated versions of the commands for AV evasion.''',
 			'least_args' : 0, # Intentionally set to 0 so that the Payload_Generator class can inform users about missing arguments
 			'max_args' : 7
 		},			
@@ -163,12 +161,11 @@ class PrompHelp:
 
 		'exec' : {
 			'details' : f''' 			
-			\rExecute a command or file against an active backdoor session. Files are executed by being http requested from the Http File Smuggler. The feature works regardless if the session is owned by you or a sibling server.
-			\r	
-			\r {ORANGE}exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>{END}
-			\r
-			\r *Command(s) should be quoted.
-			''',
+Execute a command or file against an active backdoor session. Files are executed by being http requested from the Http File Smuggler. The feature works regardless if the session is owned by you or a sibling server.
+	
+exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>
+
+*Command(s) should be quoted.''',
 			'least_args' : 2,
 			'max_args' : 2
 		},			
@@ -176,20 +173,18 @@ class PrompHelp:
 
 		'repair' : {
 			'details' : f''' 			
-			\rUse this command to manually correct a backdoor session's hostname/username value, in case Villain does not interpret the information correctly when the session is established.
-			\r 	
-			\r {ORANGE}repair <SESSION ID or ALIAS> <HOSTNAME or USERNAME> <NEW VALUE>{END}
-			''',
+Use this command to manually correct a backdoor session's hostname/username value, in case Villain does not interpret the information correctly when the session is established.
+ 	
+repair <SESSION ID or ALIAS> <HOSTNAME or USERNAME> <NEW VALUE>''',
 			'least_args' : 3,
 			'max_args' : 3
 		},	
 			
 		'shell' : {
 			'details' : f''' 			
-			\rEnables an interactive pseudo-shell prompt for a backdoor session. Press Ctrl+C to disable.
-			\r 
-			\r {ORANGE}shell <SESSION ID or ALIAS>{END}
-			''',
+Enables an interactive pseudo-shell prompt for a backdoor session. Press Ctrl+C to disable.
+ 
+shell <SESSION ID or ALIAS>''',
 			'least_args' : 1,
 			'max_args' : 1
 		},			
@@ -197,10 +192,9 @@ class PrompHelp:
 			
 		'alias' : {
 			'details' : f'''
-			\rSet an alias for a backdoor session to use instead of session ID.
-			\r
-			\r {ORANGE}alias <ALIAS> <SESSION ID>{END}
-			''',
+Set an alias for a backdoor session to use instead of session ID.
+
+alias <ALIAS> <SESSION ID>''',
 			'least_args' : 2,
 			'max_args' : 2
 		},			
@@ -208,10 +202,9 @@ class PrompHelp:
 			
 		'reset' : {
 			'details' : f'''
-			\rReset a given alias to the original session ID.
-			\r
-			\r {ORANGE}reset <ALIAS>{END}
-			''',
+Reset a given alias to the original session ID.
+
+reset <ALIAS>''',
 			'least_args' : 1,
 			'max_args' : 1
 		},			
@@ -219,129 +212,114 @@ class PrompHelp:
 		
 		'kill' : {
 			'details' : f'''
-			\rTerminate a self-owned backdoor session.
-			\r
-			\r {ORANGE}kill <SESSION ID or ALIAS>{END}
-			''',
+Terminate a self-owned backdoor session.
+
+kill <SESSION ID or ALIAS>''',
 			'least_args' : 1,
 			'max_args' : 1
 		},		
 
 		
 		'help' : {
-			'details' : f'''
-			\rReally?
-			''',
+			'details' : f'''Really?''',
 			'least_args' : 0,
 			'max_args' : 1
 		},
 
 		'siblings' : {
 			'details' : f'''
-			\rPrint info about connected Sibling Servers. 
-			\rSiblings are basically other instances of Villain that you are connected with.
-			''',
+Print info about connected Sibling Servers. 
+Siblings are basically other instances of Villain that you are connected with.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'threads' : {
 			'details' : f'''
-			\rVillain creates a lot of threads to be able to handle multiple backdoor sessions, connections with siblings and more. In file Villain/Core/settings.py there is a BoundedSemaphore that works as a thread limiter to prevent resource contention, set by default to 100 (you can of course change it). This command lists the active threads created by Villain, to give you an idea of what is happening in the background, what is the current value of the thread limiter etc.
-			\r  
-			\rNote that, if the thread limiter reaches 0, weird things will start happening as new threads (e.g. backdoor sessions) will be queued until: thread limiter > 0. 
-			''',
+Villain creates a lot of threads to be able to handle multiple backdoor sessions, connections with siblings and more. In file Villain/Core/settings.py there is a BoundedSemaphore that works as a thread limiter to prevent resource contention, set by default to 100 (you can of course change it). This command lists the active threads created by Villain, to give you an idea of what is happening in the background, what is the current value of the thread limiter etc.
+  
+Note that, if the thread limiter reaches 0, weird things will start happening as new threads (e.g. backdoor sessions) will be queued until: thread limiter > 0.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'sessions' : {
-			'details' : f'''
-			\rPrints info about active backdoor shell sessions.
-			''',
+			'details' : f'''Prints info about active backdoor shell sessions.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'backdoors' : {
-			'details' : f'''
-			\rPrints specifics about the shell and listener types of active backdoor shell sessions.
-			''',
+			'details' : f'''Prints specifics about the shell and listener types of active backdoor shell sessions.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'sockets' : {
-			'details' : f'''
-			\rPrints Villain related socket services info.
-			''',
+			'details' : f'''Prints Villain related socket services info.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'id' : {
-			'details' : f'''
-			\rPrint server's unique ID.
-			''',
+			'details' : f'''Print server's unique ID.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'upload' : {
 			'details' : f'''
-			\rUpload files to a poisoned machine (files are auto-requested from the http file smuggler). The feature works regardless if the session is owned by you or a sibling server. You can run the command from Villain's main prompt as well as the pseudo shell terminal.
-			\r
-			\r From the main prompt:
-			\r {ORANGE}upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH> <SESSION ID or ALIAS>{END}
-			\r
-			\r From an active pseudo shell prompt:
-			\r {ORANGE}upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH>{END}
-			''',
+Upload files to a poisoned machine (files are auto-requested from the http file smuggler). The feature works regardless if the session is owned by you or a sibling server. You can run the command from Villain's main prompt as well as the pseudo shell terminal.
+
+From the main prompt:
+upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH> <SESSION ID or ALIAS>
+
+From an active pseudo shell prompt:
+upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH>''',
 			'least_args' : 3,
 			'max_args' : 3
 		},
 
 		'cmdinspector' : {
 			'details' : f'''
-			\rVillain has a function that inspects user issued shell commands for input that may cause a backdoor shell session to hang (e.g., unclosed single/double quotes or backticks, commands that may start a new interactive session within the current shell and more). 
-			\rUse the cmdinspector command to turn that feature on/off. 
-			\r
-			\r {ORANGE}cmdinspector <ON / OFF>{END}
-			''',
+Villain has a function that inspects user issued shell commands for input that may cause a backdoor shell session to hang (e.g., unclosed single/double quotes or backticks, commands that may start a new interactive session within the current shell and more). 
+Use the cmdinspector command to turn that feature on/off. 
+
+cmdinspector <ON / OFF>''',
 			'least_args' : 1,
 			'max_args' : 1
 		},
 
 		'conptyshell' : {
 			'details' : f'''
-			\rAutomatically slaps Invoke-ConPtyShell to a backdoor session. A new terminal window with netcat listening will pop up (you need to have gnome-terminal installed) and the script will be executed on the target as a new process, meaning you get a fully interactive shell AND you get to keep your backdoor. Currently works only for powershell.exe backdoors.
-			\rBecause I love Invoke-ConPtyShell.
-			\r
-			\r Usage: 
-			\r {ORANGE}conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>{END}
-			\r
-			''',
+Automatically runs Invoke-ConPtyShell against a session. A new terminal window with netcat listening will pop up (you need to have gnome-terminal installed) and the script will be executed on the target as a new process, meaning that, you get a fully interactive shell AND you get to keep your backdoor. Currently works only for powershell.exe sessions.
+Because I love Invoke-ConPtyShell.
+
+Usage: 
+conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 			'least_args' : 3,
 			'max_args' : 3
 		},
 
 
 		'exit' : {
-			'details' : f'''
-			\rKill all sessions and quit.
-			''',
+			'details' : f'''Kill all self-owned sessions and quit.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'clear' : {
-			'details' : f'''
-			\rCome on man.
-			''',
+			'details' : f'''Come on man.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
-	
+
+		'purge' : {
+			'details' : f'''Villain automatically stores information regarding generated implants and loads them in memory every time it starts. This way, HoaxShell generated implants become reusable and it is possible to re-establish older sessions, assuming the payload is still running on the victim(s). Use this command to delete all session related metadata. It does not affect any active sessions you may have.''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
 	}
 	
 	
@@ -371,6 +349,7 @@ class PrompHelp:
 		\r  cmdinspector [+]     Turn Session Defender on/off.
 		\r  threads              Print information regarding active threads.
 		\r  clear                Clear screen.
+		\r  purge                Delete all stored sessions metadata.
 		\r  exit                 Kill all sessions and quit.
 		\r  
 		\r  Commands starting with "#" are interpreted as messages and will be 
@@ -384,7 +363,67 @@ class PrompHelp:
 
 	@staticmethod
 	def print_detailed(cmd):			
-		print(PrompHelp.commands[cmd]['details']) if cmd in PrompHelp.commands.keys() else print(f'No details for command "{cmd}".')
+		PrompHelp.print_justified(PrompHelp.commands[cmd]['details'].strip()) if cmd in PrompHelp.commands.keys() \
+		else print(f'No details for command "{cmd}".')
+
+
+	@staticmethod
+	def print_justified(text):
+		
+		text_length = len(text)
+		text_lines = text.split('\n')
+		wrapped_text = ''
+		term_width = os.get_terminal_size().columns
+		term_width_p = 100 if 100 <= (term_width) else term_width - 2
+		
+		if text_length >= term_width_p:
+			
+			lines = []
+			
+			for p in text_lines:
+				#print(p)
+				if len(p) <= (term_width_p - 3):
+					lines.append('  ' + p + ' ')
+					continue
+
+				words = p.split(' ')
+
+				if words == ['']:
+					continue
+
+				else:					
+					words_s = [w + ' ' for w in words]
+					line_length = 0
+					count = s = 0
+
+					for w in words_s:
+						
+						line_length += len(w)
+						#print(f'item #{count}/{len(words)} | line len: {line_length} < {(term_width_p - 3)}')
+
+						if line_length < (term_width_p - 3):
+							count += 1
+						else:
+							#print('---')
+							lines.append('  ' + ' '.join(words[s:count]) + ' ')
+							s = count
+							count += 1
+							line_length = len(w)
+					
+					if s < len(words):
+						# cc = 0
+						# for i in words[s:]:
+						# 	cc += len(i)
+						# print(f'{RED}{cc}{END}')
+						#lines.append(f'  {RED}' + ' '.join(words[s:]) + f' {END}')
+						lines.append(f'  ' + ' '.join(words[s:]) + f' ')
+				#print('\n')
+			wrapped_text = '\n'.join(lines)
+
+		else:
+			wrapped_text = text
+		
+		print('\n' + wrapped_text, end='\n\n')
 
 
 
@@ -856,7 +895,7 @@ def main():
 		
 
 				elif cmd == 'id':
-					print(f'{BOLD}Server unique id{END}: {ORANGE}{core.return_server_uniq_id()}{END}')
+					print(f'Server unique id: {ORANGE}{core.return_server_uniq_id()}{END}')
 
 
 
@@ -952,8 +991,12 @@ def main():
 								approved = True
 
 								if Sessions_Manager.return_session_attr_value(session_id, 'Stability') == 'Unstable':
-									choice = input(f'\r[{WARN}] This session is unstable. Running I/O-intensive commands may cause it to hang. Proceed? [y/n]:')
-									approved = True if choice.lower().strip() in ['yes', 'y'] else False
+									try:
+										choice = input(f'\r[{WARN}] This session is unstable. Running I/O-intensive commands may cause it to hang. Proceed? [y/n]: ')
+										approved = True if choice.lower().strip() in ['yes', 'y'] else False
+									except:
+										approved = False
+									
 
 								if approved:
 									# Check who is the owner of the shell session
@@ -1291,7 +1334,11 @@ def main():
 							Hoaxshell.command_pool[session_id].append(villain_cmd)
 
 						else:
-							verified = input(f'\r[{WARN}] This session belongs to a sibling server. If the victim host cannot directly reach your host, this operation will fail. Proceed? [y/n]: ')
+
+							try:
+								verified = input(f'\r[{WARN}] This session belongs to a sibling server. If the victim host cannot directly reach your host, this operation will fail. Proceed? [y/n]: ')
+							except:
+								verified = None
 							
 							if verified.lower().strip() in ['y', 'yes']:
 								# Start listener
@@ -1322,6 +1369,23 @@ def main():
 						print('Value can be on or off.')
 
 
+
+				elif cmd == 'purge':
+
+					try:
+						chk = input('This operation will delete all stored metadata (run "help purge" for more info). Proceed? [y/n] ')
+					except:
+						print()
+						continue
+
+					if chk.lower() in ['yes', 'y']:
+						cm = clear_metadata()
+						print(f'Operation completed.') if cm else print('Something went wrong.')
+
+					else:
+						continue
+
+
 				else:
 					continue
 		
@@ -1345,8 +1409,12 @@ def main():
 			
 			if Sessions_Manager.active_sessions or core.sibling_servers:
 				bound = True
-				choice = input('\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [yes/no]: ').lower().strip()
-				verified = True if choice in ['yes', 'y'] else False
+
+				try:
+					choice = input('\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [y/n]: ').lower().strip()
+					verified = True if choice in ['yes', 'y'] else False
+				except:
+					verified = False
 										
 			if verified:				
 				
