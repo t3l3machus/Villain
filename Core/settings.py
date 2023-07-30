@@ -6,8 +6,10 @@
 # https://github.com/t3l3machus/Villain
 
 
+import os
 from threading import BoundedSemaphore
 from uuid import uuid4
+
 
 class Threading_params:
 	
@@ -83,3 +85,11 @@ class Payload_Generator_Settings:
 	
 	# Set to false in order to parse domains as LHOST when generating commands
 	validate_lhost_as_ip = True	
+
+
+
+class Logging_Settings:
+
+	main_meta_folder_unix = f'{os.path.expanduser("~")}/.local/Villain_meta'
+	main_meta_folder_windows = f'{os.path.expanduser("~")}/.local/Villain_meta'
+	
