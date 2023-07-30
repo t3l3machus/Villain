@@ -21,7 +21,9 @@ from pyperclip import copy as copy2cb
 from string import ascii_uppercase, ascii_lowercase, digits
 from importlib import import_module
 
-if get_system_type() == 'Linux':
+system_type = get_system_type()
+
+if system_type in ['Linux', 'Darwin']:
 	import gnureadline as global_readline
 else:
 	import readline as global_readline
