@@ -19,11 +19,11 @@ The framework's main features include:
 
 <!--Many additional information can be found in the user guide.-->
 
-:zap: **This release is fresh and is still being tested.**  
+<!--:zap: **This release is fresh and is still being tested.** -->
 :warning: Create your own obfuscated reverse shell templates and replace the default ones in your instance of Villain to better handle AV evasion. Here's how 📽️ -> [youtube.com/watch?v=grSBdZdUya0](https://www.youtube.com/watch?v=grSBdZdUya0)
 
 ### Video Presentations
-[2022-11-30] John Hammond showcased the tool in this incredible video -> [youtube.com/watch?v=pTUggbSCqA0](https://www.youtube.com/watch?v=pTUggbSCqA0)  
+[2022-11-30] [John Hammond](https://github.com/JohnHammond) showcased the tool in this incredible video -> [youtube.com/watch?v=pTUggbSCqA0](https://www.youtube.com/watch?v=pTUggbSCqA0)  
 [2023-03-30] Latest release demo, made by me -> [youtube.com/watch?v=NqZEmBsLCvQ](https://www.youtube.com/watch?v=HR1KM8wrSV8)
 
 **Disclaimer**: Using this tool against hosts that you do not have explicit permission to test is illegal. You are responsible for any trouble you may cause by using this tool.
@@ -33,7 +33,7 @@ The framework's main features include:
 
 
 ## Installation & Usage
-Villain has been explicitly developed and tested on **kali linux**. You can install it with apt:
+Villain has been explicitly developed and tested on **kali linux**. You can install it with `apt`:
 ```
 apt install villain
 ```
