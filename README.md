@@ -33,20 +33,26 @@ The framework's main features include:
 
 
 ## Installation & Usage
-Villain has been explicitly developed and tested on **kali linux**.
+Villain has been explicitly developed and tested on **kali linux**. You can install it with apt:
+```
+apt install villain
+```
+You should run as root:
+```
+villain [-h] [-p PORT] [-x HOAX_PORT] [-n NETCAT_PORT] [-f FILE_SMUGGLER_PORT] [-c CERTFILE] [-k KEYFILE] [-u] [-q] 
+```
+
+For the latest version or if you prefer to install it manually:
 ```
 git clone https://github.com/t3l3machus/Villain
 cd ./Villain
 pip3 install -r requirements.txt
 ```
-You are going to need `gnome-terminal` for one of the framework's commands.
+You should also install `gnome-terminal` (required for one of the framework's commands):
 ```
 sudo apt update&&sudo apt install gnome-terminal
 ```
-You should run as root:
-```
-Villain.py [-h] [-p PORT] [-x HOAX_PORT] [-n NETCAT_PORT] [-f FILE_SMUGGLER_PORT] [-c CERTFILE] [-k KEYFILE] [-u] [-q] 
-```
+
 <!--For more information about using Villain check out the [Usage Guide](https://github.com/t3l3machus/Villain/blob/main/Usage_Guide.md).-->
 
 ## Important Notes
