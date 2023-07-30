@@ -381,7 +381,7 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 			lines = []
 			
 			for p in text_lines:
-				#print(p)
+				
 				if len(p) <= (term_width_p - 3):
 					lines.append('  ' + p + ' ')
 					continue
@@ -399,7 +399,6 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 					for w in words_s:
 						
 						line_length += len(w)
-						#print(f'item #{count}/{len(words)} | line len: {line_length} < {(term_width_p - 3)}')
 
 						if line_length < (term_width_p - 3):
 							count += 1
@@ -411,13 +410,8 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 							line_length = len(w)
 					
 					if s < len(words):
-						# cc = 0
-						# for i in words[s:]:
-						# 	cc += len(i)
-						# print(f'{RED}{cc}{END}')
-						#lines.append(f'  {RED}' + ' '.join(words[s:]) + f' {END}')
 						lines.append(f'  ' + ' '.join(words[s:]) + f' ')
-				#print('\n')
+
 			wrapped_text = '\n'.join(lines)
 
 		else:
