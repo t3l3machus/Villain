@@ -265,32 +265,6 @@ def check_list_for_duplicates(l):
 
 
 
-''' Encryption '''
-def encrypt_msg(aes_key, msg, iv):
-	enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
-	
-	if type(msg) == bytes:
-		cipher_text = enc_s.encrypt(msg)
-	else:
-		cipher_text = enc_s.encrypt(msg.encode('utf-8'))
-		
-	encoded_cipher_text = base64.b64encode(cipher_text)
-	return encoded_cipher_text
-
-
-
-def decrypt_msg(aes_key, cipher, iv):
-	
-	try:
-		decryption_suite = AES.new(aes_key, AES.MODE_CFB, iv)
-		plain_text = decryption_suite.decrypt(base64.b64decode(cipher + b'=='))
-		return plain_text if type(plain_text) == str else plain_text.decode('utf-8', 'ignore')
-	
-	except TypeError:
-		pass
-
-
-
 def subtract_lists(l1, l2):
 	
 	set1 = set(l1)
@@ -327,3 +301,30 @@ def print_columns(strings):
 			print(s.ljust(max_length))
 
 	print('\n', end='')
+
+
+
+''' Encryption '''
+def encrypt_msg(aes_key, msg, iv):
+	enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
+	
+	if type(msg) == bytes:
+		cipher_text = enc_s.encrypt(msg)
+	else:
+		cipher_text = enc_s.encrypt(msg.encode('utf-8'))
+		
+	encoded_cipher_text = base64.b64encode(cipher_text)
+	return encoded_cipher_text
+
+
+
+def decrypt_msg(aes_key, cipher, iv):
+	
+	try:
+		decryption_suite = AES.new(aes_key, AES.MODE_CFB, iv)
+		plain_text = decryption_suite.decrypt(base64.b64decode(cipher + b'=='))
+		return plain_text if type(plain_text) == str else plain_text.decode('utf-8', 'ignore')
+	
+	except TypeError:
+		pass
+
