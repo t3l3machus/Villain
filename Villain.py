@@ -19,6 +19,7 @@ parser.add_argument("-p", "--port", action="store", help = "Team server port (de
 parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
 parser.add_argument("-n", "--netcat-port", action="store", help = "Netcat multi-listener port (default: 4443).", type = int)
 parser.add_argument("-f", "--file-smuggler-port", action="store", help = "Http file smuggler server port (default: 8888).", type = int)
+parser.add_argument("-i", "--insecure", action="store_true", help = "Allows any Villain client (sibling server) to connect to your instance without prompting you for verification.")
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
 parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
 parser.add_argument("-u", "--update", action="store_true", help = "Pull the latest version from the original repo.")
@@ -51,6 +52,8 @@ else:
 if check_list_for_duplicates(defined_ports):
 	exit(f'[{DEBUG}] The port number of each server/handler must be different.')
 
+# Define core server security level
+Core_Server_Settings.insecure = True if args.insecure else False
 
 # Import Core	
 from Core.villain_core import *
@@ -301,9 +304,14 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 			'max_args' : 3
 		},
 
-
 		'exit' : {
 			'details' : f'''Kill all self-owned sessions and quit.''',
+			'least_args' : 0,
+			'max_args' : 0
+		},
+
+		'flee' : {
+			'details' : f'''Quit without terminating active sessions. When you start Villain again, if any HoaxShell implant is still running on previously injected hosts, the session(s) will be re-established.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
@@ -350,6 +358,7 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 		\r  threads              Print information regarding active threads.
 		\r  clear                Clear screen.
 		\r  purge                Delete all stored sessions metadata.
+		\r  flee                 Quit without terminating active sessions.
 		\r  exit                 Kill all sessions and quit.
 		\r  
 		\r  Commands starting with "#" are interpreted as messages and will be 
@@ -402,8 +411,8 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 
 						if line_length < (term_width_p - 3):
 							count += 1
-						else:
-							#print('---')
+
+						else:							
 							lines.append('  ' + ' '.join(words[s:count]) + ' ')
 							s = count
 							count += 1
@@ -411,7 +420,7 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 					
 					if s < len(words):
 						lines.append(f'  ' + ' '.join(words[s:]) + f' ')
-
+				
 			wrapped_text = '\n'.join(lines)
 
 		else:
@@ -810,7 +819,50 @@ def main():
 
 	''' Init File Smuggler '''
 	file_smuggler = File_Smuggler()
+
+
+	''' Define exit func '''
+	def do_nothing():
+		pass
 		
+
+	def villain_out(flee = False):
+		
+		bound = False
+		verified = True
+		
+		if Sessions_Manager.active_sessions or core.sibling_servers:
+			bound = True
+
+		chk_msg = '\nDo you wish to exit without terminating any of your active sessions? [y/n]: ' if flee else \
+		'\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [y/n]: '
+
+		try:
+			choice = input(chk_msg).lower().strip()
+			verified = True if choice in ['yes', 'y'] else False
+
+		except:
+			print()
+			verified = False
+
+		if verified:
+
+			try:
+				Core_Server.announce_server_shutdown()
+				Hoaxshell.terminate() if not flee else do_nothing()
+				core.stop_listener()
+
+			except:
+				pass
+			
+			finally:
+				print() if bound else print('\n')
+				print_meta()
+				sys.exit(0)
+
+		return
+
+
 
 	''' Start tab autoComplete '''
 	comp = Completer()
@@ -989,6 +1041,7 @@ def main():
 										choice = input(f'\r[{WARN}] This session is unstable. Running I/O-intensive commands may cause it to hang. Proceed? [y/n]: ')
 										approved = True if choice.lower().strip() in ['yes', 'y'] else False
 									except:
+										print()
 										approved = False
 									
 
@@ -1158,6 +1211,11 @@ def main():
 
 
 
+				elif cmd == 'flee':
+					villain_out(flee = True)
+
+
+
 				elif cmd == 'exit':
 					raise KeyboardInterrupt
 
@@ -1172,12 +1230,15 @@ def main():
 					sessions_manager.list_backdoors()
 
 
+
 				elif cmd == 'sockets':	
 					print_running_services_info()				
 
 
+
 				elif cmd == 'siblings':										
 					core.list_siblings()
+
 
 
 				elif cmd == 'threads':										
@@ -1332,6 +1393,7 @@ def main():
 							try:
 								verified = input(f'\r[{WARN}] This session belongs to a sibling server. If the victim host cannot directly reach your host, this operation will fail. Proceed? [y/n]: ')
 							except:
+								print()
 								verified = None
 							
 							if verified.lower().strip() in ['y', 'yes']:
@@ -1367,12 +1429,12 @@ def main():
 				elif cmd == 'purge':
 
 					try:
-						chk = input('This operation will delete all stored metadata (run "help purge" for more info). Proceed? [y/n] ')
+						chk = input('This operation will delete all stored metadata (run "help purge" for more info). Proceed? [y/n]: ')
 					except:
 						print()
 						continue
 
-					if chk.lower() in ['yes', 'y']:
+					if chk.lower().strip() in ['yes', 'y']:
 						cm = clear_metadata()
 						print(f'Operation completed.') if cm else print('Something went wrong.')
 
@@ -1386,7 +1448,6 @@ def main():
 		
 		except KeyboardInterrupt:
 			
-			bound = False
 			Main_prompt.ready = True
 
 			if global_readline.get_line_buffer(): 
@@ -1398,33 +1459,9 @@ def main():
 				Main_prompt.exec_active = False
 				print('\r')
 				continue
+
+			villain_out()
 			
-			verified = True
-			
-			if Sessions_Manager.active_sessions or core.sibling_servers:
-				bound = True
-
-				try:
-					choice = input('\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [y/n]: ').lower().strip()
-					verified = True if choice in ['yes', 'y'] else False
-				except:
-					verified = False
-										
-			if verified:				
-				
-				try:
-					Core_Server.announce_server_shutdown()			
-					Hoaxshell.terminate()				
-					core.stop_listener()
-
-				except Exception as e:
-					pass
-
-				finally:
-					print() if bound else print('\n')
-					print_meta()
-					sys.exit(0)
-
 
 if __name__ == '__main__':
 	main()
