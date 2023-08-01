@@ -23,11 +23,15 @@ class Core_Server_Settings:
 	bind_address = '0.0.0.0'
 	bind_port = 6501	
 	
-	# How long to sleep between echo requests to check if siblings are alive
+	# How long to sleep between echo requests to check if siblings are alive.
 	ping_siblings_sleep_time = 4
 	
-	# Seconds to wait for cmd output when executing commands against shell sessions of sibling servers
+	# Seconds to wait for cmd output when executing commands against shell sessions of sibling servers.
 	timeout_for_command_output = 30
+
+	# Allows any Villain client (sibling server) to connect to your instance without prompting you for verification.
+	# You can configure it on start-up with the --insecure option.
+	insecure = False
 	
 
 
@@ -79,6 +83,10 @@ class TCP_Sock_Handler_Settings:
 	# Max failed echo response requests before a connection is characterized as lost
 	fail_count = 3
 
+	# Check if connection is random socket connection by assessing the hostname value received.
+	# This filter automatically rejects TCP reverse connection if they fail to pass validation tests.
+	hostname_filter = True
+
 
 
 class Payload_Generator_Settings:
@@ -92,4 +100,3 @@ class Logging_Settings:
 
 	main_meta_folder_unix = f'{os.path.expanduser("~")}/.local/Villain_meta'
 	main_meta_folder_windows = f'{os.path.expanduser("~")}/.local/Villain_meta'
-	
