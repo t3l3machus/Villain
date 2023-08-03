@@ -21,10 +21,12 @@ from pyperclip import copy as copy2cb
 from string import ascii_uppercase, ascii_lowercase, digits
 from importlib import import_module
 
-if get_system_type() == 'Linux':
-	import gnureadline as global_readline
-else:
-	import readline as global_readline
+system_type = get_system_type()
+
+# if system_type in ['Linux', 'Darwin']:
+# 	import gnureadline as global_readline
+# else:
+import readline as global_readline
 
 
 ''' Colors '''
@@ -176,7 +178,17 @@ def print_table(rows, columns):
 
 	columns_list = [columns]
 	
-	for item in rows: 
+	for item in rows:
+
+		# Values length adjustment
+		try:
+			for key in item.keys():
+				item_to_str = str(item[key])
+				item[key] = item[key] if len(item_to_str) <= 20 else f"{item_to_str[0:8]}..{item_to_str[-8:]}"
+
+		except:
+			pass
+
 		columns_list.append([str(item[col] if item[col] is not None else '') for col in columns])
 		
 	col_size = [max(map(len, col)) for col in zip(*columns_list)]
@@ -184,14 +196,16 @@ def print_table(rows, columns):
 	columns_list.insert(1, ['-' * i for i in col_size])
 	
 	for item in columns_list:
+
 		# Session Status ANSI
 		item[-1] = f'{GREEN}{item[-1]}{END}' if item[-1] == 'Active' else item[-1]
 		item[-1] = f'{ORANGE}{item[-1]}{END}' if (item[-1] in ['Unreachable', 'Undefined']) else item[-1]
 		item[-1] = f'{LRED}{item[-1]}{END}' if (item[-1] in ['Lost']) else item[-1]
+
 		# Stability ANSI
 		item[-2] = f'{UNSTABLE}{item[-2]} {END}' if (columns_list[0][-2] == 'Stability' and item[-2] == 'Unstable') else item[-2]
 		print(format_str.format(*item))
-			
+
 
 
 def clone_dict_keys(_dict):
@@ -263,32 +277,6 @@ def check_list_for_duplicates(l):
 
 
 
-''' Encryption '''
-def encrypt_msg(aes_key, msg, iv):
-	enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
-	
-	if type(msg) == bytes:
-		cipher_text = enc_s.encrypt(msg)
-	else:
-		cipher_text = enc_s.encrypt(msg.encode('utf-8'))
-		
-	encoded_cipher_text = base64.b64encode(cipher_text)
-	return encoded_cipher_text
-
-
-
-def decrypt_msg(aes_key, cipher, iv):
-	
-	try:
-		decryption_suite = AES.new(aes_key, AES.MODE_CFB, iv)
-		plain_text = decryption_suite.decrypt(base64.b64decode(cipher + b'=='))
-		return plain_text if type(plain_text) == str else plain_text.decode('utf-8', 'ignore')
-	
-	except TypeError:
-		pass
-
-
-
 def subtract_lists(l1, l2):
 	
 	set1 = set(l1)
@@ -325,3 +313,29 @@ def print_columns(strings):
 			print(s.ljust(max_length))
 
 	print('\n', end='')
+
+
+
+''' Encryption '''
+def encrypt_msg(aes_key, msg, iv):
+	enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
+	
+	if type(msg) == bytes:
+		cipher_text = enc_s.encrypt(msg)
+	else:
+		cipher_text = enc_s.encrypt(msg.encode('utf-8'))
+		
+	encoded_cipher_text = base64.b64encode(cipher_text)
+	return encoded_cipher_text
+
+
+
+def decrypt_msg(aes_key, cipher, iv):
+	
+	try:
+		decryption_suite = AES.new(aes_key, AES.MODE_CFB, iv)
+		plain_text = decryption_suite.decrypt(base64.b64decode(cipher + b'=='))
+		return plain_text if type(plain_text) == str else plain_text.decode('utf-8', 'ignore')
+	
+	except TypeError:
+		pass
