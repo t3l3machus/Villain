@@ -23,10 +23,10 @@ from importlib import import_module
 
 system_type = get_system_type()
 
-if system_type in ['Linux', 'Darwin']:
-	import gnureadline as global_readline
-else:
-	import readline as global_readline
+# if system_type in ['Linux', 'Darwin']:
+# 	import gnureadline as global_readline
+# else:
+import readline as global_readline
 
 
 ''' Colors '''
@@ -178,7 +178,17 @@ def print_table(rows, columns):
 
 	columns_list = [columns]
 	
-	for item in rows: 
+	for item in rows:
+
+		# Values length adjustment
+		try:
+			for key in item.keys():
+				item_to_str = str(item[key])
+				item[key] = item[key] if len(item_to_str) <= 20 else f"{item_to_str[0:8]}..{item_to_str[-8:]}"
+
+		except:
+			pass
+
 		columns_list.append([str(item[col] if item[col] is not None else '') for col in columns])
 		
 	col_size = [max(map(len, col)) for col in zip(*columns_list)]
@@ -186,14 +196,16 @@ def print_table(rows, columns):
 	columns_list.insert(1, ['-' * i for i in col_size])
 	
 	for item in columns_list:
+
 		# Session Status ANSI
 		item[-1] = f'{GREEN}{item[-1]}{END}' if item[-1] == 'Active' else item[-1]
 		item[-1] = f'{ORANGE}{item[-1]}{END}' if (item[-1] in ['Unreachable', 'Undefined']) else item[-1]
 		item[-1] = f'{LRED}{item[-1]}{END}' if (item[-1] in ['Lost']) else item[-1]
+
 		# Stability ANSI
 		item[-2] = f'{UNSTABLE}{item[-2]} {END}' if (columns_list[0][-2] == 'Stability' and item[-2] == 'Unstable') else item[-2]
 		print(format_str.format(*item))
-			
+
 
 
 def clone_dict_keys(_dict):
@@ -327,4 +339,3 @@ def decrypt_msg(aes_key, cipher, iv):
 	
 	except TypeError:
 		pass
-
