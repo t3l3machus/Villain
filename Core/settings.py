@@ -86,6 +86,7 @@ class TCP_Sock_Handler_Settings:
 	# Check if connection is random socket connection by assessing the hostname value received.
 	# This filter automatically rejects TCP reverse connection if they fail to pass validation tests.
 	hostname_filter = True
+	hostname_filter_warning_delivered = False
 
 
 
