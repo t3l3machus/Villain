@@ -2473,12 +2473,16 @@ class TCP_Sock_Multi_Handler:
 				else:
 					username = tmp[1]
 
-			# Check if connection is random socket connection by assessing the hostname value received.
+			# Check if connection is a random socket by assessing the hostname value received.
 			# This filter protects against junk sessions.
 			if TCP_Sock_Handler_Settings.hostname_filter:
 				if not self.validate_hostname(hostname) or hostname == 'Undefined':
 					conn.close()
-					print_to_prompt(f'\r[{WARN}] A TCP reverse connection was rejected due to hostname validation failure. You can disable this filter by editing Villain/Core/settings.py (hostname_filter).')
+
+					if not TCP_Sock_Handler_Settings.hostname_filter_warning_delivered:
+						print_to_prompt(f'\r[{WARN}] A TCP reverse connection was rejected due to hostname validation failure. You can disable this filter by setting hostname_filter to False in Villain/Core/settings.py. This warning will be muted for the rest of the session.')
+						TCP_Sock_Handler_Settings.hostname_filter_warning_delivered = True
+
 					Threading_params.thread_limiter.release()
 					return				
 
@@ -2694,7 +2698,7 @@ class TCP_Sock_Multi_Handler:
 					if shell_type: #and prompt:
 
 						if prompt:
-							# The following func searches for sentinel value in the chunk. If detected,
+							# The following func searches for a sentinel value in the chunk. If detected,
 							# it seperates the last chunk's data and the prompt value and returns:
 							# [True, [chunk, prompt_value], shell_type] else it returns [False]							
 							sentinel_value = self.search_chunk_for_sentinel_value(shell_type, chunk)
@@ -2766,12 +2770,28 @@ class TCP_Sock_Multi_Handler:
 		return self.clean_nc_response(response) if shell_type else response
 
 
+
+	# def validate_hostname(self, hostname):
+
+	# 	try:
+	# 		if re.match(r"^(([a-zA-Z0-9]|[a-z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])$", hostname):
+	# 			return True
+	# 		else:
+	# 			return False
+	# 	except:
+	# 		return False
+
+
 	def validate_hostname(self, hostname):
 
-		if re.match(r"^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])$", hostname):
-			return True
-		else:
+		if len(hostname) > 255:
 			return False
+		
+		if hostname[-1] == ".":
+			hostname = hostname[:-1]
+
+		allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+		return all(allowed.match(x) for x in hostname.split("."))
 
 
 
