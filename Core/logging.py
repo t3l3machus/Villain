@@ -64,7 +64,6 @@ class HoaxShell_Implants_Logger:
             
 
 
-
 def clear_metadata():
 
     try:
