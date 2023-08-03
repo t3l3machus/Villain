@@ -39,7 +39,7 @@ apt install villain
 ```
 You should run as root:
 ```
-villain [-h] [-p PORT] [-x HOAX_PORT] [-n NETCAT_PORT] [-f FILE_SMUGGLER_PORT] [-c CERTFILE] [-k KEYFILE] [-u] [-q] 
+villain [-h] [-p PORT] [-x HOAX_PORT] [-n NETCAT_PORT] [-f FILE_SMUGGLER_PORT] [-i] [-c CERTFILE] [-k KEYFILE] [-u] [-q] 
 ```
 
 For the latest version or if you prefer to install it manually:
