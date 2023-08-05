@@ -12,6 +12,7 @@ from Core.common import *
 from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings, Loading
 from Core.logging import clear_metadata
 from hashlib import md5
+from requests import get as requests_get
 
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
@@ -770,7 +771,7 @@ def main():
 
 
 	try:
-		response = requests.get(url = url, timeout=(5, 27))
+		response = requests_get(url = url, timeout=(5, 27))
 		response.raise_for_status()  # raises stored HTTPError, if one occurred
 		
 	except requests.exceptions.HTTPError as e:
@@ -786,7 +787,7 @@ def main():
 		update_consent = False
 		
 		for filename in files:
-			file_data = requests.get(url = raw_url + filename, timeout=(5, 27))
+			file_data = requests_get(url = raw_url + filename, timeout=(5, 27))
 			latest_signature = md5(file_data.content).hexdigest()
 			local_signature = get_local_file_hash(filename)
 			
