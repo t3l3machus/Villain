@@ -9,7 +9,7 @@
 import os
 from threading import BoundedSemaphore
 from uuid import uuid4
-
+from time import sleep
 
 class Threading_params:
 	
@@ -101,3 +101,26 @@ class Logging_Settings:
 
 	main_meta_folder_unix = f'{os.path.expanduser("~")}/.local/Villain_meta'
 	main_meta_folder_windows = f'{os.path.expanduser("~")}/.local/Villain_meta'
+
+
+
+class Loading:
+
+	active = False
+	finished = True
+
+	@staticmethod
+	def animate(msg):
+
+		Threading_params.thread_limiter.acquire()
+		Loading.finished = False
+		animate = ['<  ', ' ^ ', '  >', ' _ ']
+
+		while Loading.active:
+			for item in animate:
+				print(f'\r{msg} {item}', end = '')
+				sleep(0.08)
+		else:
+			Loading.finished = True
+			Threading_params.thread_limiter.release()
+			return
