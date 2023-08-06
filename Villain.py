@@ -768,23 +768,24 @@ def main():
 						f.write(data)
 						return True
 						
-				except Exception as e:
-					print(f'Error updating file {filename}: {e}')
+				except:
 					return False
 		
 		
 			try:
 				response = requests_get(url = url, timeout=(5, 27))
 				response.raise_for_status()  # raises stored HTTPError, if one occurred
+				res_status_code = response.status_code
 				
-			except requests.exceptions.HTTPError as e:
-				print(f'[{ERR}] Failed to fetch latest version data: {e}') 
+			#except requests.exceptions.HTTPError as e:
+				#print(f'\r[{ERR}] Failed to fetch latest version data: {e}') 
 				
 			except Exception as e:
-				print(f'[{ERR}] Failed to fetch latest version data: {e}') 
+				res_status_code = -1
+				print(f'\r[{ERR}] Failed to fetch latest version data: {e}') 
 		
 		
-			if response.status_code == 200:
+			if res_status_code == 200:
 				
 				files = [file['path'] for file in response.json()['tree'] if file['type'] == 'blob']
 				update_consent = False
@@ -813,7 +814,10 @@ def main():
 							updated = update_file(filename, file_data.content)
 							
 							if not updated:
-								print(f'[{ERR}] Error while updating files. Installation may be corrupt. Consider reinstalling Villain.')
+								Loading.active = False
+								while not Loading.finished:
+									sleep(0.05)
+								print(f'\r[{ERR}] Error while updating files. Installation may be corrupt. Consider reinstalling Villain.')
 								exit(1)
 				
 				Loading.active = False
@@ -825,10 +829,11 @@ def main():
 					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'] + ['-s'])
 		
 			else:
-				print(f'[{ERR}] Failed to retrieve data from the main branch: ', response.content)
+				print(f'\r[{ERR}] Failed to fetch latest version data.')
 				
 		except KeyboardInterrupt:
 			pass
+			
 	# Initialize essential services
 	print(f'[{INFO}] Initializing required services:')
 
