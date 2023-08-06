@@ -12,7 +12,7 @@ from random import randint, choice, randrange
 from threading import Thread, enumerate as enumerate_threads
 from subprocess import check_output
 from platform import system as get_system_type
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES
 from uuid import UUID, uuid4
 from ipaddress import ip_address
 from copy import deepcopy
