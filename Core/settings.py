@@ -127,7 +127,7 @@ class Loading:
 
 	
 	@staticmethod
-	def stop_loading():
+	def stop():
 		Loading.active = False
 		while not Loading.finished:
 			sleep(0.05)
