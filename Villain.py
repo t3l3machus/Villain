@@ -782,6 +782,7 @@ def main():
 				
 			except Exception as e:
 				res_status_code = -1
+				Loading.stop()
 				print(f'\r[{ERR}] Failed to fetch latest version data: {e}') 
 		
 		
@@ -823,7 +824,7 @@ def main():
 					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'] + ['-s'])
 		
 			else:
-				print(f'\r[{ERR}] Failed to fetch latest version data.')
+				Loading.stop()
 				
 		except KeyboardInterrupt:
 			Loading.stop()
