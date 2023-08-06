@@ -24,7 +24,7 @@ parser.add_argument("-f", "--file-smuggler-port", action="store", help = "Http f
 parser.add_argument("-i", "--insecure", action="store_true", help = "Allows any Villain client (sibling server) to connect to your instance without prompting you for verification.")
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
 parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
-parser.add_argument("-s", "--skip-update", action="store", help = "Do not check for updates on startup.")
+parser.add_argument("-s", "--skip-update", action="store_true", help = "Do not check for updates on startup.")
 parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
 
 args = parser.parse_args()
@@ -902,7 +902,7 @@ def main():
 		'\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [y/n]: '
 
 		try:
-			choice = input(chk_msg).lower().strip()
+			choice = input(chk_msg).lower().strip() if bound else 'y'
 			verified = True if choice in ['yes', 'y'] else False
 
 		except:
