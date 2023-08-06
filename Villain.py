@@ -822,7 +822,7 @@ def main():
 				
 				if update_consent:
 					print(f'\r[{INFO}] Update completed!')
-					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'])
+					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'] + ['-s'])
 		
 			else:
 				print(f'[{ERR}] Failed to retrieve data from the main branch: ', response.content)
