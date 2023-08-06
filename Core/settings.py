@@ -124,3 +124,10 @@ class Loading:
 			Loading.finished = True
 			Threading_params.thread_limiter.release()
 			return
+
+	
+	@staticmethod
+	def stop_loading():
+		Loading.active = False
+		while not Loading.finished:
+			sleep(0.05)
