@@ -826,6 +826,7 @@ def main():
 				print(f'\r[{ERR}] Failed to fetch latest version data.')
 				
 		except KeyboardInterrupt:
+			Loading.stop()
 			pass
 			
 	# Initialize essential services
