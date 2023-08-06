@@ -796,9 +796,7 @@ def main():
 					local_signature = get_local_file_hash(filename)
 					
 					if not local_signature or (local_signature != latest_signature):
-						Loading.active = False
-						while not Loading.finished:
-							sleep(0.05)
+						Loading.stop()
 						
 						if not update_consent:				
 							consent = input(f'\r[{INFO}] Updates detected. Would you like to proceed? [y/n]: ').lower().strip()
@@ -814,15 +812,11 @@ def main():
 							updated = update_file(filename, file_data.content)
 							
 							if not updated:
-								Loading.active = False
-								while not Loading.finished:
-									sleep(0.05)
+								Loading.stop()
 								print(f'\r[{ERR}] Error while updating files. Installation may be corrupt. Consider reinstalling Villain.')
 								exit(1)
 				
-				Loading.active = False
-				while not Loading.finished:
-					sleep(0.05)
+				Loading.stop()
 				
 				if update_consent:
 					print(f'\r[{INFO}] Update completed!')
