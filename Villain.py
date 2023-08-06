@@ -740,94 +740,97 @@ def main():
 	
 	# Check for updates
 	if not args.skip_update:
-		Loading.active = True
-		loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Checking for updates',), name = 'loading_animation', daemon = True).start()
-		local_files_path = current_wd + os.sep
-		branch = 'main'  
-	
-		url = f'https://api.github.com/repos/t3l3machus/Villain/git/trees/{branch}?recursive=1'
-		raw_url = f'https://raw.githubusercontent.com/t3l3machus/Villain/{branch}/'
-	
-	
-		def get_local_file_hash(filename):
-			
-			try:
-				with open(local_files_path + filename, 'rb') as f:
-					data = f.read()
-					return md5(data).hexdigest()
-					
-			except FileNotFoundError:
-				return False
-	
-	
-		def update_file(filename, data):
-	
-			try:
-				with open(local_files_path + filename, 'wb') as f:
-					f.write(data)
-					return True
-					
-			except Exception as e:
-				print(f'Error updating file {filename}: {e}')
-				return False
-	
-	
 		try:
-			response = requests_get(url = url, timeout=(5, 27))
-			response.raise_for_status()  # raises stored HTTPError, if one occurred
-			
-		except requests.exceptions.HTTPError as e:
-			print(f'[{ERR}] Failed to fetch latest version data: {e}') 
-			
-		except Exception as e:
-			print(f'[{ERR}] Failed to fetch latest version data: {e}') 
-	
-	
-		if response.status_code == 200:
-			
-			files = [file['path'] for file in response.json()['tree'] if file['type'] == 'blob']
-			update_consent = False
-			
-			for filename in files:
-				file_data = requests_get(url = raw_url + filename, timeout=(5, 27))
-				latest_signature = md5(file_data.content).hexdigest()
-				local_signature = get_local_file_hash(filename)
+			Loading.active = True
+			loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Checking for updates',), name = 'loading_animation', daemon = True).start()
+			local_files_path = current_wd + os.sep
+			branch = 'main'  
+		
+			url = f'https://api.github.com/repos/t3l3machus/Villain/git/trees/{branch}?recursive=1'
+			raw_url = f'https://raw.githubusercontent.com/t3l3machus/Villain/{branch}/'
+		
+		
+			def get_local_file_hash(filename):
 				
-				if not local_signature or (local_signature != latest_signature):
-					Loading.active = False
-					while not Loading.finished:
-						sleep(0.05)
+				try:
+					with open(local_files_path + filename, 'rb') as f:
+						data = f.read()
+						return md5(data).hexdigest()
+						
+				except FileNotFoundError:
+					return False
+		
+		
+			def update_file(filename, data):
+		
+				try:
+					with open(local_files_path + filename, 'wb') as f:
+						f.write(data)
+						return True
+						
+				except Exception as e:
+					print(f'Error updating file {filename}: {e}')
+					return False
+		
+		
+			try:
+				response = requests_get(url = url, timeout=(5, 27))
+				response.raise_for_status()  # raises stored HTTPError, if one occurred
+				
+			except requests.exceptions.HTTPError as e:
+				print(f'[{ERR}] Failed to fetch latest version data: {e}') 
+				
+			except Exception as e:
+				print(f'[{ERR}] Failed to fetch latest version data: {e}') 
+		
+		
+			if response.status_code == 200:
+				
+				files = [file['path'] for file in response.json()['tree'] if file['type'] == 'blob']
+				update_consent = False
+				
+				for filename in files:
+					file_data = requests_get(url = raw_url + filename, timeout=(5, 27))
+					latest_signature = md5(file_data.content).hexdigest()
+					local_signature = get_local_file_hash(filename)
 					
-					if not update_consent:				
-						consent = input(f'\r[{INFO}] Updates detected. Would you like to proceed? [y/n]: ').lower().strip()
-	
-						if consent in ['y', 'yes']:
-							update_consent = True
-							Loading.active = True
-							loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Updating',), name = 'loading_animation', daemon = True).start()
-						else:
-							break
+					if not local_signature or (local_signature != latest_signature):
+						Loading.active = False
+						while not Loading.finished:
+							sleep(0.05)
 						
-					if update_consent:
-						updated = update_file(filename, file_data.content)
-						
-						if not updated:
-							print(f'[{ERR}] Error while updating files. Installation may be corrupt. Consider reinstalling Villain.')
-							exit(1)
-			
-			Loading.active = False
-			while not Loading.finished:
-				sleep(0.05)
-			
-			if update_consent:
-				print(f'\r[{INFO}] Update completed!')
-				os.execv(sys.executable, ['python3'] + sys.argv + ['-q'])
-	
-		else:
-			print(f'[{ERR}] Failed to retrieve data from the main branch: ', response.content)
-			return
-		# Initialize essential services
-		print(f'[{INFO}] Initializing required services:')
+						if not update_consent:				
+							consent = input(f'\r[{INFO}] Updates detected. Would you like to proceed? [y/n]: ').lower().strip()
+		
+							if consent in ['y', 'yes']:
+								update_consent = True
+								Loading.active = True
+								loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Updating',), name = 'loading_animation', daemon = True).start()
+							else:
+								break
+							
+						if update_consent:
+							updated = update_file(filename, file_data.content)
+							
+							if not updated:
+								print(f'[{ERR}] Error while updating files. Installation may be corrupt. Consider reinstalling Villain.')
+								exit(1)
+				
+				Loading.active = False
+				while not Loading.finished:
+					sleep(0.05)
+				
+				if update_consent:
+					print(f'\r[{INFO}] Update completed!')
+					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'])
+		
+			else:
+				print(f'[{ERR}] Failed to retrieve data from the main branch: ', response.content)
+				
+		except KeyboardInterrupt:
+			pass
+	# Initialize essential services
+	print(f'[{INFO}] Initializing required services:')
 
 	''' Init Core '''
 	core = Core_Server()
