@@ -1512,7 +1512,9 @@ def main():
 		
 		except KeyboardInterrupt:
 			
-			Main_prompt.ready = True
+			if not Main_prompt.ready:
+				Main_prompt.ready = True
+				continue
 
 			if global_readline.get_line_buffer(): 
 				sys.stdout.flush()
