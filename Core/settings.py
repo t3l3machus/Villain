@@ -121,7 +121,7 @@ class Loading:
 				print(f'\r{msg} {item}', end = '')
 				sleep(0.08)
 		else:
-			print(f'\r{msg}     ', end = '')
+			print(f'\r{msg}    ', end = '')
 			Loading.finished = True
 			Threading_params.thread_limiter.release()
 			return
