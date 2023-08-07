@@ -816,13 +816,13 @@ def main():
 								Loading.stop()
 								print(f'\r[{ERR}] Error while updating files. Installation may be corrupt. Consider reinstalling Villain.')
 								exit(1)
-				
-				Loading.stop()
-				
+								
 				if update_consent:
+					Loading.stop()
 					print(f'\r[{INFO}] Update completed!')
 					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'] + ['-s'])
-		
+				else:
+					Loading.stop(print_nl = True)	
 			else:
 				Loading.stop(print_nl = True)
 				
