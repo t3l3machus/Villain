@@ -2548,7 +2548,8 @@ class TCP_Sock_Multi_Handler:
 
 		except Exception as e:
 			conn.close()
-			print_to_prompt(f'\r[{ERR}] Failed to establish a backdoor session: {e}.')
+			print_to_prompt(f'\r[{ERR}] Failed to establish a backdoor session: {e}.') if session_id not in Sessions_Manager.sessions_graveyard \
+			else chill()
 			Threading_params.thread_limiter.release()
 			return
 
@@ -2625,7 +2626,8 @@ class TCP_Sock_Multi_Handler:
 						Sessions_Manager.active_sessions[session_id]['Status'] = 'Lost'
 						status = f'{LRED}Lost{END}'
 						Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
-						print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} seems to be {status}.')
+						print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} seems to be {status}.') if session_id not in Sessions_Manager.sessions_graveyard \
+						else chill()
 						Core_Server.restore_prompt_after_lost_conn(session_id)
 						return
 
@@ -2755,12 +2757,16 @@ class TCP_Sock_Multi_Handler:
 
 			except ConnectionResetError:
 
-				print_to_prompt(f'\r[{ERR}] Failed to establish a backdoor session: Connection reset by peer.')
+				print_to_prompt(f'\r[{ERR}] Failed to establish a backdoor session: Connection reset by peer.') if session_id not in Sessions_Manager.sessions_graveyard \
+				else chill()
 				return 'ConnectionResetError'
 
 			except BlockingIOError:
 				pass
-		
+
+			except:
+				pass
+				
 		response = ''.join(response)
 		print('\n') if (not quiet and response.strip()) else chill()
 
