@@ -2771,17 +2771,6 @@ class TCP_Sock_Multi_Handler:
 
 
 
-	# def validate_hostname(self, hostname):
-
-	# 	try:
-	# 		if re.match(r"^(([a-zA-Z0-9]|[a-z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])$", hostname):
-	# 			return True
-	# 		else:
-	# 			return False
-	# 	except:
-	# 		return False
-
-
 	def validate_hostname(self, hostname):
 
 		if len(hostname) > 255:
