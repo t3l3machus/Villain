@@ -38,7 +38,6 @@ Hoaxshell_Settings.bind_port = args.hoax_port if args.hoax_port else Hoaxshell_S
 if Hoaxshell_Settings.ssl_support:
 	Hoaxshell_Settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_Settings.bind_port_ssl
 
-
 Core_Server_Settings.bind_port = args.port if args.port else Core_Server_Settings.bind_port
 TCP_Sock_Handler_Settings.bind_port = args.netcat_port if args.netcat_port else TCP_Sock_Handler_Settings.bind_port
 File_Smuggler_Settings.bind_port = args.file_smuggler_port if args.file_smuggler_port else File_Smuggler_Settings.bind_port
@@ -743,7 +742,7 @@ def main():
 		
 		try:
 			local_files_path = current_wd + os.sep
-			branch = 'dev' 
+			branch = 'main' 
 			url = f'https://api.github.com/repos/t3l3machus/Villain/git/trees/{branch}?recursive=1'
 			raw_url = f'https://raw.githubusercontent.com/t3l3machus/Villain/{branch}/'		
 			Loading.active = True
