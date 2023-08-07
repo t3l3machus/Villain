@@ -127,7 +127,11 @@ class Loading:
 
 	
 	@staticmethod
-	def stop():
+	def stop(print_nl = False):
+
 		Loading.active = False
 		while not Loading.finished:
 			sleep(0.05)
+		
+		if print_nl:
+			print()
