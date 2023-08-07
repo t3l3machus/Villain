@@ -824,10 +824,10 @@ def main():
 					os.execv(sys.executable, ['python3'] + sys.argv + ['-q'] + ['-s'])
 		
 			else:
-				Loading.stop()
+				Loading.stop(print_nl = True)
 				
 		except KeyboardInterrupt:
-			Loading.stop()
+			Loading.stop(print_nl = True)
 			pass
 			
 	# Initialize essential services
