@@ -740,16 +740,16 @@ def main():
 	
 	# Check for updates
 	if not args.skip_update:
+		
 		try:
+			local_files_path = current_wd + os.sep
+			branch = 'dev' 
+			url = f'https://api.github.com/repos/t3l3machus/Villain/git/trees/{branch}?recursive=1'
+			raw_url = f'https://raw.githubusercontent.com/t3l3machus/Villain/{branch}/'		
 			Loading.active = True
 			loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Checking for updates',), name = 'loading_animation', daemon = True).start()
-			local_files_path = current_wd + os.sep
-			branch = 'main'  
-		
-			url = f'https://api.github.com/repos/t3l3machus/Villain/git/trees/{branch}?recursive=1'
-			raw_url = f'https://raw.githubusercontent.com/t3l3machus/Villain/{branch}/'
-		
-		
+
+			
 			def get_local_file_hash(filename):
 				
 				try:
