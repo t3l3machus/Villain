@@ -765,7 +765,7 @@ class Sessions_Manager:
 				Core_Server.announce_session_termination({'session_id' : session_id})
 
 			else:
-				print(f'[{ERR}] Permission denied. This session is owned by a sibling server).')
+				print(f'[{ERR}] Permission denied. This session is owned by a sibling server.')
 
 		else:
 			print('Session id not found in active sessions.')
