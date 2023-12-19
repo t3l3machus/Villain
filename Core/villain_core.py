@@ -1435,6 +1435,7 @@ class Core_Server:
 
 	def sock_handler(self, conn, address):
 
+		raw_data = str_data = None
 		try:
 
 			Threading_params.thread_limiter.acquire()
