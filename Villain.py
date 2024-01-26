@@ -481,12 +481,22 @@ class Completer(object):
 		self.generate_arguments = ['payload', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
 		'exec_outfile', 'domain']
 		self.payload_templates_root = os.path.dirname(os.path.abspath(__file__)) + f'{os.sep}Core{os.sep}payload_templates'
-	
+		self.payload_templates_list = self.get_payload_templates_list()
 	
 	
 	def reset_counter(self):	
 		sleep(0.4)
 		self.tab_counter = 0
+		
+
+	
+	def get_payload_templates_list(self):
+		root = self.payload_templates_root
+		dirs = [d + os.sep for d in next(os.walk(root))[1]]
+		files = next(os.walk(root))[2]
+		files = [os.path.splitext(f)[0] for f in files]
+
+		return dirs + files
 		
 	
 	
@@ -673,6 +683,9 @@ class Completer(object):
 
 
 
+		
+
+		
 		# Autocomplete aliases for reset
 		elif (main_cmd in ['reset']) and (line_buffer_list_len > 1) and \
 			(line_buffer_list[-1][0] not in ["/", "~"]):
@@ -686,28 +699,29 @@ class Completer(object):
 				self.update_prompt(len(line_buffer_list[-1]), match) if match else chill()
 
 
-
+		
 		# Autocomplete generate prompt command arguments
 		elif (main_cmd == 'generate') and (line_buffer_list_len > 1):
-									
 			word_frag = line_buffer_list[-1].lower()
-
+		
 			if re.search('payload=[\w\/\\\]{0,}', word_frag):
-				
 				tmp = word_frag.split('=')
-
+		
 				if tmp[1]:
-
-					root = self.payload_templates_root			
+					root = self.payload_templates_root
 					search_term = tmp[1]
-					self.path_autocompleter(root, search_term, hide_py_extensions = True)
-
+					self.path_autocompleter(root, search_term, hide_py_extensions=True)
 				else:
 					pass
-
+		
 			else:
-				match = self.get_match_from_list(line_buffer_list[-1], self.generate_arguments)
-				self.update_prompt(len(line_buffer_list[-1]), match, lower = True) if match else chill()
+				if line_buffer_list_len >= 3 and line_buffer_list[-2] == 'payload':
+					match = self.get_match_from_list(line_buffer_list[-1], self.payload_templates_list)
+					self.update_prompt(len(line_buffer_list[-1]), match, lower=True) if match else chill()
+				else:
+					match = self.get_match_from_list(line_buffer_list[-1], self.generate_arguments)
+					self.update_prompt(len(line_buffer_list[-1]), match, lower=True) if match else chill()
+
 
 
 		# Autocomplete help
