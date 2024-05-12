@@ -295,7 +295,7 @@ class Obfuscator:
 			if path == 1:
 				return char
 
-			return '\w' if path == 2 else f'({char}|\\?)'
+			return '\\w' if path == 2 else f'({char}|\\?)'
 
 
 
@@ -304,7 +304,7 @@ class Obfuscator:
 			if path == 1:
 				return char
 
-			return '\d' if path == 2 else f'({char}|\\?)'
+			return '\\d' if path == 2 else f'({char}|\\?)'
 
 
 
@@ -316,7 +316,7 @@ class Obfuscator:
 			if path == 1:
 				return char
 
-			return '\W' if path == 2 else f'({char}|\\?)'
+			return '\\W' if path == 2 else f'({char}|\\?)'
 
 		else:
 			return None
@@ -331,7 +331,7 @@ class Obfuscator:
 	def string_to_regex(self, string):
 
 		# First check if string is actually a regex
-		if re.match( "^\[.*\}$", string):
+		if re.match( "^\\[.*\\}$", string):
 			return string
 
 		else:
@@ -451,7 +451,7 @@ class Obfuscator:
 	def mask_payload(self, payload):
 
 		# Obfuscate variable name definitions
-		variables = re.findall("\$[A-Za-z0-9_]*={1}", payload)
+		variables = re.findall("\\$[A-Za-z0-9_]*={1}", payload)
 
 		if variables:
 
@@ -505,7 +505,7 @@ class Obfuscator:
 
 
 		# Randomize the case of each char in parameter names
-		ps_parameters = re.findall("\s-[A-Za-z]*", payload)
+		ps_parameters = re.findall("\\s-[A-Za-z]*", payload)
 
 		if ps_parameters:
 			for param in ps_parameters:
@@ -2786,7 +2786,7 @@ class TCP_Sock_Multi_Handler:
 		if hostname[-1] == ".":
 			hostname = hostname[:-1]
 
-		allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+		allowed = re.compile("(?!-)[A-Z\\d-]{1,63}(?<!-)$", re.IGNORECASE)
 		return all(allowed.match(x) for x in hostname.split("."))
 
 
@@ -2937,7 +2937,7 @@ class TCP_Sock_Multi_Handler:
 	def search_cmd_for_signature(self, cmd):
 
 		try:
-			sibling_server_id = re.findall("[\S]{1,2}echo '{[a-zA-Z0-9]{32}}'", cmd)[-1]
+			sibling_server_id = re.findall("[\\S]{1,2}echo '{[a-zA-Z0-9]{32}}'", cmd)[-1]
 			sibling_server_id = sibling_server_id.split('echo ')[1].strip('{}\'')
 
 		except:
@@ -3056,7 +3056,7 @@ class Exec_Utils:
 		if shell_type:
 
 			if shell_type == 'powershell.exe':
-				return 'Start-Process $PSHOME\powershell.exe -ArgumentList {' + execution_object + '} -WindowStyle Hidden'
+				return 'Start-Process $PSHOME\\powershell.exe -ArgumentList {' + execution_object + '} -WindowStyle Hidden'
 
 			elif shell_type == 'cmd.exe':
 				return 'start "" cmd /k "' + execution_object + '"'
