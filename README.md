@@ -15,7 +15,7 @@ The framework's main features include:
  - Auto-http request & exec scripts against sessions (a bit unstable),
  - Auto-invoke ConPtyShell against a powershell r-shell session as a new process to gain a fully interactive Windows shell,
  - Team chat,
- - Session Defender (a feature that inspects user issued commands for mistakes / unintentional input that may cause a shell to hang)
+ - Session Defender (a feature that inspects user issued commands for mistakes / unintentional input that may cause a shell to hang).
    
 
 ### Video Presentations
