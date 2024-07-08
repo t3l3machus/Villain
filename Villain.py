@@ -1041,6 +1041,15 @@ def main():
 							execution_object = cmd_list[1]
 							session_id = cmd_list[2]
 							is_file = False
+
+							# Check if session id has alias
+							session_id = sessions_manager.alias_to_session_id(session_id)
+							
+							if not session_id:
+								print(f'\r[{ERR}] Failed to interpret session_id.')
+								Main_prompt.ready = True
+								continue	
+							
 							shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
 							
 							if execution_object[0] in [os.sep, '~']:
@@ -1077,15 +1086,7 @@ def main():
 								if dangerous_input_detected:
 									Session_Defender.print_warning()
 									Main_prompt.ready = True
-									continue	
-
-							# Check if session id has alias
-							session_id = sessions_manager.alias_to_session_id(session_id)
-							
-							if not session_id:
-								print(f'\r[{ERR}] Failed to interpret session_id.')
-								Main_prompt.ready = True
-								continue								
+									continue								
 							
 							# If file, check if shell type is supported for exec
 							if shell_type not in ['unix', 'powershell.exe']:
