@@ -134,15 +134,28 @@ class Payload_Generator:
 			# Check if valid IP address
 			#re.search('[\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}', lhost_value)
 			payload.parameters["lhost"] = str(ip_address(lhost_value))
+			return 
 
 		except ValueError:
 
 			try:
 				# Check if valid interface
 				payload.parameters["lhost"] = ni.ifaddresses(lhost_value)[ni.AF_INET][0]['addr']
+				return 
 
 			except:
-				return False
+				# Check if valid hostname
+				if len(lhost_value) > 255:
+					payload.parameters["lhost"] = False
+					print('Hostname length greater than 255 characters.')
+					return
+				if lhost_value[-1] == ".":
+					lhost_value = lhost_value[:-1]  # Strip trailing dot (used to indicate an absolute domain name and technically valid according to DNS standards)
+				disallowed = re.compile(r"[^A-Z\d-]", re.IGNORECASE)
+				if all(len(part) and not part.startswith("-") and not part.endswith("-") and not disallowed.search(part) for part in lhost_value.split(".")):
+					payload.parameters["lhost"] = lhost_value
+				else:
+					payload.parameters["lhost"] = False
 
 
 
@@ -188,12 +201,12 @@ class Payload_Generator:
 						del payload, template
 						return
 
-					if payload.meta['handler'] == 'hoaxshell' or not Payload_Generator_Settings.validate_lhost_as_ip:
-						self.parse_lhost(payload, args_dict["lhost"])
-						payload.parameters["lhost"] = args_dict["lhost"] if (not payload.parameters["lhost"] and (len(args_dict["lhost"]) < 255)) else payload.parameters["lhost"]
+					#if payload.meta['handler'] == 'hoaxshell' or not Payload_Generator_Settings.validate_lhost_as_ip:
+					self.parse_lhost(payload, args_dict["lhost"])
+						#payload.parameters["lhost"] = args_dict["lhost"] if (not payload.parameters["lhost"] and (len(args_dict["lhost"]) < 255)) else payload.parameters["lhost"]
 					
-					else:
-						self.parse_lhost(payload, args_dict["lhost"])
+					# else:
+					# 	self.parse_lhost(payload, args_dict["lhost"])
 
 					if not payload.parameters["lhost"]:
 						print('Error parsing LHOST. Invalid IP or Interface.')
