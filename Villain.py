@@ -24,7 +24,7 @@ parser.add_argument("-f", "--file-smuggler-port", action="store", help = "Http f
 parser.add_argument("-i", "--insecure", action="store_true", help = "Allows any Villain client (sibling server) to connect to your instance without prompting you for verification.")
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
 parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
-parser.add_argument("-s", "--skip-update", action="store_true", help = "Do not check for updates on startup.")
+parser.add_argument("-u", "--update", action="store_true", help = "Try to fetch the latest commits from the main branch on GitHub.")
 parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
 
 args = parser.parse_args()
@@ -738,7 +738,7 @@ def main():
 	current_wd = os.path.dirname(os.path.abspath(__file__))
 	
 	# Check for updates
-	if not args.skip_update:
+	if args.update:
 		
 		try:
 			local_files_path = current_wd + os.sep
@@ -746,7 +746,7 @@ def main():
 			url = f'https://api.github.com/repos/t3l3machus/Villain/git/trees/{branch}?recursive=1'
 			raw_url = f'https://raw.githubusercontent.com/t3l3machus/Villain/{branch}/'		
 			Loading.active = True
-			loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Checking for updates',), name = 'loading_animation', daemon = True).start()
+			Thread(target = Loading.animate, args = (f'[{INFO}] Checking for updates',), name = 'loading_animation', daemon = True).start()
 
 			
 			def get_local_file_hash(filename):
