@@ -702,10 +702,12 @@ class Completer(object):
 					search_term = tmp[1]
 					self.path_autocompleter(root, search_term, hide_py_extensions = True)
 
-				else:
+				elif self.tab_counter > 1:
 					contents = os.listdir(root)
-					directories = [entry for entry in contents if os.path.isdir(os.path.join(root, entry))]
-					print(f'\n\n{"/    ".join(directories)}/\n')
+					directories = [f'{entry}/' for entry in contents if os.path.isdir(os.path.join(root, entry))]
+					print('\n')	
+					print_columns(directories)
+					self.tab_counter = 0
 					Main_prompt.rst_prompt()
 
 			else:
