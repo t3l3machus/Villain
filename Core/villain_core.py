@@ -891,10 +891,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		# Define prompt value:
 		if prompt:
-			Hoaxshell.hoax_prompt = prompt
+			Main_prompt.hoax_prompt = prompt
 
 		else:
-			Hoaxshell.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
+			Main_prompt.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
 
 		Hoaxshell.active_shell = session_id
 		Hoaxshell.prompt_ready = True
@@ -914,7 +914,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			while Hoaxshell.active_shell:
 
 				if Hoaxshell.prompt_ready:
-					user_input = input(Hoaxshell.hoax_prompt)
+					user_input = input(Main_prompt.hoax_prompt)
 					user_input_clean = re.sub(' +', ' ', user_input).strip()
 					cmd_list = user_input_clean.split(' ')
 					cmd_list[0] = cmd_list[0].lower()
@@ -1044,7 +1044,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		Hoaxshell.active_shell = None
 		Hoaxshell.prompt_ready = False
-		Hoaxshell.hoax_prompt = None
+		Main_prompt.hoax_prompt = None
 		Main_prompt.ready = True
 
 
@@ -1053,7 +1053,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	def rst_shell_prompt(prompt = ' > ', prefix = '\r'):
 
 		Hoaxshell.prompt_ready = True
-		sys.stdout.write(prefix + Hoaxshell.hoax_prompt + global_readline.get_line_buffer())
+		sys.stdout.write(prefix + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 
 
 
@@ -1593,7 +1593,7 @@ class Core_Server:
 							Sessions_Manager.active_sessions[session_id]['prompt'] = prompt_value
 
 							if Hoaxshell.active_shell == session_id:
-								Hoaxshell.hoax_prompt = prompt_value
+								Main_prompt.hoax_prompt = prompt_value
 
 						Core_Server.send_msg(conn, self.response_ack(sibling_id))
 
@@ -2732,7 +2732,7 @@ class TCP_Sock_Multi_Handler:
 								prompt_value = sentinel_value[1][1].lstrip()
 
 								if Hoaxshell.active_shell:
-									Hoaxshell.hoax_prompt = prompt_value
+									Main_prompt.hoax_prompt = prompt_value
 
 								if session_id:
 									# Sessions_Manager.active_sessions[session_id].update({'prompt' : prompt_value, 'Shell' : sentinel_value[2]})
