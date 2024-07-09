@@ -13,6 +13,7 @@ from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Han
 from Core.logging import clear_metadata
 from hashlib import md5
 from requests import get as requests_get
+from requests.exceptions import ReadTimeout
 
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
@@ -778,7 +779,7 @@ def main():
 				
 			#except requests.exceptions.HTTPError as e:
 				#print(f'\r[{ERR}] Failed to fetch latest version data: {e}') 
-				
+
 			except Exception as e:
 				res_status_code = -1
 				Loading.stop()
@@ -791,7 +792,13 @@ def main():
 				update_consent = False
 				
 				for filename in files:
-					file_data = requests_get(url = raw_url + filename, timeout=(5, 27))
+					try:
+						file_data = requests_get(url = raw_url + filename, timeout=(5, 29))
+					except:
+						# Temporary dirty solution
+						print(f'\r[{ERR}] Failed to fetch file: {filename}. Installation may be corrupt. Consider reinstalling Villain.')
+						raise KeyboardInterrupt
+						
 					latest_signature = md5(file_data.content).hexdigest()
 					local_signature = get_local_file_hash(filename)
 					
