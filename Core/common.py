@@ -65,6 +65,7 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 class Main_prompt:
 	
 	original_prompt = prompt = f"{UNDERLINE}Villain{END} > "
+	hoax_prompt = None
 	ready = True
 	SPACE = '#>SPACE$<#'
 	exec_active = False
