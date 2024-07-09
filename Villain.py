@@ -479,8 +479,9 @@ class Completer(object):
 		
 		self.tab_counter = 0		
 		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
-		self.generate_arguments = ['payload', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
+		self.main_command_arguments = ['payload', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
 		'exec_outfile', 'domain']
+		self.pseudo_shell_commands = ['upload', 'cmdinspector']
 		self.payload_templates_root = os.path.dirname(os.path.abspath(__file__)) + f'{os.sep}Core{os.sep}payload_templates'
 	
 	
@@ -537,7 +538,7 @@ class Completer(object):
 					else:						
 						print('\n')
 						print_columns(matches)
-						Main_prompt.rst_prompt()
+						Main_prompt.rst_prompt() if Main_prompt.ready else sys.stdout.write('\r' + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 						return False 
 				
 				elif len(unique) == 1:
@@ -615,7 +616,7 @@ class Completer(object):
 				print('\n')	
 				print_columns(match)
 				self.tab_counter = 0
-				Main_prompt.rst_prompt()
+				Main_prompt.rst_prompt() if Main_prompt.ready else sys.stdout.write('\r' + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 
 				
 
@@ -642,15 +643,14 @@ class Completer(object):
 		main_cmd = line_buffer_list[0].lower()
 		
 		# Get prompt command from word fragment
+		# print(f'{line_buffer_list_len} - {Main_prompt.ready}  - {main_cmd}')
 		if line_buffer_list_len == 1:
-					
-			match = self.get_match_from_list(main_cmd, self.main_prompt_commands)
+			match = self.get_match_from_list(main_cmd, self.main_prompt_commands if Main_prompt.ready else self.pseudo_shell_commands)
 			self.update_prompt(len(line_buffer_list[0]), match) if match else chill()
-		
-		
+
+	
 		# Autocomplete session IDs
-		elif (main_cmd in ['exec', 'alias', 'kill', 'shell', 'repair', 'upload', 'conptyshell']) and \
-			(line_buffer_list_len > 1) and (line_buffer_list[-1][0] not in ["/", "~"]):
+		elif ((main_cmd in ['exec', 'alias', 'kill', 'shell', 'repair', 'upload', 'conptyshell'] and Main_prompt.ready) or (main_cmd in self.pseudo_shell_commands and not Main_prompt.ready)) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] not in ["/", "~"]):
 			
 			if line_buffer_list[-1] in (Sessions_Manager.active_sessions.keys()):
 				pass
@@ -692,7 +692,6 @@ class Completer(object):
 		elif (main_cmd == 'generate') and (line_buffer_list_len > 1):
 									
 			word_frag = line_buffer_list[-1].lower()
-
 			if re.search('payload=[\\w\\/\\\\]{0,}', word_frag):
 				
 				tmp = word_frag.split('=')
@@ -708,10 +707,10 @@ class Completer(object):
 					print('\n')	
 					print_columns(directories)
 					self.tab_counter = 0
-					Main_prompt.rst_prompt()
+					Main_prompt.rst_prompt() if Main_prompt.ready else sys.stdout.write('\r' + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 
 			else:
-				match = self.get_match_from_list(line_buffer_list[-1], self.generate_arguments)
+				match = self.get_match_from_list(line_buffer_list[-1], self.main_command_arguments)
 				self.update_prompt(len(line_buffer_list[-1]), match, lower = True) if match else chill()
 
 
