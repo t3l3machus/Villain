@@ -2149,12 +2149,12 @@ class Core_Server:
 			print('\rProvided IP address is not valid.')
 			authorized = False
 
-		if server_port < 0 or server_port > 65535:
-			print('\rPort must be 0-65535.')
+		if server_port < 1 or server_port > 65535:
+			print('\rPort must be between 1 and 65535.')
 			authorized = False
 
-		# Check if attempt to connect to self
-		if (server_port == Core_Server_Settings.bind_port) and (server_ip in ['127.0.0.1', 'localhost']):
+		# Prevent connecting with self
+		if (server_ip in ['127.0.0.1', 'localhost', '::1', '127.0.0.0', '127.0.0.2', '127.0.0.3', '127.0.0.4', '127.0.0.5', '127.0.0.6', '127.0.0.7', '127.0.0.8', '::1', '0:0:0:0:0:0:0:1', '0:0:0:0:0:0:0:1%0', '[::1]']): # and (server_port == Core_Server_Settings.bind_port)
 			print('\rIf you really want to connect with yourself, try yoga.')
 			authorized = False
 
