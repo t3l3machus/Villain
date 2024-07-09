@@ -1,4 +1,4 @@
-Copyright (c) 2022 Panagiotis Chartas (t3l3machus)
+Copyright (c) 2022-2024 Panagiotis Chartas (t3l3machus)
 
 # Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
 
