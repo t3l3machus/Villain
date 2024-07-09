@@ -696,15 +696,17 @@ class Completer(object):
 			if re.search('payload=[\\w\\/\\\\]{0,}', word_frag):
 				
 				tmp = word_frag.split('=')
+				root = self.payload_templates_root	
 
-				if tmp[1]:
-
-					root = self.payload_templates_root			
+				if tmp[1]:					
 					search_term = tmp[1]
 					self.path_autocompleter(root, search_term, hide_py_extensions = True)
 
 				else:
-					pass
+					contents = os.listdir(root)
+					directories = [entry for entry in contents if os.path.isdir(os.path.join(root, entry))]
+					print(f'\n\n{"/    ".join(directories)}/\n')
+					Main_prompt.rst_prompt()
 
 			else:
 				match = self.get_match_from_list(line_buffer_list[-1], self.generate_arguments)
