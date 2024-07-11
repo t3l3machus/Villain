@@ -153,9 +153,17 @@ class Payload_Generator:
 					lhost_value = lhost_value[:-1]  # Strip trailing dot (used to indicate an absolute domain name and technically valid according to DNS standards)
 				disallowed = re.compile(r"[^A-Z\d-]", re.IGNORECASE)
 				if all(len(part) and not part.startswith("-") and not part.endswith("-") and not disallowed.search(part) for part in lhost_value.split(".")):
-					payload.parameters["lhost"] = lhost_value
-				else:
-					payload.parameters["lhost"] = False
+					# Check if hostname is resolvable
+					try:
+						socket.gethostbyname(lhost_value)
+						payload.parameters["lhost"] = lhost_value
+						return
+					except:
+						print('Failed to resolve LHOST.')
+						pass				
+				
+				payload.parameters["lhost"] = False
+				return
 
 
 
@@ -209,7 +217,7 @@ class Payload_Generator:
 					# 	self.parse_lhost(payload, args_dict["lhost"])
 
 					if not payload.parameters["lhost"]:
-						print('Error parsing LHOST. Invalid IP or Interface.')
+						print('Error parsing LHOST. Invalid IP, Hostname or Interface.')
 						return
 
 					# Check for unrecognized arguments
