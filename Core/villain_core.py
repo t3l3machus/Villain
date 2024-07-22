@@ -937,6 +937,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 						Hoaxshell.prompt_ready = False
 						file_path = os.path.expanduser(cmd_list[1])
+						try:
+							out_path = cmd_list[2]
+						except IndexError:
+							out_path = os.path.basename(cmd_list[1])
 
 						if session_id in Sessions_Manager.active_sessions.keys():
 
@@ -952,10 +956,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 									session_owner_id = Sessions_Manager.return_session_attr_value(session_id, 'Owner')
 
 									if session_owner_id == Core_Server.return_server_uniq_id():
-										File_Smuggler.upload_file(file_contents, cmd_list[2], session_id)
+										File_Smuggler.upload_file(file_contents, out_path, session_id)
 
 									else:
-										Core_Server.send_receive_one_encrypted(session_owner_id, [file_contents, cmd_list[2], session_id], 'upload_file')
+										Core_Server.send_receive_one_encrypted(session_owner_id, [file_contents, out_path, session_id], 'upload_file')
 
 							else:
 								print(f'\r[{ERR}] file {file_path} not found.')
