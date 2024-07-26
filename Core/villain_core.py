@@ -1150,12 +1150,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			try:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = url_split[1]
 				Sessions_Manager.active_sessions[session_id]['Username'] = url_split[2]
-                print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
+				print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
 
 			except IndexError:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = 'Undefined'
 				Sessions_Manager.active_sessions[session_id]['Username'] = 'Undefined'
-                print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END} (hostname and user undefined)')
+				print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END} (hostname and user undefined)')
 				
 			try:
 				Thread(target = self.monitor_shell_state, args = (session_id,), name = f'session_state_monitor_{self.client_address[0]}', daemon = True).start()
