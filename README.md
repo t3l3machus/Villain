@@ -6,7 +6,7 @@
 <img src="https://img.shields.io/badge/Maintained%3F-Yes-96c40f">
 
 ## Purpose
-Villain is a high level C2 framework that can handle multiple TCP socket & HoaxShell-based reverse shells, enhance their functionality with additional features (commands, utilities etc) and share them among connected sibling servers (Villain instances running on different machines).  
+Villain is a high-level Stage 0/1 C2 framework that can handle multiple TCP socket & HoaxShell-based reverse shells, enhance their functionality with additional features (commands, utilities), and share them among connected sibling servers (Villain instances running on different machines).  
 
 The framework's main features include:
  - Payload generation based on default, customizable and/or user defined payload templates (Windows & Linux),
@@ -15,7 +15,7 @@ The framework's main features include:
  - Auto-http request & exec scripts against sessions (a bit unstable),
  - Auto-invoke ConPtyShell against a powershell r-shell session as a new process to gain a fully interactive Windows shell,
  - Team chat,
- - Session Defender (a feature that inspects user issued commands for mistakes / unintentional input that may cause a shell to hang)
+ - Session Defender (a feature that inspects user issued commands for mistakes / unintentional input that may cause a shell to hang).
    
 
 ### Video Presentations
@@ -29,6 +29,13 @@ The framework's main features include:
 | Using this tool against hosts that you do not have explicit permission to test is illegal. You are responsible for any trouble you may cause by using this tool. |
 
 ## Preview
+
+
+https://github.com/t3l3machus/Villain/assets/75489922/20bf0ad5-d06f-4658-bb43-1bb0359fe3f7
+
+
+
+
 ![image](https://user-images.githubusercontent.com/75489922/228979419-340918d4-3c04-48b6-913a-91aaf8756ff6.png)  
 
 
@@ -62,7 +69,5 @@ Check out the [Usage Guide](https://github.com/t3l3machus/Villain/blob/main/Usag
 3. Villain instances connected with each other (sibling servers) must be able to directly reach each other as well. I intend to add a network route mapping utility so that sibling servers can use one another as a proxy to achieve cross network communication between them (some day).
 
 ## Contributions
-Pull requests are generally welcome. Please, keep in mind: I am constantly working on new offsec tools as well as maintaining several existing ones. I rarely accept pull requests because I either have a plan for the course of a project or I evaluate that it would be hard to test and/or maintain the foreign code. It doesn't have to do with how good or bad is an idea, it's just too much work and also, I am kind of developing all these tools to learn myself.
-
-There are parts of this project that were removed before publishing because I considered them to be buggy or hard to maintain (at this early stage).
-If you have an idea for an addition that comes with a significant chunk of code, I suggest you first contact me to discuss if there's something similar already in the making, before making a PR. 
+Pull requests are generally welcome. Please, keep in mind: I am constantly working on new tools as well as maintaining several existing ones. I may be slow to respond.
+If you have an idea for a new feature that comes with a significant chunk of code, I suggest you first contact me to discuss if there's something similar already in the making, before making a PR. 

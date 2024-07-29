@@ -1,4 +1,22 @@
-Copyright (c) 2022 Panagiotis Chartas (t3l3machus)
+COPYING -- Describes the terms under which Villain is distributed. A copy
+of the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International Public License is appended to this file.
+
+Copyright (c) 2022-2024 Panagiotis Chartas (t3l3machus)
+
+Contributors are encouraged to submit Git pull requests to fix bugs and add new features. 
+By submitting changes to the Villain C2 Framework repository, you grant Panagiotis Chartas (aka t3l3machus), 
+the Creator and Maintainer of the "Villain C2 Framework," an unlimited, non-exclusive right to reuse, modify, 
+and relicense your code. Villain will remain Open Source, but the ability to relicense contributions is 
+crucial to prevent potential issues that have affected other Free Software projects. 
+If you have special licensing conditions for your contributions, please specify them when submitting.
+
+For any questions or if you wish to use Villain or parts of Villain in a commercial manner, you can
+contact the Creator at t3l3machus@protonmail.com.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
 
 # Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
 
