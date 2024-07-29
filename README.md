@@ -69,7 +69,5 @@ Check out the [Usage Guide](https://github.com/t3l3machus/Villain/blob/main/Usag
 3. Villain instances connected with each other (sibling servers) must be able to directly reach each other as well. I intend to add a network route mapping utility so that sibling servers can use one another as a proxy to achieve cross network communication between them (some day).
 
 ## Contributions
-Pull requests are generally welcome. Please, keep in mind: I am constantly working on new offsec tools as well as maintaining several existing ones. I rarely accept pull requests because I either have a plan for the course of a project or I evaluate that it would be hard to test and/or maintain the foreign code. It doesn't have to do with how good or bad is an idea, it's just too much work and also, I am kind of developing all these tools to learn myself.
-
-There are parts of this project that were removed before publishing because I considered them to be buggy or hard to maintain (at this early stage).
-If you have an idea for an addition that comes with a significant chunk of code, I suggest you first contact me to discuss if there's something similar already in the making, before making a PR. 
+Pull requests are generally welcome. Please, keep in mind: I am constantly working on new tools as well as maintaining several existing ones. I may be slow to respond.
+If you have an idea for a new feature that comes with a significant chunk of code, I suggest you first contact me to discuss if there's something similar already in the making, before making a PR. 
