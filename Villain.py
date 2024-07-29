@@ -125,7 +125,7 @@ def print_banner():
 
 def print_meta():
 	print(f'{META} Created by t3l3machus')
-	print(f'{META} Follow on GitHub, HTB, X, YT: @t3l3machus')
+	print(f'{META} Follow on GitHub, X, YT: @t3l3machus')
 	print(f'{META} Thank you!\n')
 
 
