@@ -1189,7 +1189,7 @@ def main():
 						
 						if cmd_list[2] in sessions:
 							
-							alias = alias_sanitizer(cmd_list[1]).strip()
+							alias = alias_sanitizer(cmd_list[1].strip())
 							
 							if isinstance(alias, list):
 								print(alias[0])
