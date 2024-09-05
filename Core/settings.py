@@ -17,6 +17,9 @@ class Threading_params:
 	thread_limiter = BoundedSemaphore(MAX_THREADS)
 
 
+class Villain:
+	version = "2.1.0"
+
 
 class Core_Server_Settings:
 	

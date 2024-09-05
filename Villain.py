@@ -9,7 +9,7 @@
 import argparse
 from subprocess import check_output
 from Core.common import *
-from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings, Loading
+from Core.settings import Villain, Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings, Loading
 from Core.logging import clear_metadata
 from hashlib import md5
 from requests import get as requests_get
@@ -26,9 +26,14 @@ parser.add_argument("-i", "--insecure", action="store_true", help = "Allows any 
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
 parser.add_argument("-k", "--keyfile", action="store", help = "Path to the private key for your certificate (for HoaxShell https server).")
 parser.add_argument("-u", "--update", action="store_true", help = "Try to fetch the latest commits from the main branch on GitHub.")
+parser.add_argument("-v", "--version", action="store_true", help = "Show program's version number and exit.")
 parser.add_argument("-q", "--quiet", action="store_true", help = "Do not print the banner on startup.")
 
 args = parser.parse_args()
+
+if args.version:
+	print(f'v{Villain.version}')
+	exit(0)
 
 # Parse the bind ports of servers & listeners
 Hoaxshell_Settings.certfile = args.certfile
