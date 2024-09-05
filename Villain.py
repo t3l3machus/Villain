@@ -9,7 +9,7 @@
 import argparse
 from subprocess import check_output
 from Core.common import *
-from Core.settings import Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings, Loading
+from Core.settings import Villain, Hoaxshell_Settings, Core_Server_Settings, TCP_Sock_Handler_Settings, File_Smuggler_Settings, Loading
 from Core.logging import clear_metadata
 from hashlib import md5
 from requests import get as requests_get
