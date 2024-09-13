@@ -55,6 +55,7 @@ ERR = f'{LRED}Error{END}'
 DEBUG = f'{ORANGE}Debug{END}'
 CHAT =f'{BLUE}Chat{END}'
 GRN_BUL = f'[{GREEN}*{END}]'
+ATT = f'{ORANGE}[!]{END}'
 META = '[\001\033[38;5;93m\002M\001\033[38;5;129m\002e\001\033[38;5;165m\002t\001\033[38;5;201m\002a\001\033[0m\002]'
 
 cwd = os.path.dirname(os.path.abspath(__file__))
