@@ -335,6 +335,19 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 			'max_args' : 0
 		},
 
+		'redirectors' : {
+			'details' : f'''
+Villain instances set traffic redirectors when using a shell session that belongs to a sibling. Use this command to list or remove redirectors if required (setting redirectors is handled automatically by Villain when needed). This feature exists mostly for troubleshooting reasons.
+
+Usage: 
+Type "redirectors" to list all active redirector entries.
+
+To remove a redirector:
+redirectors pop <REDIRECTOR ID>
+''',
+			'least_args' : 0,
+			'max_args' : 2
+		},
 	}
 	
 	
@@ -352,6 +365,7 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 		\r  sessions             Print established backdoor sessions data table.
 		\r  backdoors            Print established backdoor types data table.
 		\r  sockets              Print Villain related running services' info.
+		\r  redirectors  [+]     List and manage traffic redirectors.
 		\r  shell        [+]     Enable an interactive pseudo-shell for a session.
 		\r  exec         [+]     Execute command/file against a session.
 		\r  upload       [+]     Upload files to a backdoor session.
@@ -1521,6 +1535,61 @@ def main():
 					else:
 						continue
 
+				
+
+				elif cmd == 'redirectors':
+					
+					shell_redirectors = list(Sessions_Manager.shell_redirectors.keys())
+
+					if len(cmd_list) == 1:
+						if shell_redirectors:
+							i = 0
+							print(f'\n{BOLD}Shell Redirectors{END}\n')
+							print('ID   Session               Sibling')
+							print('---  --------------------  --------------------------------')
+														
+							for sid in shell_redirectors:
+								print(f'{i:3d}  {sid}  {Sessions_Manager.shell_redirectors[sid]}')
+								i += 1
+							print()
+						else:
+							print('No active redirectors.')
+
+					if len(cmd_list) == 2:
+						print('Missing arguments.')
+
+					elif len(cmd_list) == 3:
+						operation = cmd_list[1].lower().strip()
+						if operation == 'pop':
+							try:
+								redirector_id = int(cmd_list[2])
+							except:
+								redirector_id = False
+								print('Redirector id must be integer.')
+							
+							redirectors_len = len(shell_redirectors)
+							if not redirectors_len:
+								print('No active redirectors detected.')
+							else:
+								if redirector_id <= redirectors_len and redirector_id >= 0:
+									for i in range(0, redirectors_len):
+										if i == redirector_id:
+											shell_occupied = core.is_shell_session_occupied(shell_redirectors[i])
+											if shell_occupied:
+												choice = input('This shell session seems to be occupied by a sibling server. Are you sure you want to remove the traffic redirector? [Y/n]: ')
+												if choice.lower().strip() in ['y', 'yes']:
+													del Sessions_Manager.shell_redirectors[shell_redirectors[i]]
+													print('Redirector removed.')
+												else:
+													print('Operation aborted.')
+								else:
+									print('Redirector ID does not exist.')
+
+						else:
+							print(f'Unknown operation: {operation}')
+
+					else:
+						continue
 
 				else:
 					continue
