@@ -318,6 +318,45 @@ def print_columns(strings):
 
 
 
+
+def validate_host_address(addr):
+
+	addr_verified = False
+	try:
+		# Check if valid IP address
+		#re.search('[\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}', lhost_value)
+		addr_verified = str(ip_address(addr))
+
+	except ValueError:
+
+		try:
+			# Check if valid interface
+			addr_verified = ni.ifaddresses(addr)[ni.AF_INET][0]['addr']
+
+		except:
+			# Check if valid hostname
+			if len(addr) > 255:
+				addr_verified = False
+				print('Hostname length greater than 255 characters.')
+				return False
+			
+			if addr[-1] == ".":
+				addr = addr[:-1]  # Strip trailing dot (used to indicate an absolute domain name and technically valid according to DNS standards)
+
+			disallowed = re.compile(r"[^A-Z\d-]", re.IGNORECASE)
+			if all(len(part) and not part.startswith("-") and not part.endswith("-") and not disallowed.search(part) for part in addr.split(".")):
+				# Check if hostname is resolvable
+				try:
+					socket.gethostbyname(addr)
+					addr_verified = addr
+				
+				except:
+					print('Failed to resolve LHOST.')			
+			
+	return addr_verified
+	
+
+
 ''' Encryption '''
 def encrypt_msg(aes_key, msg, iv):
 	enc_s = AES.new(aes_key, AES.MODE_CFB, iv)
