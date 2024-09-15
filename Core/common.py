@@ -328,7 +328,7 @@ def print_columns(strings):
 
 
 class PrompHelp:
-
+	
 	deprecated = ['exec']
 	commands = {
 	
@@ -364,7 +364,7 @@ generate payload=linux/hoaxshell/sh_curl lhost=eth0
 
 		'exec' : {
 			'details' : f''' 			
-Execute a command or file against an active backdoor session. Files are executed by being http requested from the Http File Smuggler. The feature works regardless if the session is owned by you or a sibling server.
+Execute a command or file against an active shell session. Files are executed by being http requested from the Http File Smuggler. The feature works regardless if the session is owned by you or a sibling server.
 	
 exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>
 
@@ -376,8 +376,9 @@ exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>
 
 		'inject' : {
 			'details' : f''' 			
-Execute a local file via fileless exec over http. The feature works regardless if the session is owned by you or a sibling server. You can only use it inside an active pseudo shell session.
-	
+Inject a local file using fileless execution over HTTP. The feature works regardless if the session is owned by you or a sibling server. 
+
+From an active pseudo shell prompt:
 inject <LOCAL FILE PATH> 
 
 ''',
@@ -388,7 +389,7 @@ inject <LOCAL FILE PATH>
 
 		'repair' : {
 			'details' : f''' 			
-Use this command to manually correct a backdoor session's hostname/username value, in case Villain does not interpret the information correctly when the session is established.
+Use this command to manually correct a shell session's hostname/username value, in case Villain does not interpret the information correctly when the session is established.
  	
 repair <SESSION ID or ALIAS> <HOSTNAME or USERNAME> <NEW VALUE>''',
 			'least_args' : 3,
@@ -397,7 +398,7 @@ repair <SESSION ID or ALIAS> <HOSTNAME or USERNAME> <NEW VALUE>''',
 			
 		'shell' : {
 			'details' : f''' 			
-Enables an interactive pseudo-shell prompt for a backdoor session. Press Ctrl+C to disable.
+Enables an interactive pseudo-shell prompt for a shell session. Press Ctrl+C to disable.
  
 shell <SESSION ID or ALIAS>''',
 			'least_args' : 1,
@@ -407,7 +408,7 @@ shell <SESSION ID or ALIAS>''',
 			
 		'alias' : {
 			'details' : f'''
-Set an alias for a backdoor session to use instead of session ID.
+Set an alias for a shell session to use instead of session ID.
 
 alias <ALIAS> <SESSION ID>''',
 			'least_args' : 2,
@@ -427,7 +428,7 @@ reset <ALIAS>''',
 		
 		'kill' : {
 			'details' : f'''
-Terminate a self-owned backdoor session.
+Terminate a self-owned shell session.
 
 kill <SESSION ID or ALIAS>''',
 			'least_args' : 1,
@@ -451,21 +452,21 @@ Siblings are basically other instances of Villain that you are connected with.''
 
 		'threads' : {
 			'details' : f'''
-Villain creates a lot of threads to be able to handle multiple backdoor sessions, connections with siblings and more. In file Villain/Core/settings.py there is a BoundedSemaphore that works as a thread limiter to prevent resource contention, set by default to 100 (you can of course change it). This command lists the active threads created by Villain, to give you an idea of what is happening in the background, what is the current value of the thread limiter etc.
+Villain creates a lot of threads to be able to handle multiple shell sessions, connections with siblings and more. In file Villain/Core/settings.py there is a BoundedSemaphore that works as a thread limiter to prevent resource contention, set by default to 100 (you can of course change it). This command lists the active threads created by Villain, to give you an idea of what is happening in the background, what is the current value of the thread limiter etc.
   
-Note that, if the thread limiter reaches 0, weird things will start happening as new threads (e.g. backdoor sessions) will be queued until: thread limiter > 0.''',
+Note that, if the thread limiter reaches 0, weird things will start happening as new threads (e.g. shell sessions) will be queued until: thread limiter > 0.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'sessions' : {
-			'details' : f'''Prints info about active backdoor shell sessions.''',
+			'details' : f'''Prints info about active shell shell sessions.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
 
 		'backdoors' : {
-			'details' : f'''Prints specifics about the shell and listener types of active backdoor shell sessions.''',
+			'details' : f'''Prints specifics about the shell and listener types of active shell shell sessions.''',
 			'least_args' : 0,
 			'max_args' : 0
 		},
@@ -484,7 +485,7 @@ Note that, if the thread limiter reaches 0, weird things will start happening as
 
 		'upload' : {
 			'details' : f'''
-Upload files to a poisoned machine (files are auto-requested from the http file smuggler). The feature works regardless if the session is owned by you or a sibling server. You can only use it inside an active pseudo shell session.
+Upload files into an active shell session over http (auto-requested from the http-file-smuggler service). The feature works regardless if the session is owned by you or a sibling server. 
 
 From an active pseudo shell prompt:
 upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH>''',
@@ -495,7 +496,7 @@ upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH>''',
 
 		'cmdinspector' : {
 			'details' : f'''
-Villain has a function that inspects user issued shell commands for input that may cause a backdoor shell session to hang (e.g., unclosed single/double quotes or backticks, commands that may start a new interactive session within the current shell and more). 
+Villain has a function that inspects user issued shell commands for input that may cause a shell shell session to hang (e.g., unclosed single/double quotes or backticks, commands that may start a new interactive session within the current shell and more). 
 Use the cmdinspector command to turn that feature on/off. 
 
 cmdinspector <ON / OFF>''',
@@ -539,7 +540,9 @@ conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
 
 		'redirectors' : {
 			'details' : f'''
-Villain instances set traffic redirectors when using a shell session that belongs to a sibling. Use this command to list or remove redirectors if required (setting redirectors is handled automatically by Villain when needed). This feature exists mostly for troubleshooting reasons.
+Villain instances set traffic redirectors when using a shell session that belongs to a sibling. Use this command to list or remove redirectors, if required. 
+
+Setting redirectors is handled automatically by Villain. Normally, users are not supposed to manually set redirectors. This feature exists purely for troubleshooting.
 
 Usage: 
 Type "redirectors" to list all active redirector entries.
@@ -565,17 +568,17 @@ redirectors pop <REDIRECTOR ID>
 		\r  -------              -----------
 		\r  help         [+]     Print this message.
 		\r  connect      [+]     Connect with a sibling server.
-		\r  generate     [+]     Generate backdoor payload.
+		\r  generate     [+]     Generate shell scripts.
 		\r  siblings             Print sibling servers data table.
-		\r  sessions             Print established backdoor sessions data table.
-		\r  backdoors            Print established backdoor types data table.
+		\r  sessions             Print established shell sessions data table.
+		\r  backdoors            Print established shell types data table.
 		\r  sockets              Print Villain related running services' info.
 		\r  redirectors  [+]     List and manage traffic redirectors.
 		\r  shell        [+]     Enable an interactive pseudo-shell for a session.
 		\r  alias        [+]     Set an alias for a shell session.
 		\r  reset        [+]     Reset alias back to the session's unique ID.
-		\r  kill         [+]     Terminate an established backdoor session.
-		\r  conptyshell  [+]     Slap Invoke-ConPtyShell against a backdoor session.
+		\r  kill         [+]     Terminate an established shell session.
+		\r  conptyshell  [+]     Slap Invoke-ConPtyShell against a shell session.
 		\r  repair       [+]     Manually correct a session's hostname/username info.
 		\r  id                   Print server's unique ID (Self).
 		\r  cmdinspector [+]     Turn Session Defender on/off.
@@ -604,7 +607,7 @@ redirectors pop <REDIRECTOR ID>
 
 
 	@staticmethod
-	def print_detailed(cmd):			
+	def print_detailed(cmd):
 		if cmd not in PrompHelp.deprecated:			
 			PrompHelp.print_justified(PrompHelp.commands[cmd]['details'].strip()) if cmd in PrompHelp.commands.keys() \
 			else print(f'No details for command "{cmd}".')
@@ -729,6 +732,7 @@ def validate_host_address(addr):
 		try:
 			# Check if valid interface
 			addr_verified = ni.ifaddresses(addr)[ni.AF_INET][0]['addr']
+
 		except:
 			# Check if valid hostname
 			if len(addr) > 255:
