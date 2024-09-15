@@ -328,7 +328,8 @@ def print_columns(strings):
 
 
 class PrompHelp:
-	
+
+	deprecated = ['exec']
 	commands = {
 	
 		'connect' : {
@@ -604,8 +605,11 @@ redirectors pop <REDIRECTOR ID>
 
 	@staticmethod
 	def print_detailed(cmd):			
-		PrompHelp.print_justified(PrompHelp.commands[cmd]['details'].strip()) if cmd in PrompHelp.commands.keys() \
-		else print(f'No details for command "{cmd}".')
+		if cmd not in PrompHelp.deprecated:			
+			PrompHelp.print_justified(PrompHelp.commands[cmd]['details'].strip()) if cmd in PrompHelp.commands.keys() \
+			else print(f'No details for command "{cmd}".')
+		else:
+			print(f'The command "{cmd}" is deprecated.')
 
 
 	@staticmethod
