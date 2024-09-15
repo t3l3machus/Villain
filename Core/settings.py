@@ -13,7 +13,7 @@ from time import sleep
 
 class Threading_params:
 	
-	MAX_THREADS = 100
+	MAX_THREADS = 140
 	thread_limiter = BoundedSemaphore(MAX_THREADS)
 
 
