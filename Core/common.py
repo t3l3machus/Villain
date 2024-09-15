@@ -20,6 +20,7 @@ from time import sleep, time
 from pyperclip import copy as copy2cb
 from string import ascii_uppercase, ascii_lowercase, digits
 from importlib import import_module
+from datetime import date, datetime
 
 system_type = get_system_type()
 
@@ -112,6 +113,14 @@ def print_debug(msg):
 
 def do_nothing():
 	pass
+
+
+
+def get_datetime():
+	from datetime import datetime
+	date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+	return date
+
 
 
 def get_random_str(length):
@@ -700,6 +709,44 @@ def multi_set(payload, set_dict):
 	for key,val in set_dict.items():
 		payload = payload.replace(key, str(val))
 	return payload
+
+
+
+def validate_host_address(addr):
+
+	addr_verified = False
+	try:
+		# Check if valid IP address
+		#re.search('[\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}[\.][\d]{1,3}', lhost_value)
+		addr_verified = str(ip_address(addr))
+
+	except ValueError:
+
+		try:
+			# Check if valid interface
+			addr_verified = ni.ifaddresses(addr)[ni.AF_INET][0]['addr']
+		except:
+			# Check if valid hostname
+			if len(addr) > 255:
+				addr_verified = False
+				print('Hostname length greater than 255 characters.')
+				return False
+			
+			if addr[-1] == ".":
+				addr = addr[:-1]  # Strip trailing dot (used to indicate an absolute domain name and technically valid according to DNS standards)
+
+			disallowed = re.compile(r"[^A-Z\d-]", re.IGNORECASE)
+			if all(len(part) and not part.startswith("-") and not part.endswith("-") and not disallowed.search(part) for part in addr.split(".")):
+				# Check if hostname is resolvable
+				try:
+					socket.gethostbyname(addr)
+					addr_verified = addr
+				
+				except:
+					print('Failed to resolve LHOST.')			
+			
+	return addr_verified
+
 
 
 ''' Encryption '''
