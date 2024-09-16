@@ -13,12 +13,12 @@ from time import sleep
 
 class Threading_params:
 	
-	MAX_THREADS = 100
+	MAX_THREADS = 140
 	thread_limiter = BoundedSemaphore(MAX_THREADS)
 
 
 class Villain:
-	version = "2.1.0"
+	version = "2.2.0"
 
 
 class Core_Server_Settings:

