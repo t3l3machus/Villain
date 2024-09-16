@@ -2505,7 +2505,7 @@ class TCP_Sock_Multi_Handler:
 			init_response = ''
 
 			try:
-				init_res_data = self.recv_timeout(conn, quiet = True, timeout = 5)
+				init_res_data = self.recv_timeout(conn, quiet = True, timeout = 1.5)
 				
 				if init_res_data:
 					init_response += init_res_data
