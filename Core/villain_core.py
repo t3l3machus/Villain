@@ -2,7 +2,7 @@
 #
 # Author: Panagiotis Chartas (t3l3machus)
 #
-# This script is part of the Villain framework:
+# This script is part of the Villain C2 Framework:
 # https://github.com/t3l3machus/Villain
 
 
@@ -2505,7 +2505,7 @@ class TCP_Sock_Multi_Handler:
 			init_response = ''
 
 			try:
-				init_res_data = self.recv_timeout(conn, quiet = True, timeout = 1)
+				init_res_data = self.recv_timeout(conn, quiet = True, timeout = 5)
 				
 				if init_res_data:
 					init_response += init_res_data
@@ -2637,7 +2637,9 @@ class TCP_Sock_Multi_Handler:
 	   	 
 			sessions = clone_dict_keys(Sessions_Manager.active_sessions)
 
-			if session_id in sessions:
+			if session_id not in sessions:
+				break
+			else:
 		   	 
 				# If pseudo shell is active OR sibling server has pseudo shell active for this session
 				issuer = 'self' if session_id == Hoaxshell.active_shell else None
@@ -2645,21 +2647,14 @@ class TCP_Sock_Multi_Handler:
 					issuer = Sessions_Manager.shell_redirectors[session_id]
 
 				if issuer:
-					self.recv_bulk(conn, shell_type = shell, quiet = False if Hoaxshell.active_shell else True, issuer = issuer, \
-					session_id = session_id, prompt = '', timeout = TCP_Sock_Handler_Settings.recv_timeout, echo = cmd_echo)
+					self.recv_bulk(conn, quiet = False if Hoaxshell.active_shell else True, issuer = issuer, \
+					session_id = session_id, timeout = TCP_Sock_Handler_Settings.recv_timeout, echo = cmd_echo)
 
 				if Hoaxshell.command_pool[session_id]:
 
 					cmd = Hoaxshell.command_pool[session_id].pop(0)
-					villain_issued_cmd = False
-
-					# issuer = 'self' if session_id == Hoaxshell.active_shell else None
-					# if session_id in Sessions_Manager.shell_redirectors.keys():
-					# 	issuer = Sessions_Manager.shell_redirectors[session_id]					 
-
-					quiet = False
-					prompt = '' 
-
+					villain_issued_cmd = quiet = False
+		 
 					# Check command type:
 					# type str = Normal command
 					# type dict = Command issued by Villain's Utilities
@@ -2686,13 +2681,12 @@ class TCP_Sock_Multi_Handler:
 						conn.sendall('{}\n'.format(cmd).encode('utf-8'))
 				   	 
 						# Read response
-						self.recv_bulk(conn, shell_type = shell, quiet = quiet, \
-							session_id = session_id, prompt = prompt, echo = cmd_echo, issuer = issuer,\
-							timeout = TCP_Sock_Handler_Settings.recv_timeout if prompt else 12)
+						self.recv_bulk(conn, quiet = quiet, session_id = session_id, echo = cmd_echo, issuer = issuer, \
+							timeout = TCP_Sock_Handler_Settings.recv_timeout)
 
-						if session_id in Sessions_Manager.sessions_graveyard and \
-						session_id not in Sessions_Manager.active_sessions.keys():
-							break
+						# if session_id in Sessions_Manager.sessions_graveyard and \
+						# session_id not in Sessions_Manager.active_sessions.keys():
+						# 	break
 
 						if Sessions_Manager.active_sessions[session_id]['Status'] != 'Active':
 							Sessions_Manager.active_sessions[session_id]['Status'] = 'Active'
@@ -2700,19 +2694,16 @@ class TCP_Sock_Multi_Handler:
 							print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} restored!')
 							Core_Server.restore_prompt_after_lost_conn(session_id)
 
-						del cmd
-
-					except:
-
+					except (socket.error, ConnectionResetError) as e:
 						Sessions_Manager.active_sessions[session_id]['Status'] = 'Lost'
 						Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
-						print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} seems to be {LRED}Lost{END}.') if session_id not in Sessions_Manager.sessions_graveyard else do_nothing()
+						print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} seems to be {LRED}Lost{END} ({e}).') if session_id not in Sessions_Manager.sessions_graveyard else do_nothing()
 						Core_Server.restore_prompt_after_lost_conn(session_id)
 
-				else:
-					sleep(0.1)
-			else:
-				break
+					finally:
+						del cmd
+				# else:
+				# 	sleep(0.1)
 
 			sleep(0.1)
 
@@ -2722,10 +2713,8 @@ class TCP_Sock_Multi_Handler:
 
 
 
-	def recv_bulk(self, conn, prompt = False, shell_type = False, \
-			quiet = False, timeout = TCP_Sock_Handler_Settings.recv_timeout, session_id = False, \
-			exec_timeout = TCP_Sock_Handler_Settings.await_execution_timeout, \
-			issuer = 'self', echo = False):
+	def recv_bulk(self, conn, quiet = False, timeout = TCP_Sock_Handler_Settings.recv_timeout, session_id = False, \
+			exec_timeout = TCP_Sock_Handler_Settings.await_execution_timeout, issuer = 'self', echo = False):
    	 
 		received_empty = 0
 
@@ -2780,8 +2769,7 @@ class TCP_Sock_Multi_Handler:
 
 
 
-	def recv_timeout(self, sock, prompt = False, shell_type = False, \
-			quiet = False, timeout = TCP_Sock_Handler_Settings.recv_timeout, session_id = False, \
+	def recv_timeout(self, sock, quiet = False, timeout = TCP_Sock_Handler_Settings.recv_timeout, session_id = False, \
 			exec_timeout = TCP_Sock_Handler_Settings.await_execution_timeout, \
 			user_issued_cmd = False, issuer = 'self'):
 
@@ -2853,7 +2841,7 @@ class TCP_Sock_Multi_Handler:
 		if issuer == 'self' and not quiet:
 			Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 
-		return self.clean_nc_response(response) if shell_type else response
+		return self.clean_nc_response(response)
 
 
 
