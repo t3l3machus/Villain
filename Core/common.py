@@ -349,8 +349,12 @@ Generate a reverse shell command. This function has been redesigned to use paylo
 Main logic:
 generate payload=<OS_TYPE/HANDLER/PAYLOAD_TEMPLATE> lhost=<IP or INTERFACE> [ obfuscate encode ]
 
+Handlers:
+hoaxshell
+reverse_tcp
+
 Usage examples:
-generate payload=windows/netcat/powershell_reverse_tcp lhost=eth0 encode
+generate payload=windows/reverse_tcp/powershell_reverse_tcp lhost=eth0 encode
 generate payload=linux/hoaxshell/sh_curl lhost=eth0
 
 - The ENCODE and OBFUSCATE attributes are enabled for certain templates and can be used during payload generation. 
