@@ -350,8 +350,8 @@ Main logic:
 generate payload=<OS_TYPE/HANDLER/PAYLOAD_TEMPLATE> lhost=<IP or INTERFACE> [ obfuscate encode ]
 
 Handlers:
-hoaxshell
-reverse_tcp
+- hoaxshell
+- reverse_tcp
 
 Usage examples:
 generate payload=windows/reverse_tcp/powershell_reverse_tcp lhost=eth0 encode
