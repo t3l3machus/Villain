@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("-p", "--port", action="store", help = "Team server port (default: 6501).", type = int)
 parser.add_argument("-x", "--hoax-port", action="store", help = "HoaxShell server port (default: 8080 via http, 443 via https).", type = int)
-parser.add_argument("-n", "--netcat-port", action="store", help = "Netcat multi-listener port (default: 4443).", type = int)
+parser.add_argument("-n", "--reverse-tcp-port", action="store", help = "Reverse TCP multi-handler port (default: 4443).", type = int)
 parser.add_argument("-f", "--file-smuggler-port", action="store", help = "Http file smuggler server port (default: 8888).", type = int)
 parser.add_argument("-i", "--insecure", action="store_true", help = "Allows any Villain client (sibling server) to connect to your instance without prompting you for verification.")
 parser.add_argument("-c", "--certfile", action="store", help = "Path to your ssl certificate (for HoaxShell https server).")
@@ -45,7 +45,7 @@ if Hoaxshell_Settings.ssl_support:
 	Hoaxshell_Settings.bind_port_ssl = args.hoax_port if args.hoax_port else Hoaxshell_Settings.bind_port_ssl
 
 Core_Server_Settings.bind_port = args.port if args.port else Core_Server_Settings.bind_port
-TCP_Sock_Handler_Settings.bind_port = args.netcat_port if args.netcat_port else TCP_Sock_Handler_Settings.bind_port
+TCP_Sock_Handler_Settings.bind_port = args.reverse_tcp_port if args.reverse_tcp_port else TCP_Sock_Handler_Settings.bind_port
 File_Smuggler_Settings.bind_port = args.file_smuggler_port if args.file_smuggler_port else File_Smuggler_Settings.bind_port
 
 # Check if there are port number conflicts
@@ -545,21 +545,21 @@ def main():
 		sys.exit(1)
 
 
-	''' Init Netcat '''
-	netcat = TCP_Sock_Multi_Handler()
-	nc_multi_listener = Thread(target = netcat.initiate_nc_listener, args = (), name = 'nc_tcp_socket_server')
-	nc_multi_listener.daemon = True
-	nc_multi_listener.start()
+	''' Init Reverse TCP multi-handler '''
+	reverseTCP_listener = TCP_Sock_Multi_Handler()
+	reverseTCP_listener_t = Thread(target = reverseTCP_listener.initiate_nc_listener, args = (), name = 'reverse_tcp_multi_handler')
+	reverseTCP_listener_t.daemon = True
+	reverseTCP_listener_t.start()
 
-	# Wait for the Netcat multi listener socket to be established
+	# Wait for the Reverse TCP multi listener socket to be established
 	timeout_start = time()
 
 	while time() < (timeout_start + 5):
 
-		if netcat.listener_initialized:													
+		if reverseTCP_listener.listener_initialized:													
 			break
 		
-		elif netcat.listener_initialized == False:			
+		elif reverseTCP_listener.listener_initialized == False:			
 			sys.exit(1)
 			
 	else:
