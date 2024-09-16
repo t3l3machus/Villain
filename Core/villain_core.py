@@ -2510,13 +2510,18 @@ class TCP_Sock_Multi_Handler:
 				if init_res_data:
 					init_response += init_res_data
 			
-				whoami = conn.sendall('{}\n'.format('whoami').encode('utf-8'))
-				res = self.recv_timeout(conn, quiet = True, timeout = 5)	 
-				username = self.dehash_prompt(self.clean_nc_response(res))
-				init_response += res
+				conn.sendall('{}\n'.format('whoami').encode('utf-8'))
+				username = self.recv_timeout(conn, quiet = True, timeout = 5)
+
+				if re.search('^whoami', username, re.IGNORECASE): #and (len(username.split('\n')) > 1):
+					cmd_echo = True
+					username = username[6:]
+
+				# username = self.dehash_prompt(self.clean_nc_response(res))
+				init_response += username
 
 				# Capture a prompt value
-				pv = conn.sendall('{}\n'.format('').encode('utf-8'))
+				conn.sendall('{}\n'.format('').encode('utf-8'))
 				prompt_val = self.recv_timeout(conn, quiet = True, timeout = 5)
 
 				# Try to fingerprint OS
@@ -2543,41 +2548,43 @@ class TCP_Sock_Multi_Handler:
 			# cmd.exe
 			if shell == 'cmd.exe':
 				username = username.rsplit('\n', 1)[-1]
-
-			elif re.search('whoami', username) and (len(username.split('\n')) > 1):
-				cmd_echo = True
 			
 			# Check if response includes ANSI sequences (bash / zsh)
 			if os_type == 'Linux':
 				username = strip_ansi_codes(username)
 				username = self.remove_non_print(username)
+
 				if cmd_echo:
-					res_data = username.split('\n')
-					username = res_data[1].strip()
+					username = username.strip()
 				else:
 					username = username.split('\n')[0].strip()
 				
-				conn.sendall('{}\n'.format('echo "***$(hostname)***"').encode('utf-8')) 
-				response = self.recv_timeout(conn, quiet = True, timeout = 5) 
-				response = self.remove_non_print(self.clean_nc_response(response))
-				# Remove command echo if detected
-				response = response.split('***$(hostname)***')[-1] if re.search(re.escape('***$(hostname)***'), response) else response
-
 				try:
-					hostname = response.split('***')[1]
+					conn.sendall('{}\n'.format('echo "**$(hostname)**"').encode('utf-8')) 
+					hostname_response = self.recv_timeout(conn, quiet = True, timeout = 5) 
+
+					# Remove command echo if detected
+					if re.search ('^' + re.escape('echo "**$(hostname)**"'), hostname_response):
+						hostname_response = hostname_response[24:].strip()
+
+					hostname_response = self.remove_non_print(self.clean_nc_response(hostname_response))
+					hostname = hostname_response.replace('**', '')
 
 				except:
-					hostname_undefined = True
 					hostname = 'Undefined'
 
 			else:
 
 				tmp = username.split('\\')
-				try: hostname = tmp[0].upper()
-				except: hostname = 'Undefined'
-				try: username = tmp[1].strip('\n\r\t >')
-				except: username = 'Undefined'
-
+				try: 
+					hostname = tmp[0].upper()
+				except: 
+					hostname = 'Undefined'
+					
+				try: 
+					username = tmp[1].strip('\n\r\t >')
+				except: 
+					username = 'Undefined'
 
 			# Create session object
 			Sessions_Manager.active_sessions[session_id] = {
