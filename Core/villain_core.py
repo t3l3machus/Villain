@@ -2553,6 +2553,10 @@ class TCP_Sock_Multi_Handler:
 			if os_type == 'Linux':
 				username = strip_ansi_codes(username)
 				username = self.remove_non_print(username)
+				username = username.split('\n')
+				username = [u for u in username if u.strip()]
+				username = username[0]
+
 
 				if cmd_echo:
 					username = username.strip()
@@ -2560,15 +2564,17 @@ class TCP_Sock_Multi_Handler:
 					username = username.split('\n')[0].strip()
 				
 				try:
-					conn.sendall('{}\n'.format('echo "**$(hostname)**"').encode('utf-8')) 
+					conn.sendall('{}\n'.format('hostname').encode('utf-8')) 
 					hostname_response = self.recv_timeout(conn, quiet = True, timeout = 5) 
 
 					# Remove command echo if detected
-					if re.search ('^' + re.escape('echo "**$(hostname)**"'), hostname_response):
-						hostname_response = hostname_response[24:].strip()
-
-					hostname_response = self.remove_non_print(self.clean_nc_response(hostname_response))
-					hostname = hostname_response.replace('**', '')
+					if re.search ('^' + re.escape('hostname'), hostname_response) and len(hostname_response) > 8:
+						hostname_response = hostname_response[8:].strip()
+					
+					hostname_response = self.remove_non_print(self.clean_nc_response(hostname_response)).strip()
+					hostname = hostname_response.split('\n')
+					hostname = [h for h in hostname_response if h.strip()]
+					hostname = ''.join(hostname)
 
 				except:
 					hostname = 'Undefined'
