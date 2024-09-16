@@ -12,13 +12,14 @@ The framework's main features include:
  - Payload generation based on default, customizable and/or user defined payload templates (Windows & Linux),
  - A dynamically engaged pseudo-shell prompt that can quickly swift between shell sessions,
  - File uploads (via http),
- - Auto-http request & exec scripts against sessions (a bit unstable),
+ - Fileless execution of scripts against active sessions,
  - Auto-invoke ConPtyShell against a powershell r-shell session as a new process to gain a fully interactive Windows shell,
  - Team chat,
  - Session Defender (a feature that inspects user issued commands for mistakes / unintentional input that may cause a shell to hang).
    
 
 ### Video Presentations
+There’s no up-to-date presentation of Villain with its latest features, but these videos give a good overview of its functionality.
 [2022-11-30] [John Hammond](https://github.com/JohnHammond) showcased the tool in this incredible video -> [youtube.com/watch?v=pTUggbSCqA0](https://www.youtube.com/watch?v=pTUggbSCqA0)  
 [2023-03-30] Version 2.0.0 release demo, made by me -> [youtube.com/watch?v=NqZEmBsLCvQ](https://www.youtube.com/watch?v=HR1KM8wrSV8)  
 
