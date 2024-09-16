@@ -228,7 +228,7 @@ class Payload_Generator:
 			if payload.meta['handler'] == 'hoaxshell':
 				self.compute_hoaxshell(payload, args_dict)
 
-			elif payload.meta['handler'] == 'reverse tcp':
+			elif payload.meta['handler'] == 'netcat':
 				self.compute_reverse_tcp_payload(payload, args_dict)
 
 		except:
