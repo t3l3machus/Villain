@@ -2,8 +2,9 @@
 :warning: Villain was explicitly developed and tested on **kali linux**.  
 :warning: This guide is a work in progress currently describing key features. Check out Villain's introduction on youtube for more info.
 
-[2022-11-30] [John Hammond](https://github.com/JohnHammond) showcased the tool in this incredible video -> [youtube.com/watch?v=pTUggbSCqA0](https://www.youtube.com/watch?v=pTUggbSCqA0)  
-[2023-03-30] Latest release demo, made by me -> [youtube.com/watch?v=NqZEmBsLCvQ](https://www.youtube.com/watch?v=HR1KM8wrSV8)  
+There’s no up-to-date presentation of Villain with its latest features, but these videos give a good overview of its functionality:
+- [2022-11-30] [John Hammond](https://github.com/JohnHammond) showcased the tool in this incredible video -> [youtube.com/watch?v=pTUggbSCqA0](https://www.youtube.com/watch?v=pTUggbSCqA0)  
+- [2023-03-30] Latest release demo, made by me -> [youtube.com/watch?v=NqZEmBsLCvQ](https://www.youtube.com/watch?v=HR1KM8wrSV8)  
 
 **Disclaimer**: Using this tool against hosts that you do not have explicit permission to test is illegal. You are responsible for any trouble you may cause by using this tool.
 
