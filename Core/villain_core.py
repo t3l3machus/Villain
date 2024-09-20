@@ -2,7 +2,7 @@
 #
 # Author: Panagiotis Chartas (t3l3machus)
 #
-# This script is part of the Villain C2 Framework:
+# This script is part of the "Villain C2 Framework":
 # https://github.com/t3l3machus/Villain
 
 

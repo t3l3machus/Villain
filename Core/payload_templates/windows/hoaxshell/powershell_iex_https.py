@@ -1,4 +1,4 @@
-# This module is part of the Villain framework
+# This module is part of the "Villain C2 Framework"
 
 class Payload:
 
