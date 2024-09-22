@@ -14,7 +14,7 @@ The framework's main features include:
  - File uploads (via http),
  - Fileless execution of scripts against active sessions,
  - Auto-invoke ConPtyShell against a powershell r-shell session as a new process to gain a fully interactive Windows shell,
- - Team chat,
+ - Multiplayer mode,
  - Session Defender (a feature that inspects user issued commands for mistakes / unintentional input that may cause a shell to hang).
    
 
