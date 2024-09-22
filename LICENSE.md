@@ -1,4 +1,4 @@
-COPYING -- Describes the terms under which Villain is distributed. A copy
+This document (LICENSE.md) outlines the terms and conditions governing the distribution of Villain. A copy
 of the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International Public License is appended to this file.
 
 Copyright (c) 2022-2024 Panagiotis Chartas (t3l3machus)
