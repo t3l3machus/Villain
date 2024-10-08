@@ -350,8 +350,10 @@ Main logic:
 generate payload=<OS_TYPE/HANDLER/PAYLOAD_TEMPLATE> lhost=<IP or INTERFACE> [ obfuscate encode ]
 
 Handlers:
+- reverse_tcp 
 - hoaxshell
-- reverse_tcp
+
+The "payload" argument supports tab-autocomplete, allowing for quick selection of valid OS types, handlers, and templates.
 
 Usage examples:
 generate payload=windows/reverse_tcp/powershell lhost=eth0 encode
