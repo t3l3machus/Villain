@@ -21,6 +21,7 @@ There’s no up-to-date presentation of Villain with its latest features, but th
 10. [Chat with Sibling Servers](#Chat-with-Sibling-Servers)
 11. [Session Defender](#Session-Defender)
 
+
 ## Generate Reverse Shell Commands
 Use the `generate` prompt command to generate payloads for Windows / Linux machines. 
 In the latest Villain release, this function was redesigned to use payload templates (files). In `Core/payload_templates/<OS>/<HANDLER>/` you can find these templates, edit them, make your own, etc. Ultimately, you should replace the predefined Windows reverse shell commands with obfuscated versions. That way you can create a personalized instance of Villain and deal with AV evasion in a more productive and efficient way. Here's how 📽️ -> [youtube.com/watch?v=grSBdZdUya0](https://www.youtube.com/watch?v=grSBdZdUya0)  
@@ -30,9 +31,15 @@ Main logic:
 generate payload=<OS_TYPE/HANDLER/PAYLOAD_TEMPLATE> lhost=<IP or INTERFACE> [ obfuscate encode ]
 ```
 
+Handlers:
+- reverse_tcp
+- hoaxshell
+
+The "payload" argument supports tab-autocomplete, allowing for quick selection of valid OS types, handlers, and templates.
+
 Usage examples:
 ```
-generate payload=windows/reverse_tcp/powershell lhost=eth0 
+generate payload=windows/reverse_tcp/powershell lhost=eth0 encode
 generate payload=linux/hoaxshell/sh_curl lhost=eth0 obfuscate
 ```
 
