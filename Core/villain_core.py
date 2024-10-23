@@ -2453,13 +2453,13 @@ class TCP_Sock_Multi_Handler:
 			# Check for Windows banners (no prompt symbols, but environment-specific clues)
 			if re.search('Microsoft Corporation', init_response, re.IGNORECASE):
 				# Identify shell type (PowerShell vs cmd.exe)
-				if re.search('powershell', init_response, re.IGNORECASE) or re.search('^PS\ [A-Z]{1}:', prompt_val.strip('\r\n\t ')):
+				if re.search('powershell', init_response, re.IGNORECASE) or re.search('^PS [A-Z]{1}:', prompt_val.strip('\r\n\t ')):
 					return [True, 'Windows', 'powershell.exe']
 				
 				return [True, 'Windows', 'cmd.exe']
 			
 			# Check if Windows PowerShell from prompt value
-			if re.search('^PS\ [A-Z]{1}:', prompt_val.strip('\r\n\t ')):
+			if re.search('^PS [A-Z]{1}:', prompt_val.strip('\r\n\t ')):
 				return [True, 'Windows', 'powershell.exe']
 
 			# Analyze based on shell prompts
