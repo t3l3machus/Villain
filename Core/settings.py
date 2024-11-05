@@ -18,7 +18,7 @@ class Threading_params:
 
 
 class Villain:
-	version = "2.2.0"
+	version = "2.2.1"
 
 
 class Core_Server_Settings:
