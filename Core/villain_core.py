@@ -1479,7 +1479,7 @@ def initiate_hoax_server():
 			exit(f'\n[{DEBUG}] {Hoaxshell.server_name} failed to start (Unknown error occurred).\n')
 
 		if Hoaxshell_Settings.ssl_support:
-			context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+			context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 			context.load_cert_chain(certfile = Hoaxshell_Settings.certfile, keyfile = Hoaxshell_Settings.keyfile)
 			httpd.socket = context.wrap_socket(sock = httpd.socket, server_side= True)
 
