@@ -66,7 +66,11 @@ You should run as root:
 ```
 villain [-h] [-p PORT] [-x HOAX_PORT] [-n NETCAT_PORT] [-f FILE_SMUGGLER_PORT] [-i] [-c CERTFILE] [-k KEYFILE] [-u] [-q] 
 ```
-
+Sample Upload/Download commands:
+```
+upload /home/kali/Windows/rvs.ps1 rvs2.ps1
+download .\winpeas.bat /home/kali/winpeas.bat
+```
 Check out the [Usage Guide](https://github.com/t3l3machus/Villain/blob/main/Usage_Guide.md) for more.  
 
 :warning: Create your own obfuscated reverse shell templates and replace the default ones in your instance of Villain to better handle AV evasion. Here's how 📽️ -> [youtube.com/watch?v=grSBdZdUya0](https://www.youtube.com/watch?v=grSBdZdUya0)
