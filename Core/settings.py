@@ -62,7 +62,8 @@ class Hoaxshell_Settings:
 class File_Smuggler_Settings:
 	
 	bind_address = '0.0.0.0'
-	bind_port = 8888	
+	bind_port = 8888
+	receive_port = 8889	
 
 
 

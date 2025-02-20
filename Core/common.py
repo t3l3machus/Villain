@@ -489,6 +489,18 @@ Note that, if the thread limiter reaches 0, weird things will start happening as
 			'max_args' : 0
 		},
 
+		'download' : {
+			'details' : f'''
+Download files from an active shell session over http (auto-requested from the http-file-smuggler service). The feature SHOULD work regardless if the session is owned by you or a sibling server(but doesn't). 
+
+From an active pseudo shell prompt:
+download <REMOTE_FILE_PATH> <LOCAL_FILE_PATH>''',
+			'least_args' : 3,
+			'max_args' : 3,
+			'shell' : True
+		},
+
+
 		'upload' : {
 			'details' : f'''
 Upload files into an active shell session over http (auto-requested from the http-file-smuggler service). The feature works regardless if the session is owned by you or a sibling server. 
