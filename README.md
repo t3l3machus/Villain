@@ -1,4 +1,5 @@
-# Villain
+# Villain (Download added)
+
 [![Python](https://img.shields.io/badge/Python-%E2%89%A5%203.6-yellow.svg)](https://www.python.org/) 
 <img src="https://img.shields.io/badge/PowerShell-%E2%89%A5%20v3.0-blue">
 <img src="https://img.shields.io/badge/Developed%20on-kali%20linux-blueviolet">
@@ -11,7 +12,7 @@ Villain is a high-level Stage 0/1 C2 framework that can handle multiple reverse 
 The framework's main features include:
  - Payload generation based on default, customizable and/or user defined payload templates (Windows & Linux),
  - A dynamically engaged pseudo-shell prompt that can quickly swift between shell sessions,
- - File uploads (via http),
+ - File uploads (via http), AND NOW DOWNLOADS
  - Fileless execution of scripts against active sessions,
  - Auto-invoke ConPtyShell against a powershell r-shell session as a new process to gain a fully interactive Windows shell,
  - Multiplayer mode,
@@ -65,7 +66,11 @@ You should run as root:
 ```
 villain [-h] [-p PORT] [-x HOAX_PORT] [-n NETCAT_PORT] [-f FILE_SMUGGLER_PORT] [-i] [-c CERTFILE] [-k KEYFILE] [-u] [-q] 
 ```
-
+Sample Upload/Download commands:
+```
+upload /home/kali/Windows/rvs.ps1 rvs2.ps1
+download .\winpeas.bat /home/kali/winpeas.bat
+```
 Check out the [Usage Guide](https://github.com/t3l3machus/Villain/blob/main/Usage_Guide.md) for more.  
 
 :warning: Create your own obfuscated reverse shell templates and replace the default ones in your instance of Villain to better handle AV evasion. Here's how 📽️ -> [youtube.com/watch?v=grSBdZdUya0](https://www.youtube.com/watch?v=grSBdZdUya0)

