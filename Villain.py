@@ -127,6 +127,9 @@ def print_banner():
 	print_meta()
 
 
+def do_nothing():
+	pass
+
 
 def print_meta():
 	print(f'{META} Created by t3l3machus')
@@ -575,11 +578,6 @@ def main():
 
 	''' Init File Smuggler '''
 	file_smuggler = File_Smuggler()
-
-
-	''' Define exit func '''
-	def do_nothing():
-		pass
 		
 
 	def villain_out(flee = False):
